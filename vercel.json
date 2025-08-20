@@ -2,26 +2,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "dist/mobile-server.js",
+      "src": "server/mobile-server.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "dist/mobile-server.js"
+      "dest": "/server/mobile-server.ts"
     },
     {
       "src": "/(.*)",
-      "dest": "dist/index.html"
+      "dest": "/dist/$1"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "functions": {
-    "dist/mobile-server.js": {
-      "maxDuration": 10
-    }
-  }
+  ]
 }
