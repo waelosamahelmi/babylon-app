@@ -1,11 +1,11 @@
-# fly.toml app configuration file generated for restaurant-backend on 2025-08-20T00:00:00.000Z
-app = "restaurant-backend"
+# fly.toml app configuration file generated for antonio-app on 2025-08-20T00:00:00.000Z
+app = "antonio-app"
 primary_region = "ord"
 
 [build]
 
 [http_service]
-  internal_port = 8080
+  internal_port = 5000
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true
@@ -19,4 +19,5 @@ primary_region = "ord"
 
 [env]
   NODE_ENV = "production"
-  PORT = "8080"
+  PORT = "5000"
+  HOST = "0.0.0.0"
