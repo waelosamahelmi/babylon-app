@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/language-context";
 import { useCategories } from "@/hooks/use-menu";
+import { uploadMenuItemImage, updateMenuItemImage } from "@/lib/supabase-storage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -182,34 +183,17 @@ export function ProductManagementModal({
   };
 
   const handleImageUpload = async (file: File) => {
-    if (!formData.id) {
-      toast({
-        title: t("Virhe", "Error"),
-        description: t("Tallenna tuote ensin ennen kuvan lataamista", "Save the product first before uploading an image"),
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsUploading(true);
     try {
-      const uploadFormData = new FormData();
-      uploadFormData.append('image', file);
-
-      const response = await fetch(`/api/menu-items/${formData.id}/images`, {
-        method: 'POST',
-        body: uploadFormData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const result = await response.json();
+      // Upload image to Supabase storage
+      const imageUrl = formData.id 
+        ? await updateMenuItemImage(formData.imageUrl, file, formData.id)
+        : await uploadMenuItemImage(file);
       
+      // Update form data with new image URL
       setFormData(prev => ({ 
         ...prev, 
-        imageUrl: result.imageUrl 
+        imageUrl: imageUrl 
       }));
 
       toast({

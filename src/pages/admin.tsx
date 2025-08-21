@@ -81,6 +81,7 @@ export default function Admin() {
   
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [autoRefresh, setAutoRefresh] = useState(true);  const [showProductModal, setShowProductModal] = useState(false);
   const [showToppingsModal, setShowToppingsModal] = useState(false);
@@ -632,7 +633,10 @@ export default function Admin() {
     const matchesSearch = searchTerm === "" || 
       item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.nameEn?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesAvailability = availabilityFilter === "all" || 
+      (availabilityFilter === "enabled" && item.isAvailable) ||
+      (availabilityFilter === "disabled" && !item.isAvailable);
+    return matchesCategory && matchesSearch && matchesAvailability;
   }).sort((a, b) => {
     // Sort by displayOrder first, then by ID as fallback
     const orderA = a.displayOrder ?? 999999;
@@ -1213,6 +1217,16 @@ export default function Admin() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}>
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder={adminT("Saatavuus", "Availability", "التوفر")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{adminT("Kaikki tuotteet", "All products", "جميع المنتجات")}</SelectItem>
+                      <SelectItem value="enabled">{adminT("Käytössä", "Enabled", "مفعل")}</SelectItem>
+                      <SelectItem value="disabled">{adminT("Pois käytöstä", "Disabled", "معطل")}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Menu items grid */}
@@ -1232,7 +1246,21 @@ export default function Admin() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredMenuItems.map((item) => (
-                      <Card key={item.id} className="border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow overflow-hidden">
+                      <Card 
+                        key={item.id} 
+                        className={`border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200 overflow-hidden relative ${
+                          !item.isAvailable 
+                            ? 'opacity-60 bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600' 
+                            : 'bg-white dark:bg-gray-900'
+                        }`}
+                      >
+                        {!item.isAvailable && (
+                          <div className="absolute top-2 left-2 z-10">
+                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full shadow-md">
+                              {adminT("Pois käytöstä", "Disabled", "معطل")}
+                            </span>
+                          </div>
+                        )}
                         <div className="aspect-w-16 aspect-h-9 bg-gray-100 dark:bg-gray-700">
                           {item.imageUrl ? (
                             <img 
@@ -1259,24 +1287,36 @@ export default function Admin() {
                                 €{item.price}
                               </span>
                               <div className="flex items-center space-x-2">
-                                <Switch
-                                  checked={Boolean(item.isAvailable)}
-                                  onCheckedChange={async (checked) => {
-                                    try {
-                                      await updateMenuItem.mutateAsync({
-                                        id: item.id,
-                                        data: { isAvailable: checked }
-                                      });
-                                    } catch (error) {
-                                      toast({
-                                        title: adminT("Virhe", "Error", "خطأ"),
-                                        description: adminT("Tuotteen päivitys epäonnistui", "Failed to update product", "فشل في تحديث المنتج"),
-                                        variant: "destructive",
-                                      });
+                                <div className="flex items-center space-x-1">
+                                  <Switch
+                                    checked={Boolean(item.isAvailable)}
+                                    onCheckedChange={async (checked) => {
+                                      try {
+                                        await updateMenuItem.mutateAsync({
+                                          id: item.id,
+                                          data: { isAvailable: checked }
+                                        });
+                                      } catch (error) {
+                                        toast({
+                                          title: adminT("Virhe", "Error", "خطأ"),
+                                          description: adminT("Tuotteen päivitys epäonnistui", "Failed to update product", "فشل في تحديث المنتج"),
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                    className="scale-75"
+                                  />
+                                  <span className={`text-xs font-medium ${
+                                    item.isAvailable 
+                                      ? 'text-green-600 dark:text-green-400' 
+                                      : 'text-red-600 dark:text-red-400'
+                                  }`}>
+                                    {item.isAvailable 
+                                      ? adminT("Käytössä", "Enabled", "مفعل")
+                                      : adminT("Pois", "Disabled", "معطل")
                                     }
-                                  }}
-                                  className="scale-75"
-                                />
+                                  </span>
+                                </div>
                                 <Button
                                   size="sm"
                                   variant="outline"

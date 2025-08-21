@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase, handleSupabaseError, formatSupabaseResponse } from "@/lib/supabase-client";
+import { supabase, handleSupabaseError, formatSupabaseResponse, convertCamelToSnake } from "@/lib/supabase-client";
 import { useSupabaseAuth } from "@/lib/supabase-auth-context";
 
 // Get all categories
@@ -41,8 +41,7 @@ export function useSupabaseMenuItems(categoryId?: number) {
         .select(`
           *,
           categories (*)
-        `)
-        .eq('is_available', true);
+        `);
 
       if (categoryId) {
         query = query.eq('category_id', categoryId);
@@ -99,16 +98,44 @@ export function useSupabaseUpdateMenuItem() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
       console.log('🍽️ Updating menu item in Supabase:', id, data);
+      console.log('🔍 Original data keys:', Object.keys(data));
+      console.log('🔍 Original data:', JSON.stringify(data, null, 2));
+      
+      // Define allowed fields for menu_items table
+      const allowedFields = [
+        'name', 'nameEn', 'description', 'descriptionEn', 'price', 
+        'categoryId', 'imageUrl', 'isVegetarian', 'isVegan', 'isGlutenFree',
+        'isAvailable', 'displayOrder', 'offerPrice', 'offerPercentage',
+        'offerStartDate', 'offerEndDate'
+      ];
+      
+      // Filter data to only include allowed fields
+      const filteredData = Object.keys(data)
+        .filter(key => allowedFields.includes(key))
+        .reduce((obj, key) => {
+          obj[key] = data[key];
+          return obj;
+        }, {} as any);
+      
+      console.log('🔍 Filtered data:', JSON.stringify(filteredData, null, 2));
+      
+      // Convert camelCase fields to snake_case for database
+      const dbData = convertCamelToSnake(filteredData);
+      
+      console.log('🔄 Converted data for database:', dbData);
+      console.log('🔍 Converted data keys:', Object.keys(dbData));
+      console.log('🔍 Converted data:', JSON.stringify(dbData, null, 2));
       
       const { data: updatedData, error } = await supabase
         .from('menu_items')
-        .update({ ...data, updated_at: new Date().toISOString() })
+        .update(dbData)
         .eq('id', id)
         .select()
         .single();
 
       if (error) {
         console.error('❌ Failed to update menu item:', error);
+        console.error('❌ Error details:', JSON.stringify(error, null, 2));
         handleSupabaseError(error);
       }
 
@@ -129,14 +156,38 @@ export function useSupabaseCreateMenuItem() {
     mutationFn: async (data: any) => {
       console.log('🍽️ Creating menu item in Supabase:', data);
       
+      // Define allowed fields for menu_items table
+      const allowedFields = [
+        'name', 'nameEn', 'description', 'descriptionEn', 'price', 
+        'categoryId', 'imageUrl', 'isVegetarian', 'isVegan', 'isGlutenFree',
+        'isAvailable', 'displayOrder', 'offerPrice', 'offerPercentage',
+        'offerStartDate', 'offerEndDate'
+      ];
+      
+      // Filter data to only include allowed fields
+      const filteredData = Object.keys(data)
+        .filter(key => allowedFields.includes(key))
+        .reduce((obj, key) => {
+          obj[key] = data[key];
+          return obj;
+        }, {} as any);
+      
+      console.log('🔍 Filtered data:', JSON.stringify(filteredData, null, 2));
+      
+      // Convert camelCase fields to snake_case for database
+      const dbData = convertCamelToSnake(filteredData);
+      
+      console.log('🔄 Converted data for database:', dbData);
+      
       const { data: createdData, error } = await supabase
         .from('menu_items')
-        .insert([data])
+        .insert([dbData])
         .select()
         .single();
 
       if (error) {
         console.error('❌ Failed to create menu item:', error);
+        console.error('❌ Error details:', JSON.stringify(error, null, 2));
         handleSupabaseError(error);
       }
 
@@ -157,9 +208,14 @@ export function useSupabaseUpdateTopping() {
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
       console.log('🍕 Updating topping in Supabase:', id, data);
       
+      // Convert camelCase fields to snake_case for database
+      const dbData = convertCamelToSnake(data);
+      
+      console.log('🔄 Converted topping data for database:', dbData);
+      
       const { data: updatedData, error } = await supabase
         .from('toppings')
-        .update({ ...data, updated_at: new Date().toISOString() })
+        .update(dbData)
         .eq('id', id)
         .select()
         .single();
@@ -186,9 +242,14 @@ export function useSupabaseCreateTopping() {
     mutationFn: async (data: any) => {
       console.log('🍕 Creating topping in Supabase:', data);
       
+      // Convert camelCase fields to snake_case for database
+      const dbData = convertCamelToSnake(data);
+      
+      console.log('🔄 Converted topping data for database:', dbData);
+      
       const { data: createdData, error } = await supabase
         .from('toppings')
-        .insert([data])
+        .insert([dbData])
         .select()
         .single();
 

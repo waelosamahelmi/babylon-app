@@ -55,3 +55,20 @@ const convertSnakeToCamel = (obj: any): any => {
   
   return camelObj;
 };
+
+// Helper function to convert camelCase to snake_case for database operations
+export const convertCamelToSnake = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  
+  if (Array.isArray(obj)) {
+    return obj.map(convertCamelToSnake);
+  }
+  
+  const snakeObj: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+    snakeObj[snakeKey] = convertCamelToSnake(value);
+  }
+  
+  return snakeObj;
+};
