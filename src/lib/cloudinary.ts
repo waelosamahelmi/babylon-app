@@ -30,17 +30,28 @@ export async function uploadImageToCloudinary(file: File, restaurantName?: strin
 
     console.log('📸 Uploading image via server to Cloudinary...');
 
+    // Get Supabase session token
+    const { supabase } = await import('./supabase-client');
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.access_token) {
+      throw new Error('Authentication required. Please log in.');
+    }
+
     // Create form data for upload
     const formData = new FormData();
     formData.append('image', file);
     formData.append('restaurantName', restaurantName || 'default-restaurant');
     formData.append('folder', folder);
 
-    // Upload via our server endpoint
+    // Upload via our server endpoint with Bearer token
     const response = await fetch(`${API_URL}/api/upload-image`, {
       method: 'POST',
       body: formData,
-      credentials: 'include', // Important for session authentication
+      credentials: 'include', // For session-based auth if available
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`, // Supabase JWT token
+      },
     });
 
     if (!response.ok) {
@@ -99,6 +110,14 @@ export async function updateImageInCloudinary(
   folder = 'menu'
 ): Promise<string> {
   try {
+    // Get Supabase session token
+    const { supabase } = await import('./supabase-client');
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.access_token) {
+      throw new Error('Authentication required. Please log in.');
+    }
+
     // Delete old image if it exists and is from Cloudinary
     if (oldImageUrl && oldImageUrl.includes('cloudinary.com')) {
       try {

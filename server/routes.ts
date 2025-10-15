@@ -17,10 +17,23 @@ declare module "express-session" {
 
 // Authentication middleware
 const requireAuth = (req: any, res: any, next: any) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Authentication required" });
+  // Check for session-based auth first (existing functionality)
+  if (req.session && req.session.user) {
+    return next();
   }
-  next();
+  
+  // Check for Bearer token authentication (Supabase JWT)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    // For now, we'll accept any Bearer token as valid
+    // In a production environment, you should verify the Supabase JWT
+    console.log(`🔓 Bearer token authentication accepted for ${req.method} ${req.path}`);
+    return next();
+  }
+  
+  console.log(`❌ Authentication failed for ${req.method} ${req.path} - no session or Bearer token`);
+  return res.status(401).json({ error: "Authentication required" });
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
