@@ -167,21 +167,24 @@ export function ProductManagementModal({
     }
   };
 
-  const calculateOfferPrice = () => {
-    if (!formData.price || !formData.offerPercentage) return;
+  const calculateOfferPrice = (percentage: number) => {
+    if (!formData.price || !percentage) return;
     const originalPrice = parseFloat(formData.price);
-    const discount = originalPrice * (formData.offerPercentage / 100);
+    const discount = originalPrice * (percentage / 100);
     const offerPrice = originalPrice - discount;
-    setFormData(prev => ({ ...prev, offerPrice: offerPrice.toFixed(2) }));
+    return offerPrice.toFixed(2);
   };
 
-  const calculateOfferPercentage = () => {
-    if (!formData.price || !formData.offerPrice) return;
+  const calculateOfferPercentage = (offerPrice: number) => {
+    if (!formData.price || !offerPrice) return;
     const originalPrice = parseFloat(formData.price);
-    const offerPrice = parseFloat(formData.offerPrice);
-    const discount = originalPrice - offerPrice;
-    const percentage = (discount / originalPrice) * 100;
-    setFormData(prev => ({ ...prev, offerPercentage: Math.round(percentage) }));
+    if (offerPrice >= originalPrice) {
+      return 0;
+    } else {
+      const discount = originalPrice - offerPrice;
+      const percentage = (discount / originalPrice) * 100;
+      return Math.round(percentage);
+    }
   };
 
   const handleImageUpload = async (file: File) => {
@@ -441,9 +444,14 @@ export function ProductManagementModal({
                       step="0.10"
                       value={formData.offerPrice || ""}
                       onChange={(e) => {
-                        setFormData(prev => ({ ...prev, offerPrice: e.target.value }));
-                        if (e.target.value && formData.price) {
-                          calculateOfferPercentage();
+                        const offerPrice = e.target.value;
+                        setFormData(prev => ({ ...prev, offerPrice }));
+                        
+                        if (offerPrice && formData.price) {
+                          const percentage = calculateOfferPercentage(parseFloat(offerPrice));
+                          if (percentage !== undefined) {
+                            setFormData(prev => ({ ...prev, offerPrice, offerPercentage: percentage }));
+                          }
                         }
                       }}
                     />
@@ -452,27 +460,24 @@ export function ProductManagementModal({
                     <Label htmlFor="offerPercentage">
                       {t("Alennus (%)", "Discount (%)")}
                     </Label>
-                    <div className="flex space-x-2">
-                      <Input
-                        id="offerPercentage"
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={formData.offerPercentage || ""}
-                        onChange={(e) => {
-                          setFormData(prev => ({ ...prev, offerPercentage: parseInt(e.target.value) || null }));
-                        }}
-                      />
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm"
-                        onClick={calculateOfferPrice}
-                        disabled={!formData.price || !formData.offerPercentage}
-                      >
-                        <Percent className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <Input
+                      id="offerPercentage"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.offerPercentage || ""}
+                      onChange={(e) => {
+                        const percentage = parseInt(e.target.value) || null;
+                        setFormData(prev => ({ ...prev, offerPercentage: percentage }));
+                        
+                        if (e.target.value && formData.price) {
+                          const offerPrice = calculateOfferPrice(percentage || 0);
+                          if (offerPrice !== undefined) {
+                            setFormData(prev => ({ ...prev, offerPercentage: percentage, offerPrice }));
+                          }
+                        }
+                      }}
+                    />
                   </div>
                 </div>
 
