@@ -1,9 +1,14 @@
 // Cloudinary configuration and upload utilities
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_API_KEY = import.meta.env.VITE_CLOUDINARY_API_KEY;
+const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_SERVER_URL;
 
 if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY) {
   console.warn('Missing Cloudinary environment variables. Please add VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_API_KEY to your .env file');
+}
+
+if (!API_URL) {
+  console.warn('Missing API URL. Please add VITE_API_URL or VITE_SERVER_URL to your .env file');
 }
 
 // Upload image via our server to Cloudinary
@@ -32,9 +37,10 @@ export async function uploadImageToCloudinary(file: File, restaurantName?: strin
     formData.append('folder', folder);
 
     // Upload via our server endpoint
-    const response = await fetch('/api/upload-image', {
+    const response = await fetch(`${API_URL}/api/upload-image`, {
       method: 'POST',
       body: formData,
+      credentials: 'include', // Important for session authentication
     });
 
     if (!response.ok) {

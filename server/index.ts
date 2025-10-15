@@ -28,7 +28,11 @@ const corsOptions = {
       'capacitor://localhost',
       'ionic://localhost',
       'http://localhost',
-      'https://localhost'
+      'https://localhost',
+      // Add production domains if needed
+      'https://antonio-app.fly.dev',
+      'https://helmies-food-web.netlify.app',
+      // Add any other production frontend domains
     ];
     
     // Allow any localhost with different ports
@@ -41,10 +45,13 @@ const corsOptions = {
       return callback(null, true);
     }
     
+    // Check against allowed origins
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(null, true); // Allow all origins in development
+      // In production, be more restrictive
+      log(`CORS: Blocked origin: ${origin}`);
+      callback(null, process.env.NODE_ENV !== 'production');
     }
   },
   credentials: true,
@@ -74,11 +81,13 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // Set to true in production with HTTPS
-    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production', // Secure cookies in production
+    httpOnly: false, // Allow client access for mobile/web apps
     maxAge: parseInt(process.env.SESSION_MAX_AGE || '86400000'), // Default 24 hours
-    sameSite: 'lax', // Allow cross-origin requests
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Required for cross-origin in production
+    domain: undefined // Let browser handle domain
   },
+  proxy: true // Trust proxy headers for secure cookies
 }));
 
 app.use((req, res, next) => {
