@@ -30,27 +30,17 @@ export async function uploadImageToCloudinary(file: File, restaurantName?: strin
 
     console.log('📸 Uploading image via server to Cloudinary...');
 
-    // Get auth token for API requests
-    const token = localStorage.getItem('auth_token');
-
     // Create form data for upload
     const formData = new FormData();
     formData.append('image', file);
     formData.append('restaurantName', restaurantName || 'default-restaurant');
     formData.append('folder', folder);
 
-    // Prepare headers with auth token
-    const headers: HeadersInit = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
     // Upload via our server endpoint
     const response = await fetch(`${API_URL}/api/upload-image`, {
       method: 'POST',
       body: formData,
       credentials: 'include', // Important for session authentication
-      headers,
     });
 
     if (!response.ok) {
