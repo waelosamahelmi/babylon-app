@@ -15,6 +15,7 @@ import { ProductManagementModal } from "@/components/product-management-modal";
 
 import { ToppingsManagementModal } from "@/components/toppings-management-modal-supabase";
 import { RestaurantSettingsModal } from "@/components/restaurant-settings-modal";
+import { RestaurantSiteConfig } from "@/components/restaurant-site-config";
 import { OrderDetailModal } from "@/components/order-detail-modal";
 import { PermissionsDialog } from "@/components/permissions-dialog";
 import { PrinterStatusIndicator } from "@/components/printer-status-indicator";
@@ -86,6 +87,7 @@ export default function Admin() {
   const [autoRefresh, setAutoRefresh] = useState(true);  const [showProductModal, setShowProductModal] = useState(false);
   const [showToppingsModal, setShowToppingsModal] = useState(false);
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
+  const [showSiteConfigModal, setShowSiteConfigModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
@@ -1507,6 +1509,14 @@ export default function Admin() {
                     {adminT("Ravintolan tiedot", "Restaurant Info", "معلومات المطعم")}
                   </Button>
                   <Button 
+                    onClick={() => setShowSiteConfigModal(true)}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Globe className="w-4 h-4 mr-2" />
+                    {adminT("Sivuston asetukset", "Site Configuration", "إعدادات الموقع")}
+                  </Button>
+                  <Button 
                     onClick={() => setShowToppingsModal(true)}
                     variant="outline"
                     className="w-full justify-start"
@@ -1589,6 +1599,16 @@ export default function Admin() {
         isOpen={showRestaurantModal}
         onClose={() => setShowRestaurantModal(false)}
       />
+
+      {/* Site Configuration Modal */}
+      <Dialog open={showSiteConfigModal} onOpenChange={setShowSiteConfigModal}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Restaurant Site Configuration</DialogTitle>
+          </DialogHeader>
+          <RestaurantSiteConfig onClose={() => setShowSiteConfigModal(false)} />
+        </DialogContent>
+      </Dialog>
 
       <OrderDetailModal
         order={selectedOrder}

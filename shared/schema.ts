@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, serial, integer, boolean, decimal, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, integer, boolean, decimal, timestamp, uuid, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -126,6 +126,30 @@ export const restaurantSettings = pgTable("restaurant_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const restaurantConfig = pgTable("restaurant_config", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  nameEn: text("name_en").notNull(),
+  tagline: text("tagline").notNull(),
+  taglineEn: text("tagline_en").notNull(),
+  description: text("description").notNull(),
+  descriptionEn: text("description_en").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email").notNull(),
+  address: jsonb("address").notNull().default('{}'),
+  socialMedia: jsonb("social_media").default('{}'),
+  hours: jsonb("hours").notNull().default('{}'),
+  services: jsonb("services").notNull().default('{}'),
+  deliveryConfig: jsonb("delivery_config").notNull().default('{}'),
+  theme: jsonb("theme").notNull().default('{}'),
+  logo: jsonb("logo").notNull().default('{}'),
+  about: jsonb("about").notNull().default('{}'),
+  hero: jsonb("hero").notNull().default('{}'),
+  isActive: boolean("is_active").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
 });
@@ -176,6 +200,12 @@ export const insertRestaurantSettingsSchema = createInsertSchema(restaurantSetti
   updatedAt: true,
 });
 
+export const insertRestaurantConfigSchema = createInsertSchema(restaurantConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type Category = typeof categories.$inferSelect;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type Order = typeof orders.$inferSelect;
@@ -187,6 +217,7 @@ export type ToppingGroupItem = typeof toppingGroupItems.$inferSelect;
 export type MenuItemToppingGroup = typeof menuItemToppingGroups.$inferSelect;
 export type CategoryToppingGroup = typeof categoryToppingGroups.$inferSelect;
 export type RestaurantSettings = typeof restaurantSettings.$inferSelect;
+export type RestaurantConfig = typeof restaurantConfig.$inferSelect;
 
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
@@ -199,3 +230,4 @@ export type InsertToppingGroupItem = z.infer<typeof insertToppingGroupItemSchema
 export type InsertMenuItemToppingGroup = z.infer<typeof insertMenuItemToppingGroupSchema>;
 export type InsertCategoryToppingGroup = z.infer<typeof insertCategoryToppingGroupSchema>;
 export type InsertRestaurantSettings = z.infer<typeof insertRestaurantSettingsSchema>;
+export type InsertRestaurantConfig = z.infer<typeof insertRestaurantConfigSchema>;
