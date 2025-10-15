@@ -1,17 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
 import multer from 'multer';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { uploadImageToCloudinary, deleteImageFromCloudinary } from './cloudinary';
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -31,84 +20,52 @@ const upload = multer({
   },
 });
 
-// Function to upload image to Supabase Storage
-export async function uploadImageToSupabase(file: Express.Multer.File): Promise<string> {
+// Function to upload image to Cloudinary
+export async function uploadImageToSupabase(
+  file: Express.Multer.File, 
+  restaurantName: string = 'default-restaurant',
+  folder: string = 'menu'
+): Promise<string> {
   try {
-    // Generate unique filename
-    const fileExtension = path.extname(file.originalname);
-    const fileName = `${uuidv4()}${fileExtension}`;
-    const filePath = `menu-items/${fileName}`;
-
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('restaurant-images')
-      .upload(filePath, file.buffer, {
-        contentType: file.mimetype,
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-    if (error) {
-      throw new Error(`Upload failed: ${error.message}`);
-    }
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('restaurant-images')
-      .getPublicUrl(filePath);
-
-    return urlData.publicUrl;
+    console.log('📸 Uploading image to Cloudinary...');
+    
+    // Upload to Cloudinary instead of Supabase
+    const imageUrl = await uploadImageToCloudinary(file, restaurantName, folder);
+    
+    console.log('✅ Image uploaded successfully to Cloudinary:', imageUrl);
+    return imageUrl;
+    
   } catch (error) {
-    console.error('Error uploading image to Supabase:', error);
+    console.error('Error uploading image to Cloudinary:', error);
     throw error;
   }
 }
 
-// Function to delete image from Supabase Storage
+// Function to delete image from Cloudinary
 export async function deleteImageFromSupabase(imageUrl: string): Promise<boolean> {
   try {
-    // Extract file path from URL
-    const url = new URL(imageUrl);
-    const pathSegments = url.pathname.split('/');
-    const filePath = pathSegments.slice(-2).join('/'); // Get 'menu-items/filename'
-
-    const { error } = await supabase.storage
-      .from('restaurant-images')
-      .remove([filePath]);
-
-    if (error) {
-      console.error('Error deleting image:', error);
-      return false;
+    console.log('🗑️ Deleting image from Cloudinary...');
+    
+    // Delete from Cloudinary instead of Supabase
+    const success = await deleteImageFromCloudinary(imageUrl);
+    
+    if (success) {
+      console.log('✅ Image deleted successfully from Cloudinary');
+    } else {
+      console.warn('⚠️ Image deletion from Cloudinary failed or was skipped');
     }
-
-    return true;
+    
+    return success;
   } catch (error) {
-    console.error('Error deleting image from Supabase:', error);
+    console.error('Error deleting image from Cloudinary:', error);
     return false;
   }
 }
 
-// Function to ensure storage bucket exists
+// Function to ensure storage is ready (no longer needed for Cloudinary, but keeping for compatibility)
 export async function ensureStorageBucket(): Promise<void> {
-  try {
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === 'restaurant-images');
-
-    if (!bucketExists) {
-      const { error } = await supabase.storage.createBucket('restaurant-images', {
-        public: true,
-        fileSizeLimit: 10485760, // 10MB
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-      });
-
-      if (error && !error.message.includes('already exists')) {
-        throw new Error(`Failed to create storage bucket: ${error.message}`);
-      }
-    }
-  } catch (error) {
-    console.error('Error ensuring storage bucket:', error);
-    throw error;
-  }
+  // No bucket creation needed for Cloudinary
+  console.log('📦 Using Cloudinary for image storage - no bucket setup required');
 }
 
 export { upload };

@@ -495,21 +495,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload menu item image
-  app.post("/api/menu-items/:id/images", requireAuth, upload.single("image"), async (req, res) => {
+  // General image upload endpoint
+  app.post("/api/upload-image", requireAuth, upload.single("image"), async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
       const file = req.file;
+      const restaurantName = req.body.restaurantName || 'default-restaurant';
+      const folder = req.body.folder || 'menu';
       
       if (!file) {
         return res.status(400).json({ error: "Image file is required" });
       }
       
-      // Ensure storage bucket exists
-      await ensureStorageBucket();
+      console.log('📸 Uploading image to Cloudinary for restaurant:', restaurantName, 'folder:', folder);
       
-      // Upload image to Supabase
-      const imageUrl = await uploadImageToSupabase(file);
+      // Upload image to Cloudinary with restaurant-specific folder
+      const imageUrl = await uploadImageToSupabase(file, restaurantName, folder);
+      
+      res.json({ imageUrl });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      res.status(500).json({ error: "Failed to upload image" });
+    }
+  });
+
+  // Upload menu item image
+  app.post("/api/menu-items/:id/images", requireAuth, upload.single("image"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const file = req.file;
+      const restaurantName = req.body.restaurantName || 'default-restaurant';
+      
+      if (!file) {
+        return res.status(400).json({ error: "Image file is required" });
+      }
+      
+      // No need to ensure storage bucket for Cloudinary
+      console.log('📸 Uploading menu item image to Cloudinary for restaurant:', restaurantName, 'menu item:', id);
+      
+      // Upload image to Cloudinary with restaurant-specific folder
+      const imageUrl = await uploadImageToSupabase(file, restaurantName, 'menu-items');
       
       // Update menu item with new image URL
       const updatedMenuItem = await storage.updateMenuItem(id, { imageUrl });

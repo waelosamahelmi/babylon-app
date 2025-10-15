@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/language-context";
 import { useCategories } from "@/hooks/use-menu";
-import { uploadMenuItemImage, updateMenuItemImage } from "@/lib/supabase-storage";
+import { uploadImageToCloudinary, updateImageInCloudinary } from "@/lib/cloudinary";
+import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ export function ProductManagementModal({
 }: ProductManagementModalProps) {
   const { t, language } = useLanguage();
   const { data: categories } = useCategories();
+  const { data: restaurantConfig } = useRestaurantConfig();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState<MenuItem>({
@@ -185,10 +187,13 @@ export function ProductManagementModal({
   const handleImageUpload = async (file: File) => {
     setIsUploading(true);
     try {
-      // Upload image to Supabase storage
+      // Get restaurant name for folder organization
+      const restaurantName = restaurantConfig?.name || restaurantConfig?.nameEn || 'default-restaurant';
+      
+      // Upload image to Cloudinary with restaurant-specific folder
       const imageUrl = formData.id 
-        ? await updateMenuItemImage(formData.imageUrl, file, formData.id)
-        : await uploadMenuItemImage(file);
+        ? await updateImageInCloudinary(formData.imageUrl, file, restaurantName, 'menu-items')
+        : await uploadImageToCloudinary(file, restaurantName, 'menu-items');
       
       // Update form data with new image URL
       setFormData(prev => ({ 
