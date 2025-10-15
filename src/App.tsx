@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/lib/language-context";
 import { ThemeProvider } from "@/lib/theme-context";
-import { SupabaseAuthProvider } from "@/lib/supabase-auth-context";
+import { AuthProvider } from "@/lib/api-auth-context";
 import { AndroidProvider } from "@/lib/android-context";
 import { CartProvider } from "@/lib/cart-context";
 import { PrinterProvider } from "@/lib/printer-context";
@@ -31,7 +31,7 @@ function App() {
       <ThemeProvider>
         <LanguageProvider>
           <CartProvider>
-            <SupabaseAuthProvider>
+            <AuthProvider>
               <AndroidProvider>
                 <PrinterProvider>
                   <AppWrapper>
@@ -42,7 +42,7 @@ function App() {
                   </AppWrapper>
                 </PrinterProvider>
               </AndroidProvider>
-            </SupabaseAuthProvider>
+            </AuthProvider>
           </CartProvider>
         </LanguageProvider>
       </ThemeProvider>

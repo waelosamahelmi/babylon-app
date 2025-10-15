@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertOrderSchema, insertOrderItemSchema, insertToppingSchema, insertMenuItemSchema } from "@shared/schema";
 import { authService, type AuthUser } from "./auth";
+import { generateToken, requireAuth } from "./jwt-auth";
 import { updateMenuItemImages, addImageToMenuItem, getMenuItemsWithoutImages } from "./image-updater";
 import { upload, uploadImageToSupabase, deleteImageFromSupabase, ensureStorageBucket } from "./file-upload";
 import { z } from "zod";
@@ -15,13 +16,7 @@ declare module "express-session" {
   }
 }
 
-// Authentication middleware
-const requireAuth = (req: any, res: any, next: any) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-  next();
-};
+// Authentication middleware is now imported from jwt-auth.ts
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -46,6 +41,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       req.session.user = user;
       
+      // Generate JWT token for cross-origin requests
+      const token = generateToken(user);
+      
       // Force session save to ensure it's written to store
       req.session.save((err) => {
         if (err) {
@@ -60,7 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`👤 Session user: ${JSON.stringify(req.session.user)}`);
       console.log(`🔧 Session cookie config: ${JSON.stringify(req.session.cookie)}`);
       
-      res.json({ user });
+      res.json({ user, token });
     } catch (error) {
       console.error(`💥 Login error:`, error);
       res.status(500).json({ error: "Authentication failed" });
