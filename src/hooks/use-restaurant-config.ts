@@ -3,6 +3,59 @@ import { supabase, handleSupabaseError, formatSupabaseResponse } from "@/lib/sup
 import { useSupabaseAuth } from "@/lib/supabase-auth-context";
 import { RestaurantConfig, InsertRestaurantConfig } from "../../shared/schema";
 
+// Transform camelCase fields to snake_case for database
+function transformToDatabase(formData: any): any {
+  return {
+    name: formData.name,
+    name_en: formData.nameEn,
+    tagline: formData.tagline,
+    tagline_en: formData.taglineEn,
+    description: formData.description,
+    description_en: formData.descriptionEn,
+    phone: formData.phone,
+    email: formData.email,
+    address: formData.address,
+    social_media: formData.socialMedia,
+    hours: formData.hours,
+    services: formData.services,
+    delivery_config: formData.deliveryConfig,
+    theme: formData.theme,
+    logo: formData.logo,
+    about: formData.about,
+    hero: formData.hero,
+    is_active: formData.isActive || false,
+  };
+}
+
+// Transform snake_case database fields to camelCase
+function transformFromDatabase(dbData: any): RestaurantConfig {
+  if (!dbData) return dbData;
+  
+  return {
+    id: dbData.id,
+    name: dbData.name,
+    nameEn: dbData.name_en,
+    tagline: dbData.tagline,
+    taglineEn: dbData.tagline_en,
+    description: dbData.description,
+    descriptionEn: dbData.description_en,
+    phone: dbData.phone,
+    email: dbData.email,
+    address: dbData.address,
+    socialMedia: dbData.social_media,
+    hours: dbData.hours,
+    services: dbData.services,
+    deliveryConfig: dbData.delivery_config,
+    theme: dbData.theme,
+    logo: dbData.logo,
+    about: dbData.about,
+    hero: dbData.hero,
+    isActive: dbData.is_active,
+    createdAt: dbData.created_at,
+    updatedAt: dbData.updated_at,
+  };
+}
+
 // Get active restaurant config
 export function useRestaurantConfig() {
   const { user } = useSupabaseAuth();
@@ -28,7 +81,7 @@ export function useRestaurantConfig() {
       }
 
       console.log('✅ Restaurant config fetched successfully');
-      return formatSupabaseResponse(data) as RestaurantConfig;
+      return transformFromDatabase(data);
     },
     enabled: !!user,
   });
@@ -54,7 +107,7 @@ export function useAllRestaurantConfigs() {
       }
 
       console.log('✅ Restaurant configs fetched successfully');
-      return formatSupabaseResponse(data) as RestaurantConfig[];
+      return data?.map(transformFromDatabase) || [];
     },
     enabled: !!user,
   });
@@ -65,12 +118,15 @@ export function useCreateRestaurantConfig() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (configData: InsertRestaurantConfig) => {
+    mutationFn: async (configData: any) => {
       console.log('🏪 Creating restaurant config...', configData);
+
+      // Transform camelCase to snake_case for database
+      const dbData = transformToDatabase(configData);
 
       const { data, error } = await supabase
         .from('restaurant_config')
-        .insert(configData)
+        .insert(dbData)
         .select()
         .single();
 
@@ -80,7 +136,7 @@ export function useCreateRestaurantConfig() {
       }
 
       console.log('✅ Restaurant config created successfully');
-      return formatSupabaseResponse(data);
+      return transformFromDatabase(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["restaurant-config"] });
@@ -94,12 +150,15 @@ export function useUpdateRestaurantConfig() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...configData }: { id: string } & Partial<InsertRestaurantConfig>) => {
+    mutationFn: async ({ id, ...configData }: { id: string } & any) => {
       console.log('🏪 Updating restaurant config...', { id, configData });
+
+      // Transform camelCase to snake_case for database  
+      const dbData = transformToDatabase(configData);
 
       const { data, error } = await supabase
         .from('restaurant_config')
-        .update(configData)
+        .update(dbData)
         .eq('id', id)
         .select()
         .single();
@@ -110,7 +169,7 @@ export function useUpdateRestaurantConfig() {
       }
 
       console.log('✅ Restaurant config updated successfully');
-      return formatSupabaseResponse(data);
+      return transformFromDatabase(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["restaurant-config"] });
@@ -180,7 +239,7 @@ export function useActivateRestaurantConfig() {
       }
 
       console.log('✅ Restaurant config activated successfully');
-      return formatSupabaseResponse(data);
+      return transformFromDatabase(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["restaurant-config"] });
