@@ -223,7 +223,8 @@ export default function Admin() {
     if (isAndroid && hasNotificationPermission) {
       sendNotification(
         "🚨 NEW ORDER RECEIVED! 🚨",
-        `Order #${orderData.orderNumber} - ${orderData.customerName} - €${orderData.totalAmount.toFixed(2)}`
+        `Order #${orderData.orderNumber} - ${orderData.customerName} - €${orderData.totalAmount.toFixed(2)}`,
+        "alert"
       );
     }
   }, [refetchOrders, isAndroid, hasNotificationPermission, sendNotification]);
@@ -447,7 +448,8 @@ export default function Admin() {
           const totalAmount = parseFloat(order.total_amount || order.totalAmount || '0');
           sendNotification(
             "🚨 PENDING ORDER!",
-            `Order #${order.id} from ${order.customer_name || order.customerName || 'Customer'} - €${totalAmount.toFixed(2)}`
+            `Order #${order.id} from ${order.customer_name || order.customerName || 'Customer'} - €${totalAmount.toFixed(2)}`,
+            "alert"
           );
         });
       }
@@ -485,7 +487,8 @@ export default function Admin() {
                 const totalAmount = parseFloat(order.total_amount || order.totalAmount || '0');
                 sendNotification(
                   `🚨 URGENT: Order #${order.id}`,
-                  `${order.customer_name || order.customerName || 'Customer'} is waiting! €${totalAmount.toFixed(2)} - ${order.order_type || order.orderType || 'pickup'}`
+                  `${order.customer_name || order.customerName || 'Customer'} is waiting! €${totalAmount.toFixed(2)} - ${order.order_type || order.orderType || 'pickup'}`,
+                  "alert"
                 );
               }, index * 1000); // Stagger notifications by 1 second each
             });

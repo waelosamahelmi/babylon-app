@@ -8,6 +8,12 @@ import android.net.wifi.WifiManager;
 import android.util.Base64;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
+import android.app.NotificationManager;
+import android.app.NotificationChannel;
+import android.app.Notification;
+import android.media.AudioAttributes;
+import android.media.MediaPlayer;
+import android.net.Uri;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
@@ -527,6 +533,168 @@ public class PrinterBridge {
     public void refreshNetworkState() {
         Log.d(TAG, "🔄 Refreshing network state");
         // This can be called when the activity resumes to update network info
+    }
+
+    // ===== NOTIFICATION METHODS =====
+
+    /**
+     * Show notification with default system sound
+     */
+    @JavascriptInterface
+    public void showNotification(String title, String message) {
+        showNotificationWithSound(title, message, null);
+    }
+
+    /**
+     * Send notification (alias for showNotification for compatibility)
+     */
+    @JavascriptInterface
+    public void sendNotification(String title, String message) {
+        showNotificationWithSound(title, message, null);
+    }
+
+    /**
+     * Show notification with custom sound
+     * @param title Notification title
+     * @param message Notification message
+     * @param soundName Sound file name in res/raw folder (without extension), or null for default
+     */
+    @JavascriptInterface
+    public void showNotificationWithSound(String title, String message, String soundName) {
+        try {
+            android.app.NotificationManager notificationManager = 
+                (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            
+            if (notificationManager == null) {
+                Log.e(TAG, "❌ NotificationManager not available");
+                return;
+            }
+
+            String channelId = "restaurant_orders";
+            String channelName = "Restaurant Orders";
+            
+            // Create notification channel for Android O and above
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                android.app.NotificationChannel channel = notificationManager.getNotificationChannel(channelId);
+                if (channel == null) {
+                    channel = new android.app.NotificationChannel(
+                        channelId, 
+                        channelName, 
+                        android.app.NotificationManager.IMPORTANCE_HIGH
+                    );
+                    channel.setDescription("Notifications for new restaurant orders");
+                    channel.enableLights(true);
+                    channel.enableVibration(true);
+                    channel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
+                    
+                    // Set custom sound if specified
+                    if (soundName != null && !soundName.trim().isEmpty()) {
+                        try {
+                            String soundFileName = soundName.toLowerCase().replace(" ", "_");
+                            android.net.Uri soundUri = android.net.Uri.parse(
+                                "android.resource://" + context.getPackageName() + "/raw/" + soundFileName
+                            );
+                            android.media.AudioAttributes audioAttributes = new android.media.AudioAttributes.Builder()
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                                .build();
+                            channel.setSound(soundUri, audioAttributes);
+                            Log.d(TAG, "🔊 Custom sound set: " + soundFileName);
+                        } catch (Exception e) {
+                            Log.w(TAG, "⚠️ Failed to set custom sound, using default: " + e.getMessage());
+                        }
+                    }
+                    
+                    notificationManager.createNotificationChannel(channel);
+                    Log.d(TAG, "✅ Notification channel created: " + channelId);
+                }
+            }
+
+            // Build notification
+            android.app.Notification.Builder builder;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                builder = new android.app.Notification.Builder(context, channelId);
+            } else {
+                builder = new android.app.Notification.Builder(context);
+                // For older versions, set sound directly on notification
+                if (soundName != null && !soundName.trim().isEmpty()) {
+                    try {
+                        String soundFileName = soundName.toLowerCase().replace(" ", "_");
+                        android.net.Uri soundUri = android.net.Uri.parse(
+                            "android.resource://" + context.getPackageName() + "/raw/" + soundFileName
+                        );
+                        builder.setSound(soundUri);
+                        Log.d(TAG, "🔊 Custom sound set for legacy notification: " + soundFileName);
+                    } catch (Exception e) {
+                        Log.w(TAG, "⚠️ Failed to set custom sound on legacy notification: " + e.getMessage());
+                        builder.setDefaults(android.app.Notification.DEFAULT_SOUND);
+                    }
+                } else {
+                    builder.setDefaults(android.app.Notification.DEFAULT_SOUND);
+                }
+            }
+
+            builder.setContentTitle(title != null ? title : "Restaurant Order")
+                   .setContentText(message != null ? message : "New notification")
+                   .setSmallIcon(android.R.drawable.ic_dialog_info) // You can change this to a custom icon
+                   .setPriority(android.app.Notification.PRIORITY_HIGH)
+                   .setAutoCancel(true)
+                   .setDefaults(android.app.Notification.DEFAULT_LIGHTS | android.app.Notification.DEFAULT_VIBRATE);
+
+            // Show notification
+            int notificationId = (int) System.currentTimeMillis();
+            notificationManager.notify(notificationId, builder.build());
+            
+            Log.d(TAG, String.format("✅ Notification shown - Title: '%s', Message: '%s', Sound: %s", 
+                title, message, soundName != null ? soundName : "default"));
+            
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Failed to show notification: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Play a custom sound from res/raw folder
+     * @param soundName Sound file name (without extension)
+     */
+    @JavascriptInterface
+    public void playCustomSound(String soundName) {
+        try {
+            if (soundName == null || soundName.trim().isEmpty()) {
+                Log.w(TAG, "⚠️ Sound name is empty");
+                return;
+            }
+
+            String soundFileName = soundName.toLowerCase().replace(" ", "_");
+            
+            // Get resource ID for the sound file
+            int soundResId = context.getResources().getIdentifier(
+                soundFileName, "raw", context.getPackageName()
+            );
+            
+            if (soundResId == 0) {
+                Log.e(TAG, "❌ Sound file not found: " + soundFileName + " in res/raw/");
+                return;
+            }
+
+            // Create and play MediaPlayer
+            android.media.MediaPlayer mediaPlayer = android.media.MediaPlayer.create(context, soundResId);
+            if (mediaPlayer != null) {
+                mediaPlayer.setOnCompletionListener(new android.media.MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(android.media.MediaPlayer mp) {
+                        mp.release();
+                    }
+                });
+                mediaPlayer.start();
+                Log.d(TAG, "🔊 Playing custom sound: " + soundFileName);
+            } else {
+                Log.e(TAG, "❌ Failed to create MediaPlayer for: " + soundFileName);
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Failed to play custom sound: " + e.getMessage(), e);
+        }
     }
 
     /**

@@ -16,7 +16,8 @@ interface AndroidContextType {
   requestBluetoothPermission: () => Promise<boolean>;
   requestNetworkPermission: () => Promise<boolean>;
   enablePersistentLogin: () => void;
-  sendNotification: (title: string, message: string) => void;
+  sendNotification: (title: string, message: string, customSound?: string) => void;
+  playCustomSound: (soundName: string) => void;
   scanBluetooth: () => Promise<any[]>;
   connectToLocalNetwork: (ip: string) => Promise<boolean>;
   markPermissionsRequested: () => void;
@@ -348,10 +349,13 @@ export function AndroidProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const sendNotification = (title: string, message: string) => {
+  const sendNotification = (title: string, message: string, customSound?: string) => {
     if (typeof (window as any).Android !== 'undefined' && hasNotificationPermission) {
       try {
-        if (typeof (window as any).Android.showNotification !== 'undefined') {
+        // Use custom sound notification method if sound is specified
+        if (customSound && typeof (window as any).Android.showNotificationWithSound !== 'undefined') {
+          (window as any).Android.showNotificationWithSound(title, message, customSound);
+        } else if (typeof (window as any).Android.showNotification !== 'undefined') {
           (window as any).Android.showNotification(title, message);
         } else if (typeof (window as any).Android.sendNotification !== 'undefined') {
           (window as any).Android.sendNotification(title, message);
@@ -364,11 +368,37 @@ export function AndroidProvider({ children }: { children: ReactNode }) {
     } else if ('Notification' in window && hasNotificationPermission) {
       try {
         new Notification(title, { body: message });
+        // Play custom sound for web notifications if specified
+        if (customSound) {
+          playCustomSound(customSound);
+        }
       } catch (error) {
         console.error('Error sending web notification:', error);
       }
     } else {
       console.log('Notifications not available or permission not granted');
+    }
+  };
+
+  const playCustomSound = (soundName: string) => {
+    if (typeof (window as any).Android !== 'undefined') {
+      try {
+        if (typeof (window as any).Android.playCustomSound !== 'undefined') {
+          (window as any).Android.playCustomSound(soundName);
+        } else {
+          console.log('playCustomSound method not available on Android interface');
+        }
+      } catch (error) {
+        console.error('Error playing custom sound:', error);
+      }
+    } else {
+      // Fallback for web: try to play audio file
+      try {
+        const audio = new Audio(`/sounds/${soundName}.mp3`);
+        audio.play().catch(e => console.warn('Could not play web audio:', e));
+      } catch (error) {
+        console.warn('Could not play custom sound on web:', error);
+      }
     }
   };  const scanBluetooth = async (): Promise<any[]> => {
     console.log('🔵 Starting comprehensive Bluetooth scan...');
@@ -691,6 +721,7 @@ export function AndroidProvider({ children }: { children: ReactNode }) {
     requestNetworkPermission,
     enablePersistentLogin,
     sendNotification,
+    playCustomSound,
     scanBluetooth,
     connectToLocalNetwork,
     markPermissionsRequested,

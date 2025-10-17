@@ -110,7 +110,7 @@ export class BackgroundNotificationManager {
         const title = `🚨 NEW ORDER #${orderData.orderNumber}`;
         const message = `${orderData.customerName} - €${orderData.totalAmount.toFixed(2)} - ${orderData.orderType.toUpperCase()}`;
         
-        // Send notification with high priority and persistent flags
+        // Send notification with high priority, persistent flags, and custom alert sound
         if (typeof (window as any).Android.showNotificationWithActions !== 'undefined') {
           // Enhanced notification with action buttons
           await (window as any).Android.showNotificationWithActions(
@@ -122,9 +122,13 @@ export class BackgroundNotificationManager {
               priority: 'HIGH',
               persistent: true,
               sound: true,
-              vibrate: true
+              vibrate: true,
+              customSound: 'alert' // Use the alert.mp3 sound
             })
           );
+        } else if (typeof (window as any).Android.showNotificationWithSound !== 'undefined') {
+          // Use custom sound notification method
+          await (window as any).Android.showNotificationWithSound(title, message, "alert");
         } else if (typeof (window as any).Android.showNotification !== 'undefined') {
           // Fallback to basic notification
           await (window as any).Android.showNotification(title, message);

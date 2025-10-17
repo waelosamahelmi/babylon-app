@@ -83,7 +83,7 @@ export function useSupabaseRealtime(options: UseSupabaseRealtimeOptions = {}) {
             const message = `Order #${order.order_number || order.id} from ${order.customer_name || 'Customer'} - €${order.total_amount}`;
             
             console.log('📱 Sending background notification:', { title, message });
-            sendNotification(title, message);
+            sendNotification(title, message, "alert");
           }
           
           callbacksRef.current.onNewOrder?.(payload.new);
@@ -114,7 +114,7 @@ export function useSupabaseRealtime(options: UseSupabaseRealtimeOptions = {}) {
             const message = `Order #${order.order_number || order.id} - ${title}`;
             
             console.log('📱 Sending status update notification:', { title, message });
-            sendNotification(title, message);
+            sendNotification(title, message, "alert");
           }
           
           callbacksRef.current.onOrderUpdate?.(payload.new);
