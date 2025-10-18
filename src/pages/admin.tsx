@@ -6,6 +6,7 @@ import { useSupabaseMenuItems, useSupabaseUpdateMenuItem, useSupabaseCreateMenuI
 import { useSupabaseRealtime } from "@/hooks/use-supabase-realtime";
 import { useLanguage } from "@/lib/language-context";
 import { useSupabaseAuth } from "@/lib/supabase-auth-context";
+import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme-context";
 import { useAndroid } from "@/lib/android-context";
 import { usePrinter } from "@/lib/printer-context";
@@ -95,6 +96,10 @@ export default function Admin() {
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [showOrderDetailModal, setShowOrderDetailModal] = useState(false);
   const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
+  
+  // Restaurant busy status
+  const [isRestaurantBusy, setIsRestaurantBusy] = useState(false);
+  const [isUpdatingBusyStatus, setIsUpdatingBusyStatus] = useState(false);
   
   // Restaurant settings state
   const [restaurantSettings, setRestaurantSettings] = useState<any>({
@@ -187,6 +192,59 @@ export default function Admin() {
     if (language === "en") return en;
     if (language === "ar") return ar;
     return fi;
+  };
+
+  // Fetch restaurant busy status
+  useEffect(() => {
+    const fetchBusyStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('restaurant_settings')
+          .select('is_busy')
+          .single();
+        
+        if (error) throw error;
+        setIsRestaurantBusy(data?.is_busy || false);
+      } catch (error) {
+        console.error('Error fetching busy status:', error);
+      }
+    };
+
+    fetchBusyStatus();
+  }, []);
+
+  // Toggle restaurant busy status
+  const toggleRestaurantBusy = async () => {
+    setIsUpdatingBusyStatus(true);
+    try {
+      const newStatus = !isRestaurantBusy;
+      
+      const { error } = await supabase
+        .from('restaurant_settings')
+        .update({ is_busy: newStatus })
+        .eq('id', 1); // Assuming single settings row with id=1
+      
+      if (error) throw error;
+      
+      setIsRestaurantBusy(newStatus);
+      toast({
+        title: newStatus 
+          ? adminT("Ravintola asetettu kiireiseksi", "Restaurant set to busy", "تم تعيين المطعم مشغول")
+          : adminT("Ravintola ei ole enää kiireinen", "Restaurant no longer busy", "المطعم لم يعد مشغولاً"),
+        description: newStatus
+          ? adminT("Asiakkaat näkevät, että olet kiireinen", "Customers will see you're busy", "سيرى العملاء أنك مشغول")
+          : adminT("Asiakkaat voivat taas tehdä tilauksia normaalisti", "Customers can order normally again", "يمكن للعملاء الطلب بشكل طبيعي مرة أخرى"),
+      });
+    } catch (error) {
+      console.error('Error toggling busy status:', error);
+      toast({
+        title: adminT("Virhe", "Error", "خطأ"),
+        description: adminT("Kiireisyystilan muuttaminen epäonnistui", "Failed to update busy status", "فشل تحديث الحالة"),
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdatingBusyStatus(false);
+    }
   };  // Memoize realtime callbacks to prevent unnecessary reconnections
   const handleNewOrder = useCallback(async (order: any) => {
     console.log('🆕 New order notification:', order);
@@ -738,6 +796,20 @@ export default function Admin() {
                 <span>{isConnected ? adminT("Yhdistetty", "Connected", "متصل") : adminT("Ei yhteyttä", "Disconnected", "غير متصل")}</span>
               </div>
 
+              {/* Busy Status Toggle */}
+              <div className="flex items-center space-x-2 px-3 py-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg">
+                <label htmlFor="busy-toggle" className="text-xs font-medium cursor-pointer">
+                  {adminT("Kiireinen", "Busy", "مشغول")}
+                </label>
+                <Switch
+                  id="busy-toggle"
+                  checked={isRestaurantBusy}
+                  onCheckedChange={toggleRestaurantBusy}
+                  disabled={isUpdatingBusyStatus}
+                  className="data-[state=checked]:bg-orange-600"
+                />
+              </div>
+
               {/* Theme Toggle */}
               <Button
                 variant="outline"
@@ -837,6 +909,20 @@ export default function Admin() {
               }`}>
                 <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}></div>
                 <span>{isConnected ? adminT("Yhdistetty", "Connected", "متصل") : adminT("Ei yhteyttä", "Disconnected", "غير متصل")}</span>
+              </div>
+
+              {/* Busy Status Toggle */}
+              <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <label htmlFor="busy-toggle-mobile" className="text-sm font-medium">
+                  {adminT("Ravintola kiireinen", "Restaurant Busy", "المطعم مشغول")}
+                </label>
+                <Switch
+                  id="busy-toggle-mobile"
+                  checked={isRestaurantBusy}
+                  onCheckedChange={toggleRestaurantBusy}
+                  disabled={isUpdatingBusyStatus}
+                  className="data-[state=checked]:bg-orange-600"
+                />
               </div>
 
               {/* Theme Toggle */}
