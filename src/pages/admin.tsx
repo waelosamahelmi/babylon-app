@@ -188,12 +188,8 @@ export default function Admin() {
     if (language === "ar") return ar;
     return fi;
   };  // Memoize realtime callbacks to prevent unnecessary reconnections
-  const handleNewOrder = useCallback((order: any) => {
+  const handleNewOrder = useCallback(async (order: any) => {
     console.log('🆕 New order notification:', order);
-    
-    // Get enhanced sound manager and start sound immediately
-    const soundManager = NotificationSoundManager.getInstance();
-    soundManager.forceStartSound();
     
     // Create properly formatted order data for background notification
     const orderData = {
@@ -208,16 +204,20 @@ export default function Admin() {
       items: order.items || []
     };
     
-    // Show enhanced background notification immediately
+    // Refresh orders first to get the order in the list
+    await refetchOrders();
+    
+    // NOW play sound after order appears in list
+    const soundManager = NotificationSoundManager.getInstance();
+    soundManager.forceStartSound();
+    
+    // Show enhanced background notification
     backgroundNotificationManager.showOrderNotification(orderData);
     
     // Add strong vibration if supported
     if ('vibrate' in navigator) {
       navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
     }
-    
-    // Refresh orders to trigger the continuous notification system
-    refetchOrders();
     
     // Send urgent Android notification if available
     if (isAndroid && hasNotificationPermission) {

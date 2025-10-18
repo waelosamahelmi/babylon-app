@@ -135,6 +135,60 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
     return service;
   });
 
+  // Auto-add Direct Printer on Android devices
+  useEffect(() => {
+    const addDirectPrinter = async () => {
+      if (!isAndroid) return;
+      
+      try {
+        console.log('🖨️ Checking for Direct Printer (LocalPrintService)...');
+        const { directPrint } = await import('./direct-print');
+        
+        const isAvailable = await directPrint.isAvailable();
+        
+        if (isAvailable) {
+          console.log('✅ Direct Printer available! Adding to printers list...');
+          
+          const directPrinterDevice: PrinterDevice = {
+            id: 'direct-print-system',
+            name: 'Direct Printer (Z92)',
+            address: 'system://direct-print',
+            type: 'network', // Use 'network' type to show in list
+            isConnected: true, // Auto-connect!
+            status: 'idle'
+          };
+          
+          // Add to printers list
+          setPrinters(prev => {
+            const exists = prev.find(p => p.id === 'direct-print-system');
+            if (exists) {
+              return prev.map(p => p.id === 'direct-print-system' ? directPrinterDevice : p);
+            }
+            return [directPrinterDevice, ...prev];
+          });
+          
+          // Set as active printer
+          setActivePrinter(directPrinterDevice);
+          setConnectionStatus('Connected');
+          
+          console.log('✅ Direct Printer added and set as active!');
+          
+          toast({
+            title: "Direct Printer Connected",
+            description: "System printer ready for 58mm thermal printing",
+          });
+        } else {
+          console.log('⚠️ Direct Printer not available on this device');
+        }
+      } catch (error) {
+        console.error('❌ Failed to add Direct Printer:', error);
+      }
+    };
+    
+    // Add Direct Printer first
+    addDirectPrinter();
+  }, [isAndroid, toast]);
+
   // Auto re-discover and reconnect to saved printers on startup
   useEffect(() => {
     console.log('📄 Auto-discovering saved printers on startup...');
@@ -254,6 +308,33 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
     return () => clearTimeout(timeoutId);
   }, [isAndroid, toast]);
 
+  // Listen for manually added Bluetooth printers
+  useEffect(() => {
+    const handleBluetoothPrinterAdded = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const printer = customEvent.detail as PrinterDevice;
+      
+      console.log('📱 Received bluetooth-printer-added event:', printer);
+      
+      // Add to printers list if not already present
+      setPrinters(prev => {
+        const exists = prev.find(p => p.id === printer.id);
+        if (exists) {
+          console.log('⚠️ Printer already exists, skipping');
+          return prev;
+        }
+        console.log('✅ Adding new Bluetooth printer to list');
+        return [...prev, printer];
+      });
+    };
+
+    window.addEventListener('bluetooth-printer-added', handleBluetoothPrinterAdded);
+    
+    return () => {
+      window.removeEventListener('bluetooth-printer-added', handleBluetoothPrinterAdded);
+    };
+  }, []);
+
   // Discovery functions
   const startBluetoothDiscovery = useCallback(async () => {
     if (isDiscovering) return;
@@ -262,68 +343,63 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
     setScanProgress(0);
     
     try {
-      console.log('📱 Starting Bluetooth discovery with thermal printer service...');
+      console.log('📱 Starting simple Bluetooth discovery...');
       
       // Check if Android
       if (!isAndroid) {
         throw new Error('Bluetooth scanning is only available on Android devices');
       }
 
-      // Import and use thermal printer service
-      const { CapacitorThermalPrinterService } = await import('./capacitor-thermal-printer');
-      const thermalPrinter = new CapacitorThermalPrinterService();
+      // Use simple Bluetooth printer service
+      const { SimpleBluetoothPrinter } = await import('./simple-bluetooth-printer');
+      const btPrinter = new SimpleBluetoothPrinter();
       
-      // Setup progress tracking - Note: thermal printer service doesn't have onProgress callback
-      // We'll track progress manually during the scan
+      console.log('� Initializing Bluetooth...');
+      await btPrinter.initialize();
+      
+      console.log('🔍 Scanning for Bluetooth devices...');
+      const foundDevices: any[] = [];
+      
+      await btPrinter.scanForPrinters((printer) => {
+        foundDevices.push(printer);
+        
+        // Add to printer list immediately
+        const printerDevice: PrinterDevice = {
+          id: `bt-${printer.id.replace(/[:-]/g, '')}`,
+          name: printer.name,
+          address: printer.id, // Use deviceId as address for connection
+          type: 'bluetooth',
+          isOnline: true,
+          isConnected: false,
+          metadata: {
+            rssi: printer.rssi
+          }
+        };
 
-      // Start scanning with 30-second timeout
-      const scanPromise = thermalPrinter.scanBluetoothPrinters();
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Scan timeout after 30 seconds')), 30000);
+        setPrinters(prev => {
+          const exists = prev.find(p => p.id === printerDevice.id);
+          if (!exists) {
+            console.log(`📱 Added device: ${printerDevice.name}`);
+            return [...prev, printerDevice];
+          }
+          return prev;
+        });
+
+        setScanProgress(prev => Math.min(prev + 10, 90));
       });
-
-      const devices = await Promise.race([scanPromise, timeoutPromise]);
-      console.log(`📱 Bluetooth scan found ${devices.length} devices`);
       
-        // Convert thermal printer devices to PrinterDevice format
-        devices.forEach(device => {
-          const printerDevice: PrinterDevice = {
-            id: device.address,
-            name: device.name || 'Unknown Bluetooth Printer',
-            address: device.address,
-            type: 'bluetooth',
-            isConnected: false,
-            status: 'idle',
-            capabilities: {
-              paperWidth: 58,
-              supportsImages: false,
-              supportsCLahting: false,
-              supportsQR: false,
-              supportsBarcode: false,
-              maxLineLength: 32,
-              characterEncoding: 'UTF-8'
-            }
-          };
-          
-          setPrinters(current => {
-            const existing = current.find(p => p.id === printerDevice.id);
-            if (existing) {
-              return current.map(p => p.id === printerDevice.id ? printerDevice : p);
-            } else {
-              return [...current, printerDevice];
-            }
-          });
-        });      setScanProgress(100);
+      setScanProgress(100);
+      console.log(`✅ Bluetooth scan complete - found ${foundDevices.length} devices`);
       
-      if (devices.length === 0) {
+      if (foundDevices.length === 0) {
         toast({
-          title: "No Bluetooth Printers Found",
-          description: "Make sure your printer is powered on and in pairing mode",
+          title: "No Bluetooth Devices Found",
+          description: "Make sure your printer is powered on and Bluetooth is enabled",
         });
       } else {
         toast({
           title: "Bluetooth Scan Complete",
-          description: `Found ${devices.length} Bluetooth printer${devices.length === 1 ? '' : 's'}`,
+          description: `Found ${foundDevices.length} Bluetooth device${foundDevices.length === 1 ? '' : 's'}`,
         });
       }
     } catch (error) {
@@ -392,39 +468,46 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
       console.log(`🔗 Connecting to printer: ${printer.name} (${printer.type})`);
       
       if (printer.type === 'bluetooth') {
-        // For Bluetooth printers, use thermal printer service
+        // For Bluetooth printers, use simple bluetooth printer service
         console.log(`🔵 Connecting to Bluetooth printer: ${printer.address}`);
         
-        const { CapacitorThermalPrinterService } = await import('./capacitor-thermal-printer');
-        const thermalPrinter = new CapacitorThermalPrinterService();
-        
-        // Try connecting to the Bluetooth device
-        const bluetoothDevice = {
-          address: printer.address,
-          name: printer.name
-        };
-        const connected = await thermalPrinter.connectToPrinter(bluetoothDevice);
-        
-        if (connected) {
-          // Update printer status
-          setPrinters(prev => prev.map(p => 
-            p.id === printer.id 
-              ? { ...p, isConnected: true, status: 'idle' } 
-              : { ...p, isConnected: false }
-          ));
+        try {
+          const { SimpleBluetoothPrinter } = await import('./simple-bluetooth-printer');
+          const btPrinter = new SimpleBluetoothPrinter();
           
-          setActivePrinter({ ...printer, isConnected: true, status: 'idle' });
-          setConnectionStatus('Connected');
+          console.log('🔵 Initializing Bluetooth...');
+          await btPrinter.initialize();
           
-          // Record successful connection in localStorage
-          LocalPrinterManager.recordConnection(printer.id);
+          console.log('🔵 Connecting to device...');
+          const connected = await btPrinter.connect(printer.address);
           
-          toast({
-            title: "Connected",
-            description: `Successfully connected to Bluetooth printer ${printer.name}`,
-          });
-        } else {
-          throw new Error('Failed to establish Bluetooth connection');
+          if (connected) {
+            // Update printer status
+            setPrinters(prev => prev.map(p => 
+              p.id === printer.id 
+                ? { ...p, isConnected: true, status: 'idle' } 
+                : { ...p, isConnected: false }
+            ));
+            
+            setActivePrinter({ ...printer, isConnected: true, status: 'idle' });
+            setConnectionStatus('Connected');
+            
+            // Record successful connection
+            LocalPrinterManager.recordConnection(printer.id);
+            
+            toast({
+              title: "Connected",
+              description: `Successfully connected to ${printer.name}. Ready to print!`,
+            });
+            
+            console.log('✅ Bluetooth printer connected successfully!');
+            return;
+          } else {
+            throw new Error('Failed to connect to Bluetooth printer');
+          }
+        } catch (btError: any) {
+          console.error('❌ Bluetooth printer error:', btError);
+          throw new Error(`Bluetooth connection failed: ${btError.message || btError}`);
         }
       } else {
         // For network printers, use the original logic
@@ -556,10 +639,38 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
   }, [activePrinter, toast]);
   // Printing functions
   const printOrder = useCallback(async (order: any): Promise<boolean> => {
+    // PRIORITY 1: Try DirectPrint on Android (auto-print with LocalPrintService)
+    if (isAndroid) {
+      try {
+        console.log('🖨️ [Android] Attempting DirectPrint for order...');
+        const { directPrint } = await import('./direct-print');
+        
+        const isAvailable = await directPrint.isAvailable();
+        if (isAvailable) {
+          console.log('✅ DirectPrint available, printing order silently...');
+          const success = await directPrint.printOrder(order, true); // silentPrint=true
+          
+          if (success) {
+            toast({
+              title: "Order Sent to Printer",
+              description: `Order #${order.id} printing...`,
+            });
+            return true;
+          }
+        } else {
+          console.log('⚠️ DirectPrint not available, falling back to network printer');
+        }
+      } catch (error) {
+        console.error('❌ DirectPrint failed:', error);
+        // Continue to fallback
+      }
+    }
+
+    // FALLBACK: Use configured printer
     if (!activePrinter || !activePrinter.isConnected) {
       toast({
         title: "No Active Printer",
-        description: "Please connect to a printer first",
+        description: "Please connect to a printer first or enable LocalPrintService",
         variant: "destructive",
       });
       return false;
@@ -613,7 +724,7 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
       });
       return false;
     }
-  }, [activePrinter, printerService, toast]);
+  }, [activePrinter, printerService, isAndroid, toast]);
 
   const printReceipt = useCallback(async (data: ReceiptData): Promise<boolean> => {
     if (!activePrinter || !activePrinter.isConnected) {
@@ -653,6 +764,73 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
   const testPrint = useCallback(async (printerId: string) => {
     try {
       console.log(`🧪 Running test print for: ${printerId}`);
+      
+      // Find the printer
+      const printer = printers.find(p => p.id === printerId);
+      
+      // PRIORITY 1: On Android, ALWAYS try Direct Print first (for Z92 LocalPrintService)
+      if (isAndroid) {
+        try {
+          console.log('🖨️ [Android Device] Attempting Direct Print using system print service...');
+          const { directPrint } = await import('./direct-print');
+          
+          console.log('📋 Checking print service availability...');
+          const isAvailable = await directPrint.isAvailable();
+          console.log(`📋 Print service available: ${isAvailable}`);
+          
+          if (isAvailable) {
+            console.log('✅ System print service detected! Sending test print...');
+            console.log('📄 This will use LocalPrintService if available on Z92');
+            
+            await directPrint.testPrint();
+            
+            toast({
+              title: "Test Print Sent",
+              description: "Print dialog should appear. Select your printer if needed.",
+            });
+            return;
+          } else {
+            console.log('⚠️ No system print service found, trying other methods...');
+          }
+        } catch (directPrintError: any) {
+          console.error('❌ Direct Print failed:', directPrintError);
+          console.log('⚠️ Falling back to alternative printing methods...');
+          // Continue to fallback options
+        }
+      }
+      
+      // FALLBACK: Check if this is a Bluetooth printer
+      if (printer && printer.type === 'bluetooth') {
+        console.log('🔵 Using simple Bluetooth printer for test print');
+        
+        const { SimpleBluetoothPrinter } = await import('./simple-bluetooth-printer');
+        const btPrinter = new SimpleBluetoothPrinter();
+        
+        try {
+          // Initialize and connect
+          await btPrinter.initialize();
+          await btPrinter.connect(printer.address);
+          
+          // Print test receipt
+          await btPrinter.printTestReceipt();
+          
+          toast({
+            title: "Test Print Sent",
+            description: "Check your printer for the test receipt!",
+          });
+          return;
+        } catch (btError: any) {
+          console.error('❌ Bluetooth test print failed:', btError);
+          toast({
+            title: "Test Print Failed",
+            description: `Bluetooth Error: ${btError.message || 'Unknown error'}`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
+      // LAST RESORT: For network printers, use regular printer service
       const success = await printerService.testPrint(printerId);
       
       if (success) {
@@ -675,7 +853,7 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
         variant: "destructive",
       });
     }
-  }, [printerService, toast]);
+  }, [printers, printerService, isAndroid, toast]);
 
   const refreshPrinterStatus = useCallback(async (printerId: string) => {
     const printer = printers.find(p => p.id === printerId);

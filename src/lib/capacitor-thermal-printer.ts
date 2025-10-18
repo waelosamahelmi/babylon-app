@@ -133,16 +133,25 @@ export class CapacitorThermalPrinterService {
       
       // Provide more detailed error information
       let errorMessage = 'Unknown error occurred';
-      if (error.message) {
-        errorMessage = error.message;
+      
+      if (error && typeof error === 'object') {
+        if (error.code === 'UNIMPLEMENTED' || error.message?.includes('UNIMPLEMENTED')) {
+          errorMessage = 'Thermal printer plugin is not implemented on this platform. The plugin may not be properly installed or configured.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        } else if (error.code) {
+          errorMessage = `Error code: ${error.code}`;
+        }
       } else if (typeof error === 'string') {
         errorMessage = error;
-      } else if (error.code) {
-        errorMessage = `Error code: ${error.code}`;
       }
 
       this.onError(`Bluetooth scan failed: ${errorMessage}`);
-      throw new Error(errorMessage);
+      
+      // Throw a specific error that the printer context can catch
+      const scanError = new Error(errorMessage);
+      (scanError as any).code = error?.code || 'SCAN_FAILED';
+      throw scanError;
     } finally {
       this.isScanning = false;
     }

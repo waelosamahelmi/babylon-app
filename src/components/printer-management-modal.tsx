@@ -76,8 +76,11 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
   const [manualIp, setManualIp] = useState('192.168.1.233');
   const [manualPort, setManualPort] = useState('9100');
   const [manualName, setManualName] = useState('');
+  const [manualMacAddress, setManualMacAddress] = useState('66:11:22:33:44:55');
+  const [manualBluetoothName, setManualBluetoothName] = useState('BluetoothPrint');
   const [selectedPrinterId, setSelectedPrinterId] = useState<string | null>(null);
   const [isAddingManualPrinter, setIsAddingManualPrinter] = useState(false);
+  const [isAddingManualBluetooth, setIsAddingManualBluetooth] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showLogsModal, setShowLogsModal] = useState(false);
 
@@ -139,20 +142,87 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
       setManualName('');
       
       toast({
-        title: "Printer Added Successfully",
-        description: `Manual printer has been added and verified`,
-        variant: "default",
+        title: "Printer Added",
+        description: "Manual printer has been added successfully",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to add manual printer:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Failed to Add Printer",
-        description: errorMessage,
+        description: error.message || "An error occurred",
         variant: "destructive",
       });
     } finally {
       setIsAddingManualPrinter(false);
+    }
+  };
+
+  const handleAddManualBluetooth = async () => {
+    if (!manualMacAddress.trim()) {
+      toast({
+        title: "Invalid MAC Address",
+        description: "Please enter a valid Bluetooth MAC address (e.g., 00:11:22:33:44:55)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate MAC address format
+    const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+    if (!macRegex.test(manualMacAddress.trim())) {
+      toast({
+        title: "Invalid MAC Address Format",
+        description: "MAC address must be in format: 00:11:22:33:44:55",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAddingManualBluetooth(true);
+    
+    try {
+      console.log(`🔄 Adding manual Bluetooth printer: ${manualMacAddress.trim()}`);
+      
+      // Create a Bluetooth printer device directly
+      const bluetoothPrinter: PrinterDevice = {
+        id: `bt-${manualMacAddress.trim().replace(/:/g, '')}`,
+        name: manualBluetoothName.trim() || 'BluetoothPrint',
+        address: manualMacAddress.trim(), // Pure MAC address, no port
+        type: 'bluetooth',
+        isOnline: false,
+        isConnected: false,
+        metadata: {
+          isPaired: true
+        }
+      };
+
+      // Add directly to the printer list without going through network printer flow
+      // Use the addDiscoveredPrinter method or similar that doesn't require network validation
+      console.log('📱 Bluetooth printer object:', bluetoothPrinter);
+      
+      // Dispatch a custom event to notify the printer context
+      const event = new CustomEvent('bluetooth-printer-added', { 
+        detail: bluetoothPrinter 
+      });
+      window.dispatchEvent(event);
+      
+      toast({
+        title: "Bluetooth Printer Added",
+        description: `${bluetoothPrinter.name} has been added successfully. Check the Printers tab to connect to it.`,
+      });
+
+      // Switch to Printers tab automatically
+      setActiveTab('printers');
+      
+    } catch (error: any) {
+      console.error('Failed to add manual Bluetooth printer:', error);
+      toast({
+        title: "Failed to Add Bluetooth Printer",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingManualBluetooth(false);
     }
   };
 
@@ -585,6 +655,52 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
                   </Card>
                 </div>
 
+                {/* Z92 System Print Test - No Printer Selection Needed */}
+                {isAndroid && (
+                  <Card className="border-2 border-primary">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Printer className="w-5 h-5" />
+                        Z92 System Print Test
+                        <Badge variant="secondary">No Setup Required</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Test print using your device's built-in print service (LocalPrintService).
+                        <br />
+                        <strong>Works directly without adding printers!</strong>
+                      </p>
+                      <Button 
+                        onClick={async () => {
+                          try {
+                            console.log('🖨️ Direct system print test requested');
+                            const { directPrint } = await import('@/lib/direct-print');
+                            await directPrint.testPrint();
+                            toast({
+                              title: "System Print Sent",
+                              description: "Print dialog should appear. Select your printer if needed.",
+                            });
+                          } catch (error) {
+                            console.error('❌ System print failed:', error);
+                            toast({
+                              title: "System Print Failed",
+                              description: error instanceof Error ? error.message : "Unknown error",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                        variant="default" 
+                        className="w-full"
+                        size="lg"
+                      >
+                        <TestTube className="w-4 h-4 mr-2" />
+                        Test Print (System)
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
                 <Separator />
 
                 <Card>
@@ -638,6 +754,63 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
                         <>
                           <Plus className="w-4 h-4 mr-2" />
                           Add Printer
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Bluetooth className="w-5 h-5" />
+                      Add Bluetooth Printer Manually (Z92)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      For Z92 BluetoothPrint: Use the default MAC address or enter your printer's MAC from Android Settings → Bluetooth.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="macAddress">MAC Address *</Label>
+                        <Input
+                          id="macAddress"
+                          placeholder="66:11:22:33:44:55"
+                          value={manualMacAddress}
+                          onChange={(e) => setManualMacAddress(e.target.value)}
+                          disabled={isAddingManualBluetooth}
+                          className="font-mono"
+                        />
+                        <p className="text-xs text-green-600 mt-1">
+                          Default: 66:11:22:33:44:55 (BluetoothPrint - Z92)
+                        </p>
+                      </div>
+                      <div>
+                        <Label htmlFor="btName">Name (Optional)</Label>
+                        <Input
+                          id="btName"
+                          placeholder="BluetoothPrint"
+                          value={manualBluetoothName}
+                          onChange={(e) => setManualBluetoothName(e.target.value)}
+                          disabled={isAddingManualBluetooth}
+                        />
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={handleAddManualBluetooth} 
+                      className="w-full"
+                      disabled={isAddingManualBluetooth}
+                    >
+                      {isAddingManualBluetooth ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Adding Z92 Printer...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Z92 BluetoothPrint Printer
                         </>
                       )}
                     </Button>

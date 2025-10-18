@@ -538,19 +538,19 @@ public class PrinterBridge {
     // ===== NOTIFICATION METHODS =====
 
     /**
-     * Show notification with default system sound
+     * Show notification with alert.mp3 sound (default custom sound)
      */
     @JavascriptInterface
     public void showNotification(String title, String message) {
-        showNotificationWithSound(title, message, null);
+        showNotificationWithSound(title, message, "alert");
     }
 
     /**
-     * Send notification (alias for showNotification for compatibility)
+     * Send notification with alert.mp3 sound (alias for showNotification for compatibility)
      */
     @JavascriptInterface
     public void sendNotification(String title, String message) {
-        showNotificationWithSound(title, message, null);
+        showNotificationWithSound(title, message, "alert");
     }
 
     /**
@@ -627,10 +627,29 @@ public class PrinterBridge {
                         Log.d(TAG, "🔊 Custom sound set for legacy notification: " + soundFileName);
                     } catch (Exception e) {
                         Log.w(TAG, "⚠️ Failed to set custom sound on legacy notification: " + e.getMessage());
-                        builder.setDefaults(android.app.Notification.DEFAULT_SOUND);
+                        // Fallback to alert.mp3 instead of default sound
+                        try {
+                            android.net.Uri alertUri = android.net.Uri.parse(
+                                "android.resource://" + context.getPackageName() + "/raw/alert"
+                            );
+                            builder.setSound(alertUri);
+                            Log.d(TAG, "🔊 Fallback to alert.mp3 sound");
+                        } catch (Exception fallbackError) {
+                            builder.setDefaults(android.app.Notification.DEFAULT_SOUND);
+                        }
                     }
                 } else {
-                    builder.setDefaults(android.app.Notification.DEFAULT_SOUND);
+                    // Use alert.mp3 as default instead of system default
+                    try {
+                        android.net.Uri alertUri = android.net.Uri.parse(
+                            "android.resource://" + context.getPackageName() + "/raw/alert"
+                        );
+                        builder.setSound(alertUri);
+                        Log.d(TAG, "🔊 Using alert.mp3 as default notification sound");
+                    } catch (Exception e) {
+                        Log.w(TAG, "⚠️ Could not use alert.mp3, falling back to system sound");
+                        builder.setDefaults(android.app.Notification.DEFAULT_SOUND);
+                    }
                 }
             }
 

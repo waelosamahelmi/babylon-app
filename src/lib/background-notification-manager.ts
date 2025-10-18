@@ -83,8 +83,8 @@ export class BackgroundNotificationManager {
     this.currentNotification = orderData;
     this.isNotificationActive = true;
 
-    // Start loud looping sound immediately
-    this.soundManager.forceStartSound();
+    // Sound is already started by handleNewOrder when order arrives
+    // Don't play sound here to avoid double sound trigger
 
     // Show popup immediately if app is in foreground
     this.notificationHandlers.onShow?.(orderData);
@@ -105,13 +105,26 @@ export class BackgroundNotificationManager {
   }
 
   private async sendAndroidNotification(orderData: BackgroundNotificationData): Promise<void> {
+    console.log('🔍 DEBUG: Checking Android bridge availability...');
+    console.log('🔍 DEBUG: window.Android exists:', typeof (window as any).Android !== 'undefined');
+    
     if (typeof (window as any).Android !== 'undefined') {
+      console.log('🔍 DEBUG: Available Android methods:');
+      console.log('  - showNotificationWithActions:', typeof (window as any).Android.showNotificationWithActions);
+      console.log('  - showNotificationWithSound:', typeof (window as any).Android.showNotificationWithSound);
+      console.log('  - showNotification:', typeof (window as any).Android.showNotification);
+      console.log('  - sendNotification:', typeof (window as any).Android.sendNotification);
+      
       try {
         const title = `🚨 NEW ORDER #${orderData.orderNumber}`;
         const message = `${orderData.customerName} - €${orderData.totalAmount.toFixed(2)} - ${orderData.orderType.toUpperCase()}`;
         
+        console.log('🔍 DEBUG: Attempting to send notification with title:', title);
+        console.log('🔍 DEBUG: Message:', message);
+        
         // Send notification with high priority, persistent flags, and custom alert sound
         if (typeof (window as any).Android.showNotificationWithActions !== 'undefined') {
+          console.log('🔔 Using showNotificationWithActions with alert sound');
           // Enhanced notification with action buttons
           await (window as any).Android.showNotificationWithActions(
             title,
@@ -127,20 +140,27 @@ export class BackgroundNotificationManager {
             })
           );
         } else if (typeof (window as any).Android.showNotificationWithSound !== 'undefined') {
+          console.log('🔔 Using showNotificationWithSound with alert');
           // Use custom sound notification method
           await (window as any).Android.showNotificationWithSound(title, message, "alert");
         } else if (typeof (window as any).Android.showNotification !== 'undefined') {
+          console.log('🔔 Using showNotification (should use alert by default now)');
           // Fallback to basic notification
           await (window as any).Android.showNotification(title, message);
         } else if (typeof (window as any).Android.sendNotification !== 'undefined') {
+          console.log('🔔 Using sendNotification (should use alert by default now)');
           // Legacy fallback
           await (window as any).Android.sendNotification(title, message);
+        } else {
+          console.log('❌ No Android notification methods available!');
         }
 
         console.log('✅ Android notification sent successfully');
       } catch (error) {
         console.error('❌ Failed to send Android notification:', error);
       }
+    } else {
+      console.log('❌ Android bridge not available, will fall back to web notifications');
     }
 
     // Fallback to web notification

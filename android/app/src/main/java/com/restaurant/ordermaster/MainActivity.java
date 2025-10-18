@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.webkit.WebView;
 import android.util.Log;
 import com.getcapacitor.BridgeActivity;
+import com.restaurant.admin.PairedBluetoothHelper;
+import java.util.ArrayList;
 
 /**
  * Main Activity for Restaurant Order Master Android App
@@ -15,9 +17,13 @@ public class MainActivity extends BridgeActivity {
     private PrinterBridge printerBridge;
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
+        // Register DirectPrintPlugin BEFORE calling super.onCreate()
+        registerPlugin(DirectPrintPlugin.class);
+        
         super.onCreate(savedInstanceState);
         
+        Log.d(TAG, "✅ DirectPrintPlugin registered for LocalPrintService support");
         Log.d(TAG, "MainActivity onCreate - initializing printer bridge");
         
         try {
@@ -60,6 +66,10 @@ public class MainActivity extends BridgeActivity {
         }
         
         Log.d(TAG, "MainActivity onCreate completed");
+        
+        // Register plugins
+        registerPlugin(PairedBluetoothHelper.class);
+        registerPlugin(Z92PrinterPlugin.class);
     }
 
     /**

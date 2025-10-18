@@ -1,6 +1,6 @@
 export class NotificationSoundManager {
   private static instance: NotificationSoundManager;
-  private audioContext: AudioContext | null = null;
+  private audio: HTMLAudioElement | null = null;
   private currentInterval: NodeJS.Timeout | null = null;
   private isPlaying = false;
 
@@ -11,51 +11,35 @@ export class NotificationSoundManager {
     return NotificationSoundManager.instance;
   }
 
-  private initAudioContext(): AudioContext {
-    if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    return this.audioContext;
-  }
-
-  private playBeep(frequency: number, duration: number): void {
+  private async playNotificationSound(): Promise<void> {
     try {
-      const audioContext = this.initAudioContext();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+      console.log('🔔 Playing notification sound (alert.mp3)');
+      
+      // Try to use Android native notification with alert.mp3
+      if ((window as any).PrinterBridge?.playNotificationSound) {
+        console.log('✅ Using Android PrinterBridge for alert.mp3');
+        await (window as any).PrinterBridge.playNotificationSound();
+        return;
+      }
 
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);      oscillator.frequency.value = frequency;
-      oscillator.type = 'sine';
-
-      // Make the sound much louder and more prominent
-      gainNode.gain.setValueAtTime(0.8, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.1, audioContext.currentTime + duration / 1000);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + duration / 1000);
+      // Fallback to HTML5 Audio
+      console.log('⚠️ PrinterBridge not available, using HTML5 Audio fallback');
+      if (!this.audio) {
+        this.audio = new Audio('/alert.mp3');
+        this.audio.volume = 1.0;
+      }
+      
+      this.audio.currentTime = 0;
+      await this.audio.play();
+      
     } catch (error) {
-      console.warn('Could not play notification sound:', error);
+      console.error('❌ Could not play notification sound:', error);
     }
   }
+
   private playNotificationSequence(): void {
-    // Play a very loud and urgent notification sound sequence
-    const frequencies = [800, 1000, 1200, 1000, 800, 1200, 800];
-    frequencies.forEach((freq, index) => {
-      setTimeout(() => {
-        this.playBeep(freq, 200);
-      }, index * 150);
-    });
-    
-    // Add a second wave of sounds for extra urgency
-    setTimeout(() => {
-      const urgentFreqs = [1500, 1200, 1500, 1200];
-      urgentFreqs.forEach((freq, index) => {
-        setTimeout(() => {
-          this.playBeep(freq, 100);
-        }, index * 100);
-      });
-    }, 1200);
+    // Play the alert.mp3 notification sound
+    this.playNotificationSound();
   }
 
   startNotificationSound(): void {
@@ -99,9 +83,9 @@ export class NotificationSoundManager {
   // Clean up resources
   destroy(): void {
     this.stopNotificationSound();
-    if (this.audioContext) {
-      this.audioContext.close();
-      this.audioContext = null;
+    if (this.audio) {
+      this.audio.pause();
+      this.audio = null;
     }
   }
 }
