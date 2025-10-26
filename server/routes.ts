@@ -387,14 +387,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Calculate delivery fee and small order fee
       const deliveryFee = order.orderType === 'delivery' ? parseFloat(order.deliveryFee || '3.50') : 0;
-      const totalAmount = subtotal + deliveryFee;
+      const smallOrderFee = parseFloat(order.smallOrderFee || '0');
+      const totalAmount = subtotal + deliveryFee + smallOrderFee;
       
       // Create order
       const newOrder = await storage.createOrder({
         ...order,
         subtotal: subtotal.toFixed(2),
         deliveryFee: deliveryFee.toFixed(2),
+        smallOrderFee: smallOrderFee.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
       });
       

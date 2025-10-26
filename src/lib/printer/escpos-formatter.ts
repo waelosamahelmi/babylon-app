@@ -526,6 +526,10 @@ export class ESCPOSFormatter {
         formatter.bold(true).size('large').columns('Toimitusmaksu:', `${parseFloat(originalOrder.deliveryFee).toFixed(2)}`).bold(false).size('normal');
       }
 
+      if (originalOrder.smallOrderFee && parseFloat(originalOrder.smallOrderFee) > 0) {
+        formatter.bold(true).size('large').columns('Pientilauslisa:', `${parseFloat(originalOrder.smallOrderFee).toFixed(2)}`).bold(false).size('normal');
+      }
+
       if (originalOrder.discount && parseFloat(originalOrder.discount) > 0) {
         formatter.bold(true).size('large').columns('Alennus:', `-${parseFloat(originalOrder.discount).toFixed(2)}`).bold(false).size('normal');
       }

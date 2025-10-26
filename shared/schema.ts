@@ -41,6 +41,7 @@ export const orders = pgTable("orders", {
   status: text("status").notNull().default("pending"), // 'pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).default("0"),
+  smallOrderFee: decimal("small_order_fee", { precision: 10, scale: 2 }).default("0"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   paymentMethod: text("payment_method").default("cash"), // 'cash', 'card'
   specialInstructions: text("special_instructions"),

@@ -378,6 +378,12 @@ export function OrderDetailModal({ order, isOpen, onClose, onStatusUpdate }: Ord
                     <span>€{Number(order.deliveryFee).toFixed(2)}</span>
                   </div>
                 )}
+                {(order.smallOrderFee !== undefined && order.smallOrderFee !== null && parseFloat(order.smallOrderFee) > 0) && (
+                  <div className="flex justify-between">
+                    <span>{adminT("Pientilauslisä", "Small Order Fee", "رسوم الطلب الصغير")}</span>
+                    <span>€{Number(order.smallOrderFee).toFixed(2)}</span>
+                  </div>
+                )}
                 {order.discount && parseFloat(order.discount) > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>{adminT("Alennus", "Discount", "خصم")}</span>

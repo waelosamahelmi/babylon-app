@@ -124,7 +124,18 @@ export function ProductManagementModal({
 
     setIsLoading(true);
     try {
-      await onSave(formData);
+      // Clear offer fields if offer settings are disabled
+      const dataToSave = showOfferSettings 
+        ? formData 
+        : {
+            ...formData,
+            offerPrice: null,
+            offerPercentage: null,
+            offerStartDate: null,
+            offerEndDate: null,
+          };
+      
+      await onSave(dataToSave);
       toast({
         title: t("Tallennettu", "Saved"),
         description: t("Tuote tallennettu onnistuneesti", "Product saved successfully"),
