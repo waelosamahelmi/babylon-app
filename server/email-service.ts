@@ -95,7 +95,7 @@ export async function sendOrderConfirmationEmail(orderData: OrderEmailData): Pro
         </div>
 
         <div style="text-align: center; margin-top: 30px; color: #666;">
-          <p>Thank you for choosing pizzeria antonio!</p>
+          <p>Thank you for choosing Pizzeria Antonio!</p>
           <p>For any questions, please contact us at +358 41 3152619</p>
           <p>Pasintie 2, 45410 Lahti</p>
         </div>
@@ -105,7 +105,7 @@ export async function sendOrderConfirmationEmail(orderData: OrderEmailData): Pro
     const msg = {
       to: customerEmail,
       from: process.env.SENDGRID_FROM_EMAIL || 'orders@pizzeriaantonio.fi',
-      subject: `Order Confirmation #${orderNumber} - pizzeria antonio`,
+      subject: `Order Confirmation #${orderNumber} - Pizzeria Antonio`,
       html: emailContent,
     };
 

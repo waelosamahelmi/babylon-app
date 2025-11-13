@@ -117,7 +117,7 @@ export function OrderSuccessModal({ isOpen, onClose, orderType, orderNumber }: O
             <CardContent className="p-4">
               <div className="text-center space-y-1">
                 <p className="font-semibold text-red-800 dark:text-red-200">
-                  pizzeria antonio
+                  Pizzeria Antonio
                 </p>
                 <p className="text-sm text-red-700 dark:text-red-300">
                   Pasintie 2, 45410 Lahti

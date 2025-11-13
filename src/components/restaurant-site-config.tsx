@@ -348,7 +348,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="pizzeria antonio"
+                  placeholder="Pizzeria Antonio"
                 />
               </div>
               <div className="space-y-2">
@@ -357,7 +357,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                   id="nameEn"
                   value={formData.nameEn}
                   onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                  placeholder="pizzeria antonio"
+                  placeholder="Pizzeria Antonio"
                 />
               </div>
               <div className="space-y-2">
@@ -387,7 +387,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="pizzeria antoniossa tarjoamme laadukkaita aterioita..."
+                  placeholder="Pizzeria Antoniossa tarjoamme laadukkaita aterioita..."
                   rows={3}
                 />
               </div>
@@ -397,7 +397,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                   id="descriptionEn"
                   value={formData.descriptionEn}
                   onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
-                  placeholder="At pizzeria antonio we offer quality meals..."
+                  placeholder="At Pizzeria Antonio we offer quality meals..."
                   rows={3}
                 />
               </div>

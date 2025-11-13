@@ -32,7 +32,7 @@ const menuItemImages: Record<string, string> = {
   "Greek Salad": "https://images.unsplash.com/photo-1540420773420-3366772f4999?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1984&q=80"
 };
 
-// Additional high-quality food images for the expanded pizzeria antonio menu
+// Additional high-quality food images for the expanded Pizzeria Antonio menu
 const expandedMenuImages: Record<string, string> = {
   // More Pizzas
   "Marinara": "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",

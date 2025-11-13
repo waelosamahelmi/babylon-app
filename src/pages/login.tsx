@@ -60,7 +60,7 @@ export default function Login() {
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
               <Smartphone className="h-8 w-8 text-orange-600 mr-2" />
-              <CardTitle className="text-2xl">pizzeria antonio</CardTitle>
+              <CardTitle className="text-2xl">Pizzeria Antonio</CardTitle>
             </div>            {isAndroid && (
               <p className="text-sm text-muted-foreground">
                 Kitchen Management System

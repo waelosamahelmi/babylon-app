@@ -80,7 +80,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
         <Card className="border-0 shadow-none">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-lg text-gray-600 dark:text-gray-300">
-              pizzeria antonio
+              Pizzeria Antonio
             </CardTitle>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {t("Kirjaudu sisään hallintapaneeliin", "Login to admin panel")}

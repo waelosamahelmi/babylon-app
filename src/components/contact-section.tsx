@@ -88,7 +88,7 @@ export function ContactSection() {
                       rel="noopener noreferrer"
                       className="text-purple-600 hover:underline"
                     >
-                      Facebook - pizzeria antonio
+                      Facebook - Pizzeria Antonio
                     </a>
                   </div>
                 </div>

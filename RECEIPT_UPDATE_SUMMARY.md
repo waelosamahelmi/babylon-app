@@ -6,7 +6,7 @@
 1. ✅ 5mm left and right margins
 2. ✅ Make sure everything in order details is printed
 3. ✅ Make text bold
-4. ✅ Add restaurant name on top (pizzeria antonio)
+4. ✅ Add restaurant name on top (Pizzeria Antonio)
 5. ✅ Use Finnish language (just as in order details)
 6. ✅ Better layout with big text
 7. ✅ Fix dollar sign to euro (€)
@@ -66,7 +66,7 @@ lines.push('================================');
 #### **Header - AFTER:**
 ```typescript
 lines.push(centerText('================================'));
-lines.push(centerText('pizzeria antonio'));  // ✅ Restaurant name
+lines.push(centerText('Pizzeria Antonio'));  // ✅ Restaurant name
 lines.push(centerText('================================'));
 ```
 
@@ -266,7 +266,7 @@ lines.push(centerText('Tervetuloa uudelleen!'));      // ✅ Finnish
 | **Section Size** | 10pt | ✅ 14pt bold |
 | **Font Style** | Regular | ✅ **Bold** |
 | **Font Family** | Courier New | ✅ Arial (sans-serif) |
-| **Restaurant Name** | ❌ Not shown | ✅ **pizzeria antonio** |
+| **Restaurant Name** | ❌ Not shown | ✅ **Pizzeria Antonio** |
 | **Language** | English | ✅ **Finnish** |
 | **Currency** | $ (dollar) | ✅ **€ (euro)** |
 | **Order Type** | ❌ Not shown | ✅ KOTIINKULJETUS/NOUTO |
@@ -318,7 +318,7 @@ TOTAL:           $32.50
 ### **AFTER (New Receipt):**
 ```
      ================================
-         pizzeria antonio
+         Pizzeria Antonio
      ================================
 
 TILAUS #: 1234
@@ -388,7 +388,7 @@ YHTEENSÄ:                34.50€
 - [x] **5mm margins** applied in CSS (`margin: 0 5mm`)
 - [x] **Bold text** applied (`font-weight: bold`)
 - [x] **Larger font** (12pt base, 14pt sections, 16pt header)
-- [x] **Restaurant name** at top (pizzeria antonio)
+- [x] **Restaurant name** at top (Pizzeria Antonio)
 - [x] **Finnish labels** throughout (Nimi, Puh, Tyyppi, etc.)
 - [x] **Euro symbols** (€) everywhere instead of $
 - [x] **All order details** printed (customer, items, toppings, notes, instructions)
@@ -425,7 +425,7 @@ adb install -r android\app\build\outputs\apk\debug\app-debug.apk
 5. Receipt prints with new layout! 🎉
 
 ### **Expected Result:**
-- ✅ Restaurant name "pizzeria antonio" at top (large, centered)
+- ✅ Restaurant name "Pizzeria Antonio" at top (large, centered)
 - ✅ Bold text throughout
 - ✅ Clear 5mm margins on left and right
 - ✅ All text in Finnish
@@ -443,7 +443,7 @@ adb install -r android\app\build\outputs\apk\debug\app-debug.apk
 | 5mm right margin | ✅ DONE | CSS: `margin: 0 5mm` |
 | Everything printed | ✅ DONE | All order fields in receipt |
 | Bold text | ✅ DONE | CSS: `font-weight: bold` |
-| Restaurant name | ✅ DONE | "pizzeria antonio" header |
+| Restaurant name | ✅ DONE | "Pizzeria Antonio" header |
 | Finnish language | ✅ DONE | All labels translated |
 | Better layout | ✅ DONE | Larger fonts, better spacing |
 | Big text | ✅ DONE | 12pt base, 14pt sections, 16pt header |

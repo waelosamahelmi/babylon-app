@@ -68,7 +68,7 @@ another-restaurant/
 - Converts to lowercase
 - Replaces special characters with hyphens
 - Removes multiple consecutive hyphens
-- Examples: "pizzeria antonio" → `pizzeria-antonio/`
+- Examples: "Pizzeria Antonio" → `pizzeria-antonio/`
 
 ### 6. Documentation
 - ✅ Created `CLOUDINARY_SETUP.md` with comprehensive setup instructions

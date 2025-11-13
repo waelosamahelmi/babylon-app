@@ -15,7 +15,7 @@ export function Footer() {
                 <UtensilsCrossed className="text-white text-lg" />
               </div>
               <div>
-                <h3 className="text-xl font-bold">pizzeria antonio</h3>
+                <h3 className="text-xl font-bold">Pizzeria Antonio</h3>
                 <p className="text-gray-400 text-sm">{t("Lahti, Suomi", "Lahti, Finland")}</p>
               </div>
             </div>
@@ -96,7 +96,7 @@ export function Footer() {
 
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
           <p>
-            &copy; 2024 pizzeria antonio.{" "}
+            &copy; 2024 Pizzeria Antonio.{" "}
             {t("Kaikki oikeudet pidätetään.", "All rights reserved.")}
           </p>
         </div>

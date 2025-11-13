@@ -605,7 +605,7 @@ export default function Admin() {
                 <UtensilsCrossed className="text-white w-8 h-8" />
               </div>
               <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                pizzeria antonio
+                Pizzeria Antonio
               </CardTitle>
               <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                 {adminT("Hallintapaneeli", "Admin Panel", "لوحة الإدارة")}
@@ -775,7 +775,7 @@ export default function Admin() {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-                  <span className="hidden sm:inline">pizzeria antonio</span>
+                  <span className="hidden sm:inline">Pizzeria Antonio</span>
                   <span className="sm:hidden">antonio</span>
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">

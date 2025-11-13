@@ -428,7 +428,7 @@ class ThermalPrinterService {
   private generateTestReceipt(): string {
     return `
 ==============================
-        pizzeria antonio
+        Pizzeria Antonio
 ==============================
       Pasintie 2, 45410 Lahti
         +358 41 3152619
@@ -463,7 +463,7 @@ printer connectivity.
     
     // Header
     receipt += escCenter + escBold + escLarge;
-    receipt += 'pizzeria antonio' + lineFeed;
+    receipt += 'Pizzeria Antonio' + lineFeed;
     receipt += escNormal + escBoldOff;
     receipt += '==============================' + lineFeed;
     receipt += 'Pasintie 2, 45410 Lahti' + lineFeed;
@@ -639,7 +639,7 @@ printer connectivity.
     receipt += 'Kiitos tilauksestasi!' + lineFeed;
     receipt += 'Thank you for your order!' + lineFeed;
     receipt += lineFeed;
-    receipt += 'pizzeria antonio' + lineFeed;
+    receipt += 'Pizzeria Antonio' + lineFeed;
     receipt += 'Avoinna: Ma-Su 10:00-20:00' + lineFeed;
     receipt += 'Kotiinkuljetus: Ma-To,Pe-Su 10:00-19:30' + lineFeed;
     receipt += lineFeed;

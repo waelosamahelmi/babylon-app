@@ -25,7 +25,7 @@ export function Logo({ className = "h-8" }: { className?: string }) {
       {/* Restaurant Name */}
       <div className="flex flex-col">
         <span className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
-          pizzeria antonio
+          Pizzeria Antonio
         </span>
       </div>
     </div>
