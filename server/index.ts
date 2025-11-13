@@ -30,7 +30,7 @@ const corsOptions = {
       'http://localhost',
       'https://localhost',
       // Add production domains if needed
-      'https://antonio-app.fly.dev',
+      'https://babylon-app.fly.dev',
       'https://helmies-food-web.netlify.app',
       // Add any other production frontend domains
     ];
@@ -77,7 +77,7 @@ app.use(session({
     tableName: 'session',
     createTableIfMissing: true,
   }),
-  secret: process.env.SESSION_SECRET || 'pizzeria-antonio-secret-key-2025',
+  secret: process.env.SESSION_SECRET || 'ravintola-babylon-secret-key-2025',
   resave: false,
   saveUninitialized: false,
   cookie: {

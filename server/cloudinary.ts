@@ -36,7 +36,7 @@ export async function uploadImageToCloudinary(
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
 
-    // Create folder path: restaurant-name/folder (e.g., "pizzeria-antonio/menu")
+    // Create folder path: restaurant-name/folder (e.g., "ravintola-babylon/menu")
     const folderPath = `${sanitizedRestaurantName}/${folder}`;
 
     // Convert buffer to stream

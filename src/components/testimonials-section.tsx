@@ -19,7 +19,7 @@ export function TestimonialsSection() {
       name: "Jukka Korhonen",
       rating: 5,
       comment: {
-        fi: "Kebab oli mahtava ja palvelu ystävällistä. Tämä on meidän uusi suosikkipizzeria!",
+        fi: "Kebab oli mahtava ja palvelu ystävällistä. Tämä on meidän uusi suosikkiravintola!",
         en: "The kebab was amazing and the service was friendly. This is our new favorite restaurant!"
       },
       location: "Espoo"

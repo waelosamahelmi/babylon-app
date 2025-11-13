@@ -126,7 +126,7 @@ export function ServiceHoursSection() {
             </span>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            {t("pizzeria: 06:00 - 20:00", "Restaurant: 06:00 - 20:00")}
+            {t("ravintola: 06:00 - 20:00", "Restaurant: 06:00 - 20:00")}
           </p>
         </div>
       </div>

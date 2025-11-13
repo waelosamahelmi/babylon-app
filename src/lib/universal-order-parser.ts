@@ -124,7 +124,7 @@ export class UniversalOrderParser {
     // Create receipt data
     const receiptData: ReceiptData = {
       header: {
-        text: "Pizzeria Antonio",
+        text: "ravintola babylon",
         alignment: 'center',
         fontSize: 'large',
         bold: true
@@ -699,7 +699,7 @@ export class UniversalOrderParser {
 
     return {
       header: {
-        text: 'Pizzeria Antonio\n================\nPasintie 2, 45410 Lahti\n+358 41 3152619',
+        text: 'ravintola babylon\n================\nPasintie 2, 45410 Lahti\n+358 41 3152619',
         alignment: 'center',
         bold: true
       },
@@ -712,7 +712,7 @@ export class UniversalOrderParser {
         notes: 'Please check order details manually'
       }],
       footer: {
-        text: 'Kiitos tilauksestasi!\nThank you for your order!\n\nPizzeria Antonio',
+        text: 'Kiitos tilauksestasi!\nThank you for your order!\n\nravintola babylon',
         alignment: 'center'
       },
       total,
@@ -755,13 +755,13 @@ export class UniversalOrderParser {
 
     return {
       header: {
-        text: 'Pizzeria Antonio\n================\nPasintie 2, 45410 Lahti\n+358 41 3152619',
+        text: 'ravintola babylon\n================\nPasintie 2, 45410 Lahti\n+358 41 3152619',
         alignment: 'center',
         bold: true
       },
       items,
       footer: {
-        text: 'Kiitos tilauksestasi!\nThank you for your order!\n\nPizzeria Antonio\nAvoinna: Ma-Su 10:00-20:00',
+        text: 'Kiitos tilauksestasi!\nThank you for your order!\n\nravintola babylon\nAvoinna: Ma-Su 10:00-20:00',
         alignment: 'center'
       },
       total,
