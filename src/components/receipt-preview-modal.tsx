@@ -189,23 +189,32 @@ export function ReceiptPreviewModal({ receiptData, originalOrder, isOpen, onClos
       const priceLine = makeBold(`${item.totalPrice.toFixed(2)}`);
       lines.push(alignText(itemLine, priceLine));
 
-      // Toppings/additions with size-adjusted pricing and "first 4 free" logic
+      // Toppings/additions with size-adjusted pricing and conditional pricing logic
       if (item.toppings && item.toppings.length > 0) {
         lines.push('');
         lines.push(makeBold('  Lisätäytteet:'));
         
-        // Check if this is the "Your Choice Pizza" (product ID 93) for "first 4 toppings free" logic
-        const isYourChoicePizza = originalOrder && (() => {
-          const originalItems = originalOrder.orderItems || originalOrder.order_items || originalOrder.items || [];
-          const matchingOriginalItem = originalItems.find((oi: any) => 
-            (oi.menuItems?.name || oi.menu_items?.name || oi.name) === item.name.replace(/\s*\([^)]+\)$/, '')
-          );
-          return matchingOriginalItem && 
+        // Check for conditional pricing or legacy "Your Choice Pizza" (product ID 93)
+        const originalItems = originalOrder ? (originalOrder.orderItems || originalOrder.order_items || originalOrder.items || []) : [];
+        const matchingOriginalItem = originalItems.find((oi: any) => 
+          (oi.menuItems?.name || oi.menu_items?.name || oi.name) === item.name.replace(/\s*\([^)]+\)$/, '')
+        );
+        
+        // Check for conditional pricing
+        const menuItemData = matchingOriginalItem ? 
+          (matchingOriginalItem.menuItems || matchingOriginalItem.menu_items || matchingOriginalItem.menuItem || {}) : {};
+        const hasConditionalPricing = menuItemData.hasConditionalPricing || menuItemData.has_conditional_pricing || false;
+        const includedToppingsCount = menuItemData.includedToppingsCount || menuItemData.included_toppings_count || 0;
+        
+        // Legacy support: Check if this is "Your Choice Pizza" (product ID 93)
+        const isYourChoicePizza = matchingOriginalItem && 
                  (matchingOriginalItem.menuItemId === 93 || 
                   matchingOriginalItem.menu_item_id === 93 ||
                   matchingOriginalItem.menuItems?.id === 93 ||
                   matchingOriginalItem.menu_items?.id === 93);
-        })();
+        
+        // Determine number of free toppings
+        const freeToppingCount = hasConditionalPricing ? includedToppingsCount : (isYourChoicePizza ? 4 : 0);
         
         // Count how many paid toppings have been made free so far
         let freeCount = 0;
@@ -213,11 +222,11 @@ export function ReceiptPreviewModal({ receiptData, originalOrder, isOpen, onClos
         item.toppings.forEach((topping, index) => {
           let adjustedPrice = topping.price;
           
-          // Apply "first 4 toppings free" logic for "Your Choice Pizza" only
-          // Only paid toppings (price > 0) count toward the 4-free limit
-          if (isYourChoicePizza && topping.price > 0 && freeCount < 4) {
+          // Apply conditional pricing or legacy "first 4 free" logic
+          // Only paid toppings (price > 0) count toward the free limit
+          if (freeToppingCount > 0 && topping.price > 0 && freeCount < freeToppingCount) {
             adjustedPrice = 0; // Make this paid topping free
-            freeCount++; // Count this as one of the 4 free toppings
+            freeCount++; // Count this as one of the free toppings
           } else {
             // Apply size-based pricing adjustments for paid toppings
             if (itemSize === "perhe" || itemSize === "family") {
@@ -230,8 +239,8 @@ export function ReceiptPreviewModal({ receiptData, originalOrder, isOpen, onClos
           const toppingLine = `    + ${topping.name}`;
           let toppingPrice = '';
           
-          if (isYourChoicePizza && topping.price > 0 && freeCount <= 4 && adjustedPrice === 0) {
-            toppingPrice = ' '; // Free in Finnish
+          if (freeToppingCount > 0 && topping.price > 0 && freeCount <= freeToppingCount && adjustedPrice === 0) {
+            toppingPrice = 'ILMAINEN'; // Free in Finnish
           } else if (adjustedPrice > 0) {
             toppingPrice = `+${adjustedPrice.toFixed(2)}`;
           }

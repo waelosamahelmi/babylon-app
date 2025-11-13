@@ -96,11 +96,20 @@ export function ItemDetailModal({ item, isOpen, onClose, onAddToCart }: ItemDeta
   const drinkPrice = isDrink && selectedSize === "0.5L" ? 0.60 : 
                    isDrink && selectedSize === "1.5L" ? 2.10 : 0;
   
-  const toppingsPrice = selectedToppings.reduce((total, toppingId) => {
-    const topping = Array.isArray(allToppings) ? allToppings.find((t: any) => t.id.toString() === toppingId) : null;
-    if (!topping) return total;
+  // Conditional pricing support: check if item has conditional pricing enabled
+  const hasConditionalPricing = item?.hasConditionalPricing || false;
+  const includedToppingsCount = item?.includedToppingsCount || 0;
+  
+  const toppingsPrice = selectedToppings.reduce((total, topping, index) => {
+    const toppingData = Array.isArray(allToppings) ? allToppings.find((t: any) => t.id === topping.id) : null;
+    if (!toppingData) return total;
     
-    let toppingPrice = parseFloat(topping.price);
+    // Conditional pricing: if enabled, first N toppings are free
+    if (hasConditionalPricing && index < includedToppingsCount) {
+      return total; // This topping is included in base price
+    }
+    
+    let toppingPrice = parseFloat(toppingData.price);
     
     // Special rule: if pizza size is "perhe" (family), all toppings are double-priced
     if (selectedSize === "perhe") {
@@ -437,25 +446,66 @@ export function ItemDetailModal({ item, isOpen, onClose, onAddToCart }: ItemDeta
               <div>
                 <h3 className="font-semibold text-lg mb-3">
                   {t("Lisätäytteet", "Pizza Toppings")}
+                  {(hasConditionalPricing && includedToppingsCount > 0) && (
+                    <span className="text-sm font-normal text-green-600 ml-2">
+                      {t(
+                        `(${includedToppingsCount} ensimmäistä ilmaista)`, 
+                        `(First ${includedToppingsCount} free)`
+                      )}
+                    </span>
+                  )}
                 </h3>
+                
+                {/* Conditional pricing info banner */}
+                {hasConditionalPricing && includedToppingsCount > 0 && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-green-800 dark:text-green-200">
+                      <span className="font-semibold">🎉 {t("Erikoistarjous!", "Special offer!")}</span>{" "}
+                      {t(
+                        `Valitse ${includedToppingsCount} ensimmäistä lisätäytettä ilmaiseksi! Lisätäytteet sen jälkeen normaalihintaan.`,
+                        `Choose your first ${includedToppingsCount} toppings for free! Additional toppings after that at regular price.`
+                      )}
+                    </p>
+                    {selectedToppings.length > 0 && (
+                      <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                        {t(
+                          `Valittu: ${selectedToppings.length} lisätäytettä (${Math.max(0, includedToppingsCount - selectedToppings.length)} ilmaista jäljellä)`,
+                          `Selected: ${selectedToppings.length} toppings (${Math.max(0, includedToppingsCount - selectedToppings.length)} free remaining)`
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {toppings.map((topping: any) => (
-                    <div key={topping.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id={topping.id.toString()}
-                          checked={selectedToppings.some(t => t.id === topping.id)}
-                          onCheckedChange={(checked) => handleToppingChange(topping, !!checked)}
-                        />
-                        <Label htmlFor={topping.id.toString()} className="font-medium cursor-pointer">
-                          {topping.name}
-                        </Label>
+                  {toppings.map((topping: any, index: number) => {
+                    const toppingIndex = selectedToppings.findIndex(t => t.id === topping.id);
+                    const isFree = hasConditionalPricing && toppingIndex !== -1 && toppingIndex < includedToppingsCount;
+                    
+                    return (
+                      <div key={topping.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={topping.id.toString()}
+                            checked={selectedToppings.some(t => t.id === topping.id)}
+                            onCheckedChange={(checked) => handleToppingChange(topping, !!checked)}
+                          />
+                          <Label htmlFor={topping.id.toString()} className="font-medium cursor-pointer">
+                            {topping.name}
+                          </Label>
+                        </div>
+                        <span className="text-sm text-gray-600">
+                          {isFree ? (
+                            <span className="text-green-600 font-medium">
+                              {t("Ilmainen", "Free")}
+                            </span>
+                          ) : (
+                            `+${formatPrice(parseFloat(topping.price))}`
+                          )}
+                        </span>
                       </div>
-                      <span className="text-sm text-gray-600">
-                        +{formatPrice(parseFloat(topping.price))}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

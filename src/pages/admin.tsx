@@ -1637,17 +1637,27 @@ export default function Admin() {
         product={editingProduct}
         onSave={async (productData) => {
           try {
+            console.log("💾 Saving product data:", productData);
+            console.log("🔍 hasConditionalPricing:", productData.hasConditionalPricing);
+            console.log("🔍 includedToppingsCount:", productData.includedToppingsCount);
+            
             if (editingProduct?.id) {
               // Editing existing product - preserve displayOrder
+              const updatePayload = {
+                ...productData,
+                // Convert date strings to Date objects
+                offerStartDate: productData.offerStartDate ? new Date(productData.offerStartDate) : null,
+                offerEndDate: productData.offerEndDate ? new Date(productData.offerEndDate) : null,
+                displayOrder: editingProduct.displayOrder // Preserve original order
+              };
+              
+              console.log("📤 Update payload:", updatePayload);
+              console.log("📤 Payload hasConditionalPricing:", updatePayload.hasConditionalPricing);
+              console.log("📤 Payload includedToppingsCount:", updatePayload.includedToppingsCount);
+              
               await updateMenuItem.mutateAsync({
                 id: editingProduct.id,
-                data: {
-                  ...productData,
-                  // Convert date strings to Date objects
-                  offerStartDate: productData.offerStartDate ? new Date(productData.offerStartDate) : null,
-                  offerEndDate: productData.offerEndDate ? new Date(productData.offerEndDate) : null,
-                  displayOrder: editingProduct.displayOrder // Preserve original order
-                }
+                data: updatePayload
               });
             } else {
               // Creating new product - find next displayOrder for the category

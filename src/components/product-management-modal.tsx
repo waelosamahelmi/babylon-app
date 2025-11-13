@@ -13,26 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, X, Upload, Percent, Tag, Save, Trash2 } from "lucide-react";
+import type { MenuItem } from "@shared/schema";
 
-interface MenuItem {
+// Form-specific type with optional id and string dates for inputs
+type MenuItemFormData = Omit<MenuItem, 'id' | 'offerStartDate' | 'offerEndDate'> & {
   id?: number;
-  name: string;
-  nameEn: string;
-  price: string;
-  categoryId: number | null;
-  description: string | null;
-  descriptionEn: string | null;
-  imageUrl: string | null;
-  isVegetarian: boolean | null;
-  isVegan: boolean | null;
-  isGlutenFree: boolean | null;
-  isAvailable: boolean | null;
-  displayOrder: number | null;
-  offerPrice: string | null;
-  offerPercentage: number | null;
-  offerStartDate: string | null;
-  offerEndDate: string | null;
-}
+  offerStartDate?: string | null;
+  offerEndDate?: string | null;
+};
 
 interface ProductManagementModalProps {
   isOpen: boolean;
@@ -54,7 +42,7 @@ export function ProductManagementModal({
   const { data: restaurantConfig } = useRestaurantConfig();
   const { toast } = useToast();
   
-  const [formData, setFormData] = useState<MenuItem>({
+  const [formData, setFormData] = useState<MenuItemFormData>({
     name: "",
     nameEn: "",
     price: "",
@@ -71,6 +59,8 @@ export function ProductManagementModal({
     offerPercentage: null,
     offerStartDate: null,
     offerEndDate: null,
+    hasConditionalPricing: false,
+    includedToppingsCount: 0,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -83,8 +73,8 @@ export function ProductManagementModal({
         ...product,
         offerPrice: product.offerPrice || null,
         offerPercentage: product.offerPercentage || null,
-        offerStartDate: product.offerStartDate || null,
-        offerEndDate: product.offerEndDate || null,
+        offerStartDate: product.offerStartDate ? product.offerStartDate.toISOString().split('T')[0] : null,
+        offerEndDate: product.offerEndDate ? product.offerEndDate.toISOString().split('T')[0] : null,
       });
       setShowOfferSettings(!!(product.offerPrice || product.offerPercentage));
     } else {
@@ -105,6 +95,8 @@ export function ProductManagementModal({
         offerPercentage: null,
         offerStartDate: null,
         offerEndDate: null,
+        hasConditionalPricing: false,
+        includedToppingsCount: 0,
       });
       setShowOfferSettings(false);
     }
@@ -135,7 +127,11 @@ export function ProductManagementModal({
             offerEndDate: null,
           };
       
-      await onSave(dataToSave);
+      console.log("🔍 MODAL: Saving product data:", dataToSave);
+      console.log("🔍 MODAL: hasConditionalPricing:", dataToSave.hasConditionalPricing);
+      console.log("🔍 MODAL: includedToppingsCount:", dataToSave.includedToppingsCount);
+      
+      await onSave(dataToSave as MenuItem);
       toast({
         title: t("Tallennettu", "Saved"),
         description: t("Tuote tallennettu onnistuneesti", "Product saved successfully"),
@@ -534,6 +530,80 @@ export function ProductManagementModal({
             {!showOfferSettings && (formData.offerPrice || formData.offerPercentage) && (
               <div className="text-sm text-orange-600 dark:text-orange-400">
                 {t("Tarjousasetukset poistetaan tallennettaessa", "Offer settings will be removed when saved")}
+              </div>
+            )}
+          </div>
+
+          {/* Conditional Pricing (Your Choice Items) */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold dark:text-white flex items-center">
+                  <Tag className="w-5 h-5 mr-2" />
+                  {t("Ehdollinen hinnoittelu", "Conditional Pricing")}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {t(
+                    "Asiakkaat voivat valita tietyn määrän lisätäytteitä ilmaiseksi",
+                    "Customers can choose a certain number of toppings for free"
+                  )}
+                </p>
+              </div>
+              <Switch
+                checked={formData.hasConditionalPricing || false}
+                onCheckedChange={(checked) => setFormData(prev => ({ 
+                  ...prev, 
+                  hasConditionalPricing: checked,
+                  includedToppingsCount: checked ? (prev.includedToppingsCount || 1) : 0
+                }))}
+              />
+            </div>
+
+            {formData.hasConditionalPricing && (
+              <div className="space-y-4 p-4 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                <div className="space-y-2">
+                  <Label htmlFor="includedToppingsCount">
+                    {t("Ilmaisten lisätäytteiden määrä", "Number of Free Toppings")}
+                  </Label>
+                  <Input
+                    id="includedToppingsCount"
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={formData.includedToppingsCount || 0}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      includedToppingsCount: parseInt(e.target.value) || 0 
+                    }))}
+                  />
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {t(
+                      "Esim. Jos määrität 3, ensimmäiset 3 lisätäytettä ovat ilmaisia. Loput maksavat normaalihintaan.",
+                      "E.g. If you set 3, the first 3 toppings are free. Additional toppings are charged at regular price."
+                    )}
+                  </p>
+                </div>
+
+                {(formData.includedToppingsCount || 0) > 0 && (
+                  <div className="flex items-center space-x-2 text-sm p-3 bg-green-100 dark:bg-green-900/30 rounded">
+                    <span className="font-semibold text-green-800 dark:text-green-300">
+                      💡 {t("Esimerkki:", "Example:")}
+                    </span>
+                    <span className="text-green-700 dark:text-green-400">
+                      {t(
+                        `Asiakas valitsee ${(formData.includedToppingsCount || 0) + 1} lisätäytettä → ${formData.includedToppingsCount || 0} ilmaista + 1 maksullinen`,
+                        `Customer selects ${(formData.includedToppingsCount || 0) + 1} toppings → ${formData.includedToppingsCount || 0} free + 1 paid`
+                      )}
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-sm text-green-700 dark:text-green-300 p-3 bg-green-100 dark:bg-green-900/30 rounded">
+                  <strong>{t("Huom:", "Note:")}</strong> {t(
+                    "Tämä toimii automaattisesti nettisivustolla, mobiilisovelluksessa ja kuitilla.",
+                    "This works automatically on the website, mobile app, and receipts."
+                  )}
+                </div>
               </div>
             )}
           </div>

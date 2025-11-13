@@ -28,6 +28,9 @@ export const menuItems = pgTable("menu_items", {
   offerPercentage: integer("offer_percentage"),
   offerStartDate: timestamp("offer_start_date"),
   offerEndDate: timestamp("offer_end_date"),
+  // Conditional pricing fields for customizable items (e.g., "Your Choice Pizza")
+  hasConditionalPricing: boolean("has_conditional_pricing").default(false),
+  includedToppingsCount: integer("included_toppings_count").default(0), // Number of free toppings included in base price
 });
 
 export const orders = pgTable("orders", {

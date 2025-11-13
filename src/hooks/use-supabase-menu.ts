@@ -106,7 +106,7 @@ export function useSupabaseUpdateMenuItem() {
         'name', 'nameEn', 'description', 'descriptionEn', 'price', 
         'categoryId', 'imageUrl', 'isVegetarian', 'isVegan', 'isGlutenFree',
         'isAvailable', 'displayOrder', 'offerPrice', 'offerPercentage',
-        'offerStartDate', 'offerEndDate'
+        'offerStartDate', 'offerEndDate', 'hasConditionalPricing', 'includedToppingsCount'
       ];
       
       // Filter data to only include allowed fields
@@ -161,7 +161,7 @@ export function useSupabaseCreateMenuItem() {
         'name', 'nameEn', 'description', 'descriptionEn', 'price', 
         'categoryId', 'imageUrl', 'isVegetarian', 'isVegan', 'isGlutenFree',
         'isAvailable', 'displayOrder', 'offerPrice', 'offerPercentage',
-        'offerStartDate', 'offerEndDate'
+        'offerStartDate', 'offerEndDate', 'hasConditionalPricing', 'includedToppingsCount'
       ];
       
       // Filter data to only include allowed fields

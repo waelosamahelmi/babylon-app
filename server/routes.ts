@@ -138,10 +138,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const updateData = req.body;
       
+      console.log("🔍 SERVER: Received PATCH request for menu item", id);
+      console.log("🔍 SERVER: Update data:", updateData);
+      console.log("🔍 SERVER: hasConditionalPricing:", updateData.hasConditionalPricing);
+      console.log("🔍 SERVER: includedToppingsCount:", updateData.includedToppingsCount);
+      
       const updated = await storage.updateMenuItem(id, updateData);
       if (!updated) {
         return res.status(404).json({ error: "Menu item not found" });
       }
+      
+      console.log("✅ SERVER: Updated item:", updated);
+      console.log("✅ SERVER: Result hasConditionalPricing:", updated.hasConditionalPricing);
+      console.log("✅ SERVER: Result includedToppingsCount:", updated.includedToppingsCount);
       
       res.json(updated);
     } catch (error) {
