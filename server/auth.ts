@@ -76,12 +76,12 @@ export class AuthService {
     const [existingAdmin] = await db
       .select()
       .from(users)
-      .where(eq(users.email, "info@pizzeriaantonio.fi"));
+      .where(eq(users.email, "info@ravintolababylon.fi"));
 
     if (!existingAdmin) {
       await this.createUser({
-        email: "info@pizzeriaantonio.fi",
-        password: "Antonio@2025",
+        email: "info@ravintolababylon.fi",
+        password: "babylon@2025",
         role: "admin",
         isActive: true,
       });

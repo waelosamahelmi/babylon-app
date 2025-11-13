@@ -83,12 +83,12 @@ export function ContactSection() {
                       {t("Facebook", "Facebook")}
                     </h4>
                     <a 
-                      href="https://fi-fi.facebook.com/pizzeriaantonio/" 
+                      href="https://fi-fi.facebook.com/ravintolababylon/" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-purple-600 hover:underline"
                     >
-                      Facebook - Pizzeria Antonio
+                      Facebook - ravintola babylon
                     </a>
                   </div>
                 </div>

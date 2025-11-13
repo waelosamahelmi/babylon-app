@@ -54,7 +54,7 @@ Successfully integrated Cloudinary for image uploads in the admin app, with imag
 ### 5. Folder Structure Implementation
 Images are now organized as:
 ```
-pizzeria-antonio/           # Sanitized restaurant name
+ravintola-babylon/           # Sanitized restaurant name
 ├── menu-items/            # Menu item images
 ├── menu/                  # General menu images
 └── logos/                 # Restaurant branding
@@ -68,7 +68,7 @@ another-restaurant/
 - Converts to lowercase
 - Replaces special characters with hyphens
 - Removes multiple consecutive hyphens
-- Examples: "Pizzeria Antonio" → `pizzeria-antonio/`
+- Examples: "ravintola babylon" → `ravintola-babylon/`
 
 ### 6. Documentation
 - ✅ Created `CLOUDINARY_SETUP.md` with comprehensive setup instructions

@@ -32,7 +32,7 @@ export function HeroVideo() {
       {/* Content */}
       <div className="relative z-10 text-center text-white px-4 max-w-4xl mx-auto">
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-          {t("Pizzeria Antonio", "Pizzeria Antonio")}
+          {t("ravintola babylon", "ravintola babylon")}
         </h1>
         
         <p className="text-xl md:text-2xl lg:text-3xl mb-4 opacity-90 font-light">

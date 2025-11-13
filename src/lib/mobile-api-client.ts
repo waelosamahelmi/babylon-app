@@ -38,7 +38,7 @@ export class MobileApiClient {
       const hostname = window.location.hostname;
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         console.log('🏠 Using local development API URL');
-        return 'https://antonioadmin.netlify.app/';
+        return 'https://babylonadmin.netlify.app/';
       } else {
         // Use the same hostname as the frontend but port 5000
         const localUrl = `http://${hostname}:5000`;
@@ -49,7 +49,7 @@ export class MobileApiClient {
     
     // Default fallback
     console.log('🏠 Using default local API URL');
-    return 'https://antonioadmin.netlify.app/';
+    return 'https://babylonadmin.netlify.app/';
   }
 
   static getInstance(): MobileApiClient {

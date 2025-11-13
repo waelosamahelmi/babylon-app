@@ -60,7 +60,7 @@ export default function Login() {
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
               <Smartphone className="h-8 w-8 text-orange-600 mr-2" />
-              <CardTitle className="text-2xl">Pizzeria Antonio</CardTitle>
+              <CardTitle className="text-2xl">ravintola babylon</CardTitle>
             </div>            {isAndroid && (
               <p className="text-sm text-muted-foreground">
                 Kitchen Management System
@@ -117,7 +117,7 @@ export default function Login() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@pizzeriaantonio.fi"
+                  placeholder="admin@ravintolababylon.fi"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -162,7 +162,7 @@ export default function Login() {
             <CardContent className="space-y-4">
               <Alert>
                 <AlertDescription>
-                  This is the native Android version of the antonio Kitchen Management System.
+                  This is the native Android version of the babylon Kitchen Management System.
                   Make sure you have a stable internet connection for the best experience.
                 </AlertDescription>
               </Alert>

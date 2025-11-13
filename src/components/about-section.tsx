@@ -22,13 +22,13 @@ export function AboutSection() {
         {/* Main About Content */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
-            {t("Meistä Pizzeria Antonio Lahti", "About Pizzeria Antonio Lahti")}
+            {t("Meistä ravintola babylon Lahti", "About ravintola babylon Lahti")}
           </h2>
           <div className="max-w-4xl mx-auto space-y-6 text-lg text-gray-700 dark:text-gray-300">
             <p>
               {t(
-                "Tervetuloa Antonio ravintolaan, jossa valmistamme annoksemme aina tuoreista ja laadukkaista raaka-aineista. Olemme ylpeitä perinteisistä valmistusmenetelmistämme, jotka takaavat aidon makuelämyksen jokaisella kerralla.",
-                "Welcome to Antonio restaurant, where we prepare our dishes always from fresh and quality ingredients. We are proud of our traditional preparation methods, which guarantee an authentic taste experience every time."
+                "Tervetuloa babylon ravintolaan, jossa valmistamme annoksemme aina tuoreista ja laadukkaista raaka-aineista. Olemme ylpeitä perinteisistä valmistusmenetelmistämme, jotka takaavat aidon makuelämyksen jokaisella kerralla.",
+                "Welcome to babylon restaurant, where we prepare our dishes always from fresh and quality ingredients. We are proud of our traditional preparation methods, which guarantee an authentic taste experience every time."
               )}
             </p>
             <p className="text-xl font-semibold text-red-600">
@@ -152,8 +152,8 @@ export function AboutSection() {
               </p>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 {t(
-                  "Kun haluat kuninkaallista kohtelua, on Pizzeria Antonio täydellinen vaihtoehto.",
-                  "When you want royal treatment, Pizzeria Antonio is the perfect choice."
+                  "Kun haluat kuninkaallista kohtelua, on ravintola babylon täydellinen vaihtoehto.",
+                  "When you want royal treatment, ravintola babylon is the perfect choice."
                 )}
               </p>
               <p className="font-medium text-gray-800 dark:text-gray-200">
@@ -209,12 +209,12 @@ export function AboutSection() {
                 <div className="flex items-center space-x-3">
                   <Facebook className="w-5 h-5 text-gray-500" />
                   <a 
-                    href="https://fi-fi.facebook.com/pizzeriaantonio/" 
+                    href="https://fi-fi.facebook.com/ravintolababylon/" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="font-medium text-blue-600 hover:underline"
                   >
-                    Facebook - Pizzeria Antonio
+                    Facebook - ravintola babylon
                   </a>
                 </div>
               </div>

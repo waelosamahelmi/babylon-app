@@ -1,5 +1,5 @@
-# fly.toml app configuration file generated for antonio-app on 2025-08-20T00:00:00.000Z
-app = "antonio-app"
+# fly.toml app configuration file generated for babylon-app on 2025-08-20T00:00:00.000Z
+app = "babylon-app"
 primary_region = "ord"
 
 [build]

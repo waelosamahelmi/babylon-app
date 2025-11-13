@@ -25,7 +25,7 @@ function sanitizeRestaurantName(name) {
 
 console.log('\n📁 Folder Name Sanitization Test:');
 const testNames = [
-  'Pizzeria Antonio',
+  'ravintola babylon',
   'Café De Luxe',
   'Restaurant & Bar',
   'Sushi-Ya!',
@@ -39,7 +39,7 @@ testNames.forEach(name => {
 });
 
 console.log('\n🏗️  Expected Folder Structure:');
-console.log('   pizzeria-antonio/');
+console.log('   ravintola-babylon/');
 console.log('   ├── menu-items/');
 console.log('   ├── menu/');
 console.log('   └── logos/');
