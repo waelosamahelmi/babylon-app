@@ -74,7 +74,7 @@ export function DeliveryMap({ onDeliveryCalculated, initialAddress = "" }: Deliv
       
       // Add restaurant marker
       const restaurantIcon = L.divIcon({
-        html: `<div style="background: #ef4444; color: white; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3); white-space: nowrap;">🍕 ${t("ravintola babylon", "ravintola babylon")}</div>`,
+        html: `<div style="background: #ef4444; color: white; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3); white-space: nowrap;">🍕 ${t("pizzeria antonio", "pizzeria antonio")}</div>`,
         className: 'custom-marker',
         iconSize: [120, 30],
         iconAnchor: [60, 30]
@@ -84,7 +84,7 @@ export function DeliveryMap({ onDeliveryCalculated, initialAddress = "" }: Deliv
         .addTo(map)
         .bindPopup(`
           <div style="text-align: center;">
-            <strong>${t("ravintola babylon", "ravintola babylon")}</strong><br>
+            <strong>${t("pizzeria antonio", "pizzeria antonio")}</strong><br>
             <small>Pasintie 2, 45410 Lahti</small><br>
             <small>+358 41 3152619</small>
           </div>

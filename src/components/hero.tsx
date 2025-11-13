@@ -36,7 +36,7 @@ export function Hero() {
       <div className="relative z-10 text-center text-white max-w-5xl mx-auto px-4">
         <div className="animate-fade-in">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            {t("ravintola babylon", "ravintola babylon")}
+            {t("pizzeria antonio", "pizzeria antonio")}
           </h1>
           <p className="text-2xl md:text-3xl mb-4 font-light">
             {t("Tervetuloa!", "Welcome!")}

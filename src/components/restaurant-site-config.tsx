@@ -348,7 +348,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="ravintola babylon"
+                  placeholder="pizzeria antonio"
                 />
               </div>
               <div className="space-y-2">
@@ -357,7 +357,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                   id="nameEn"
                   value={formData.nameEn}
                   onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                  placeholder="ravintola babylon"
+                  placeholder="pizzeria antonio"
                 />
               </div>
               <div className="space-y-2">
@@ -387,7 +387,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="ravintola babylonssa tarjoamme laadukkaita aterioita..."
+                  placeholder="pizzeria antoniossa tarjoamme laadukkaita aterioita..."
                   rows={3}
                 />
               </div>
@@ -397,7 +397,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                   id="descriptionEn"
                   value={formData.descriptionEn}
                   onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
-                  placeholder="At ravintola babylon we offer quality meals..."
+                  placeholder="At pizzeria antonio we offer quality meals..."
                   rows={3}
                 />
               </div>
@@ -423,7 +423,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="info@ravintolababylon.fi"
+                  placeholder="info@pizzeriaantonio.fi"
                 />
               </div>
             </div>

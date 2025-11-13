@@ -15,7 +15,7 @@ export function Footer() {
                 <UtensilsCrossed className="text-white text-lg" />
               </div>
               <div>
-                <h3 className="text-xl font-bold">ravintola babylon</h3>
+                <h3 className="text-xl font-bold">pizzeria antonio</h3>
                 <p className="text-gray-400 text-sm">{t("Lahti, Suomi", "Lahti, Finland")}</p>
               </div>
             </div>
@@ -84,7 +84,7 @@ export function Footer() {
               </li>
               <li className="flex items-center space-x-2">
                 <Mail className="w-4 h-4" />
-                <span>info@ravintolababylon.fi</span>
+                <span>info@pizzeriaantonio.fi</span>
               </li>
               <li className="flex items-center space-x-2">
                 <MapPin className="w-4 h-4" />
@@ -96,7 +96,7 @@ export function Footer() {
 
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
           <p>
-            &copy; 2024 ravintola babylon.{" "}
+            &copy; 2024 pizzeria antonio.{" "}
             {t("Kaikki oikeudet pidätetään.", "All rights reserved.")}
           </p>
         </div>

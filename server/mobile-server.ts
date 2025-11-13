@@ -33,8 +33,8 @@ const corsOptions = {
       'ionic://localhost',
       'http://localhost',
       'https://localhost',
-      'https://ravintola-babylon.netlify.app',
-      'https://babylonadmin.netlify.app'
+      'https://pizzeria-antonio.netlify.app',
+      'https://antonioadmin.netlify.app'
     ];
     
     // Allow any localhost with different ports and IPs

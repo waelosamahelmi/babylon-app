@@ -720,13 +720,13 @@ export class PrinterService {
     
     const receiptData = {
       header: {
-        text: 'ravintola babylon\n================\nPasintie 2, 45410 Lahti\n+358 41 3152619',
+        text: 'pizzeria antonio\n================\nPasintie 2, 45410 Lahti\n+358 41 3152619',
         alignment: 'center' as const,
         bold: true
       },
       items: items,
       footer: {
-        text: 'Kiitos tilauksestasi!\nThank you for your order!\n\nravintola babylon\nAvoinna: Ma-Su 10:00-20:00',
+        text: 'Kiitos tilauksestasi!\nThank you for your order!\n\npizzeria antonio\nAvoinna: Ma-Su 10:00-20:00',
         alignment: 'center' as const
       },
       total: total,

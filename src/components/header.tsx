@@ -61,8 +61,8 @@ export function Header({ onCartClick }: HeaderProps) {
               </div>
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-                  <span className="hidden sm:inline">ravintola babylon</span>
-                  <span className="sm:hidden">babylon</span>
+                  <span className="hidden sm:inline">pizzeria antonio</span>
+                  <span className="sm:hidden">antonio</span>
                 </h1>
               </div>
             </div>

@@ -47,10 +47,10 @@ This setup provides:
 import { uploadImageToCloudinary, updateImageInCloudinary } from "@/lib/cloudinary";
 
 // Upload new image with restaurant name
-const imageUrl = await uploadImageToCloudinary(file, 'ravintola babylon', 'menu-items');
+const imageUrl = await uploadImageToCloudinary(file, 'pizzeria antonio', 'menu-items');
 
 // Update existing image (deletes old, uploads new)
-const imageUrl = await updateImageInCloudinary(oldImageUrl, newFile, 'ravintola babylon', 'menu-items');
+const imageUrl = await updateImageInCloudinary(oldImageUrl, newFile, 'pizzeria antonio', 'menu-items');
 ```
 
 **Note:** The restaurant name is automatically fetched from the restaurant configuration, so you typically don't need to pass it manually.
@@ -63,7 +63,7 @@ const imageUrl = await updateImageInCloudinary(oldImageUrl, newFile, 'ravintola 
 
 Images are now organized by restaurant name in Cloudinary:
 ```
-ravintola-babylon/           # Restaurant name (sanitized)
+pizzeria-antonio/           # Restaurant name (sanitized)
 ├── menu-items/            # Menu item images
 │   ├── timestamp-random.jpg
 │   └── timestamp-random.png
@@ -80,7 +80,7 @@ another-restaurant/         # Another restaurant
 **Folder Naming:**
 - Restaurant names are automatically sanitized (lowercase, special characters replaced with hyphens)
 - Examples:
-  - "ravintola babylon" → `ravintola-babylon/`
+  - "pizzeria antonio" → `pizzeria-antonio/`
   - "Café De Luxe" → `cafe-de-luxe/`
   - "Restaurant & Bar" → `restaurant-bar/`
 

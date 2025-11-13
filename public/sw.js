@@ -1,4 +1,4 @@
-const CACHE_NAME = 'babylon-admin-v1';
+const CACHE_NAME = 'antonio-admin-v1';
 const urlsToCache = [
   '/',
   '/admin',

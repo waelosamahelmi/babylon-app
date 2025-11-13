@@ -80,7 +80,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
         <Card className="border-0 shadow-none">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-lg text-gray-600 dark:text-gray-300">
-              ravintola babylon
+              pizzeria antonio
             </CardTitle>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {t("Kirjaudu sisään hallintapaneeliin", "Login to admin panel")}
@@ -99,7 +99,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="info@ravintolababylon.fi"
+                  placeholder="info@pizzeriaantonio.fi"
                   required
                   disabled={isLoading}
                 />
@@ -159,10 +159,10 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
               <div className="text-xs text-gray-500 dark:text-gray-400 text-center space-y-1">
                 <p>{t("Oletustunnukset:", "Default credentials:")}</p>
                 <p className="font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded">
-                  info@ravintolababylon.fi
+                  info@pizzeriaantonio.fi
                 </p>
                 <p className="font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded">
-                  babylon@2025
+                  antonio@2025
                 </p>
               </div>
             </div>

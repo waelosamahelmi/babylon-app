@@ -83,12 +83,12 @@ export function ContactSection() {
                       {t("Facebook", "Facebook")}
                     </h4>
                     <a 
-                      href="https://fi-fi.facebook.com/ravintolababylon/" 
+                      href="https://fi-fi.facebook.com/pizzeriaantonio/" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-purple-600 hover:underline"
                     >
-                      Facebook - ravintola babylon
+                      Facebook - pizzeria antonio
                     </a>
                   </div>
                 </div>
@@ -109,7 +109,7 @@ export function ContactSection() {
                   <div className="flex items-center space-x-3 mb-3">
                     <Clock className="w-5 h-5 text-green-600" />
                     <h4 className="font-semibold text-gray-900 dark:text-white">
-                      {t("Ravintola", "Restaurant")}
+                      {t("pizzeria", "Restaurant")}
                     </h4>
                   </div>
                   <div className="ml-8 space-y-1 text-gray-600 dark:text-gray-300">

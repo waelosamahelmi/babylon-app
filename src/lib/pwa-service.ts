@@ -131,13 +131,13 @@ export class PWAService {
 
   // Persistent login management
   saveAuthToken(token: string): void {
-    localStorage.setItem('babylon_auth_token', token);
-    localStorage.setItem('babylon_auth_timestamp', Date.now().toString());
+    localStorage.setItem('antonio_auth_token', token);
+    localStorage.setItem('antonio_auth_timestamp', Date.now().toString());
   }
 
   getAuthToken(): string | null {
-    const token = localStorage.getItem('babylon_auth_token');
-    const timestamp = localStorage.getItem('babylon_auth_timestamp');
+    const token = localStorage.getItem('antonio_auth_token');
+    const timestamp = localStorage.getItem('antonio_auth_timestamp');
     
     if (token && timestamp) {
       const tokenAge = Date.now() - parseInt(timestamp);
@@ -154,8 +154,8 @@ export class PWAService {
   }
 
   clearAuthToken(): void {
-    localStorage.removeItem('babylon_auth_token');
-    localStorage.removeItem('babylon_auth_timestamp');
+    localStorage.removeItem('antonio_auth_token');
+    localStorage.removeItem('antonio_auth_timestamp');
   }
 
   // Background sync for offline support

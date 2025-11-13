@@ -214,7 +214,7 @@ export class ESCPOSFormatter {
       .size('double')
       .bold(true)
       .underline(true)
-      .line('RAVINTOLA babylon')
+      .line('pizzeria antonio')
       .underline(false)
       .bold(false)
       .size('normal')
