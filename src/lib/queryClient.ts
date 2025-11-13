@@ -30,7 +30,7 @@ const getApiBaseUrl = () => {
         return `http://${networkIp}:5000`;
       }
       console.log('🏠 QueryClient using local development API URL');
-      return 'https://babylonadmin.netlify.app/';
+      return 'https://babylonadmin.fly.io/';
     } else {
       // Use the same hostname as the frontend but port 5000
       const localUrl = `http://${hostname}:5000`;
@@ -41,7 +41,7 @@ const getApiBaseUrl = () => {
   
   // Default fallback
   console.log('🏠 QueryClient using default local API URL');
-  return 'https://babylonadmin.netlify.app/';
+  return 'https://babylonadmin.fly.io/';
 };
 
 // Helper to build full URL

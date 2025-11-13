@@ -33,8 +33,8 @@ const corsOptions = {
       'ionic://localhost',
       'http://localhost',
       'https://localhost',
-      'https://ravintola-babylon.netlify.app',
-      'https://babylonadmin.netlify.app'
+      'https://ravintola-babylon.fly.io',
+      'https://babylonadmin.fly.io'
     ];
     
     // Allow any localhost with different ports and IPs
@@ -50,7 +50,7 @@ const corsOptions = {
     }
     
     // Allow Netlify domains
-    if (origin.includes('netlify.app')) {
+    if (origin.includes('fly.io')) {
       console.log(`✅ CORS allowed: Netlify domain ${origin}`);
       return callback(null, true);
     }
@@ -108,7 +108,7 @@ app.use((req, res, next) => {
   // Explicitly set CORS headers for API routes
   if (req.path.startsWith('/api')) {
     const origin = req.headers.origin;
-    if (origin && (origin.includes('netlify.app') || origin.includes('localhost'))) {
+    if (origin && (origin.includes('fly.io') || origin.includes('localhost'))) {
       res.header('Access-Control-Allow-Origin', origin);
       res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
       res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin');
