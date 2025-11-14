@@ -25,7 +25,7 @@ function sanitizeRestaurantName(name) {
 
 console.log('\n📁 Folder Name Sanitization Test:');
 const testNames = [
-  'ravintola babylon',
+  'Ravintola Babylon',
   'Café De Luxe',
   'Restaurant & Bar',
   'Sushi-Ya!',

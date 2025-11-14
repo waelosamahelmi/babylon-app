@@ -171,7 +171,7 @@ export function MobileNav() {
                 <SheetContent side="right" className="w-80">
                   <SheetHeader>
                     <SheetTitle className="text-left">
-                      ravintola babylon
+                      Ravintola Babylon
                     </SheetTitle>
                   </SheetHeader>
                   

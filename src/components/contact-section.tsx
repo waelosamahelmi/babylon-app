@@ -88,7 +88,7 @@ export function ContactSection() {
                       rel="noopener noreferrer"
                       className="text-purple-600 hover:underline"
                     >
-                      Facebook - ravintola babylon
+                      Facebook - Ravintola Babylon
                     </a>
                   </div>
                 </div>

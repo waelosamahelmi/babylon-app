@@ -68,7 +68,7 @@ another-restaurant/
 - Converts to lowercase
 - Replaces special characters with hyphens
 - Removes multiple consecutive hyphens
-- Examples: "ravintola babylon" → `ravintola-babylon/`
+- Examples: "Ravintola Babylon" → `ravintola-babylon/`
 
 ### 6. Documentation
 - ✅ Created `CLOUDINARY_SETUP.md` with comprehensive setup instructions

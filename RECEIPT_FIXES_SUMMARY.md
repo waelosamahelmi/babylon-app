@@ -144,7 +144,7 @@ lines.push(`Tilaus: #${order.orderNumber || order.id || 'N/A'}`); // "Tilaus: #1
 ### **BEFORE (Broken):**
 ```
 ================================  ← Too long, wraps!
-    ravintola babylon
+    Ravintola Babylon
 ================================
 
 TILAUS #: 1234                    ← Too large
@@ -167,7 +167,7 @@ YHTEENSÄ:                0.00€    ← WRONG! (total not found)
 ### **AFTER (Fixed):**
 ```
   ==========================      ← Fits perfectly!
-      ravintola babylon
+      Ravintola Babylon
   ==========================
 
 Tilaus: #1234                     ← Smaller, cleaner

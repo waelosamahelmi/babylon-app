@@ -22,7 +22,7 @@ export function AboutSection() {
         {/* Main About Content */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
-            {t("Meistä ravintola babylon Lahti", "About ravintola babylon Lahti")}
+            {t("Meistä Ravintola Babylon Lahti", "About Ravintola Babylon Lahti")}
           </h2>
           <div className="max-w-4xl mx-auto space-y-6 text-lg text-gray-700 dark:text-gray-300">
             <p>
@@ -152,8 +152,8 @@ export function AboutSection() {
               </p>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 {t(
-                  "Kun haluat kuninkaallista kohtelua, on ravintola babylon täydellinen vaihtoehto.",
-                  "When you want royal treatment, ravintola babylon is the perfect choice."
+                  "Kun haluat kuninkaallista kohtelua, on Ravintola Babylon täydellinen vaihtoehto.",
+                  "When you want royal treatment, Ravintola Babylon is the perfect choice."
                 )}
               </p>
               <p className="font-medium text-gray-800 dark:text-gray-200">
@@ -214,7 +214,7 @@ export function AboutSection() {
                     rel="noopener noreferrer"
                     className="font-medium text-blue-600 hover:underline"
                   >
-                    Facebook - ravintola babylon
+                    Facebook - Ravintola Babylon
                   </a>
                 </div>
               </div>

@@ -428,7 +428,7 @@ class ThermalPrinterService {
   private generateTestReceipt(): string {
     return `
 ==============================
-        ravintola babylon
+        Ravintola Babylon
 ==============================
       Pasintie 2, 45410 Lahti
         +358 41 3152619
@@ -463,7 +463,7 @@ printer connectivity.
     
     // Header
     receipt += escCenter + escBold + escLarge;
-    receipt += 'ravintola babylon' + lineFeed;
+    receipt += 'Ravintola Babylon' + lineFeed;
     receipt += escNormal + escBoldOff;
     receipt += '==============================' + lineFeed;
     receipt += 'Pasintie 2, 45410 Lahti' + lineFeed;
@@ -639,7 +639,7 @@ printer connectivity.
     receipt += 'Kiitos tilauksestasi!' + lineFeed;
     receipt += 'Thank you for your order!' + lineFeed;
     receipt += lineFeed;
-    receipt += 'ravintola babylon' + lineFeed;
+    receipt += 'Ravintola Babylon' + lineFeed;
     receipt += 'Avoinna: Ma-Su 10:00-20:00' + lineFeed;
     receipt += 'Kotiinkuljetus: Ma-To,Pe-Su 10:00-19:30' + lineFeed;
     receipt += lineFeed;
