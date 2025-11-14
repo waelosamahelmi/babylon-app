@@ -12,6 +12,7 @@ import { PrinterProvider } from "@/lib/printer-context";
 import { AppWrapper } from "@/components/app-wrapper";
 import Admin from "@/pages/admin";
 import Login from "@/pages/login";
+import LocationsAdmin from "@/pages/locations-admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/" component={Admin} />
       <Route path="/admin" component={Admin} />
       <Route path="/login" component={Login} />
+      <Route path="/locations" component={LocationsAdmin} />
       <Route component={NotFound} />
     </Switch>
   );

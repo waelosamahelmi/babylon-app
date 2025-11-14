@@ -23,7 +23,7 @@ export function useRestaurantSettings() {
           return {
             isOpen: true,
             openingHours: "10:00-22:00",
-            pickupHours: "10:00-21:30",
+            pickupHours: "10:00-10:29",
             deliveryHours: "11:00-21:00",
             lunchBuffetHours: "11:00-15:00",
             specialMessage: "",
@@ -149,7 +149,7 @@ export function useUpdatePrinterSettings() {
           .insert([{
             is_open: true,
             opening_hours: "10:00-22:00",
-            pickup_hours: "10:00-21:30",
+            pickup_hours: "10:00-10:29",
             delivery_hours: "11:00-21:00",
             lunch_buffet_hours: "11:00-15:00",
             special_message: "",

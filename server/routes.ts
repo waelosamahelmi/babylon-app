@@ -6,6 +6,7 @@ import { insertOrderSchema, insertOrderItemSchema, insertToppingSchema, insertMe
 import { authService, type AuthUser } from "./auth";
 import { updateMenuItemImages, addImageToMenuItem, getMenuItemsWithoutImages } from "./image-updater";
 import { upload, uploadImageToSupabase, deleteImageFromSupabase, ensureStorageBucket } from "./file-upload";
+import { testHostingerConnection } from "./hostinger-upload";
 import { z } from "zod";
 
 // Extend Express session interface
@@ -540,6 +541,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error uploading image:", error);
       res.status(500).json({ error: "Failed to upload image" });
+    }
+  });
+
+  // Test Hostinger FTP connection
+  app.get("/api/test-hostinger", requireAuth, async (req, res) => {
+    try {
+      console.log('🔌 Testing Hostinger FTP connection...');
+      const isConnected = await testHostingerConnection();
+      
+      if (isConnected) {
+        res.json({ 
+          success: true, 
+          message: 'Hostinger FTP connection successful',
+          strategy: process.env.IMAGE_UPLOAD_STRATEGY || 'hostinger'
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          error: 'Hostinger FTP connection failed. Check credentials.' 
+        });
+      }
+    } catch (error) {
+      console.error("Error testing Hostinger:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
     }
   });
 

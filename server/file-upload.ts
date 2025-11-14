@@ -1,6 +1,10 @@
 import multer from 'multer';
 import path from 'path';
 import { uploadImageToCloudinary, deleteImageFromCloudinary } from './cloudinary';
+import { uploadImageToHostinger, deleteImageFromHostinger } from './hostinger-upload';
+
+// Image upload strategy: 'hostinger' or 'cloudinary'
+const UPLOAD_STRATEGY = process.env.IMAGE_UPLOAD_STRATEGY || 'hostinger';
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -20,52 +24,67 @@ const upload = multer({
   },
 });
 
-// Function to upload image to Cloudinary
+// Function to upload image (supports both Hostinger and Cloudinary)
 export async function uploadImageToSupabase(
   file: Express.Multer.File, 
   restaurantName: string = 'default-restaurant',
   folder: string = 'menu'
 ): Promise<string> {
   try {
-    console.log('📸 Uploading image to Cloudinary...');
-    
-    // Upload to Cloudinary instead of Supabase
-    const imageUrl = await uploadImageToCloudinary(file, restaurantName, folder);
-    
-    console.log('✅ Image uploaded successfully to Cloudinary:', imageUrl);
-    return imageUrl;
+    // Choose upload strategy
+    if (UPLOAD_STRATEGY === 'hostinger') {
+      console.log('📸 Uploading image to Hostinger FTP...');
+      const imageUrl = await uploadImageToHostinger(file, folder);
+      console.log('✅ Image uploaded successfully to Hostinger:', imageUrl);
+      return imageUrl;
+    } else {
+      console.log('📸 Uploading image to Cloudinary...');
+      const imageUrl = await uploadImageToCloudinary(file, restaurantName, folder);
+      console.log('✅ Image uploaded successfully to Cloudinary:', imageUrl);
+      return imageUrl;
+    }
     
   } catch (error) {
-    console.error('Error uploading image to Cloudinary:', error);
+    console.error('Error uploading image:', error);
     throw error;
   }
 }
 
-// Function to delete image from Cloudinary
+// Function to delete image (supports both Hostinger and Cloudinary)
 export async function deleteImageFromSupabase(imageUrl: string): Promise<boolean> {
   try {
-    console.log('🗑️ Deleting image from Cloudinary...');
+    console.log('🗑️ Deleting image...');
     
-    // Delete from Cloudinary instead of Supabase
-    const success = await deleteImageFromCloudinary(imageUrl);
+    // Detect storage provider from URL
+    const isHostinger = imageUrl.includes('ravintolababylon.fi') || imageUrl.includes('images.ravintolababylon.fi');
+    
+    let success: boolean;
+    if (isHostinger) {
+      success = await deleteImageFromHostinger(imageUrl);
+    } else {
+      success = await deleteImageFromCloudinary(imageUrl);
+    }
     
     if (success) {
-      console.log('✅ Image deleted successfully from Cloudinary');
+      console.log('✅ Image deleted successfully');
     } else {
-      console.warn('⚠️ Image deletion from Cloudinary failed or was skipped');
+      console.warn('⚠️ Image deletion failed or was skipped');
     }
     
     return success;
   } catch (error) {
-    console.error('Error deleting image from Cloudinary:', error);
+    console.error('Error deleting image:', error);
     return false;
   }
 }
 
-// Function to ensure storage is ready (no longer needed for Cloudinary, but keeping for compatibility)
+// Function to ensure storage is ready
 export async function ensureStorageBucket(): Promise<void> {
-  // No bucket creation needed for Cloudinary
-  console.log('📦 Using Cloudinary for image storage - no bucket setup required');
+  if (UPLOAD_STRATEGY === 'hostinger') {
+    console.log('📦 Using Hostinger FTP for image storage');
+  } else {
+    console.log('📦 Using Cloudinary for image storage');
+  }
 }
 
 export { upload };

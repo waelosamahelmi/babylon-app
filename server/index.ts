@@ -30,7 +30,7 @@ const corsOptions = {
       'http://localhost',
       'https://localhost',
       // Add production domains if needed
-      'https://babylon-app.fly.dev',
+      'https://babylon-admin.fly.dev',
       'https://helmies-food-web.fly.io',
       // Add any other production frontend domains
     ];

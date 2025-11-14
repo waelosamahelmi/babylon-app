@@ -282,7 +282,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
     }
   };
 
-  const generateDayHours = (defaultOpen = "10:30", defaultClose = "21:30") => {
+  const generateDayHours = (defaultOpen = "10:30", defaultClose = "10:29") => {
     const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
     const hours = {};
     days.forEach(day => {
@@ -534,7 +534,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                 <h3 className="text-lg font-semibold">Business Hours</h3>
                 <Button 
                   onClick={() => {
-                    const defaultHours = generateDayHours("10:30", "21:30");
+                    const defaultHours = generateDayHours("10:30", "10:29");
                     setFormData({
                       ...formData,
                       hours: {
@@ -576,7 +576,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                           onCheckedChange={(checked) => {
                             const newHours = { ...formData.hours };
                             if (!newHours.general) newHours.general = {};
-                            if (!newHours.general[day]) newHours.general[day] = { open: "10:30", close: "21:30", closed: true };
+                            if (!newHours.general[day]) newHours.general[day] = { open: "10:30", close: "10:29", closed: true };
                             newHours.general[day].closed = !checked;
                             setFormData({ ...formData, hours: newHours });
                           }}
@@ -592,7 +592,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                               onChange={(e) => {
                                 const newHours = { ...formData.hours };
                                 if (!newHours.general) newHours.general = {};
-                                if (!newHours.general[day]) newHours.general[day] = { open: "10:30", close: "21:30", closed: false };
+                                if (!newHours.general[day]) newHours.general[day] = { open: "10:30", close: "10:29", closed: false };
                                 newHours.general[day].open = e.target.value;
                                 setFormData({ ...formData, hours: newHours });
                               }}
@@ -601,11 +601,11 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                             <span className="text-gray-400">to</span>
                             <Input
                               type="time"
-                              value={formData.hours.general?.[day]?.close || "21:30"}
+                              value={formData.hours.general?.[day]?.close || "10:29"}
                               onChange={(e) => {
                                 const newHours = { ...formData.hours };
                                 if (!newHours.general) newHours.general = {};
-                                if (!newHours.general[day]) newHours.general[day] = { open: "10:30", close: "21:30", closed: false };
+                                if (!newHours.general[day]) newHours.general[day] = { open: "10:30", close: "10:29", closed: false };
                                 newHours.general[day].close = e.target.value;
                                 setFormData({ ...formData, hours: newHours });
                               }}
@@ -643,7 +643,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                           onCheckedChange={(checked) => {
                             const newHours = { ...formData.hours };
                             if (!newHours.pickup) newHours.pickup = {};
-                            if (!newHours.pickup[day]) newHours.pickup[day] = { open: "10:30", close: "21:30", closed: true };
+                            if (!newHours.pickup[day]) newHours.pickup[day] = { open: "10:30", close: "10:29", closed: true };
                             newHours.pickup[day].closed = !checked;
                             setFormData({ ...formData, hours: newHours });
                           }}
@@ -659,7 +659,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                               onChange={(e) => {
                                 const newHours = { ...formData.hours };
                                 if (!newHours.pickup) newHours.pickup = {};
-                                if (!newHours.pickup[day]) newHours.pickup[day] = { open: "10:30", close: "21:30", closed: false };
+                                if (!newHours.pickup[day]) newHours.pickup[day] = { open: "10:30", close: "10:29", closed: false };
                                 newHours.pickup[day].open = e.target.value;
                                 setFormData({ ...formData, hours: newHours });
                               }}
@@ -668,11 +668,11 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                             <span className="text-gray-400">to</span>
                             <Input
                               type="time"
-                              value={formData.hours.pickup?.[day]?.close || "21:30"}
+                              value={formData.hours.pickup?.[day]?.close || "10:29"}
                               onChange={(e) => {
                                 const newHours = { ...formData.hours };
                                 if (!newHours.pickup) newHours.pickup = {};
-                                if (!newHours.pickup[day]) newHours.pickup[day] = { open: "10:30", close: "21:30", closed: false };
+                                if (!newHours.pickup[day]) newHours.pickup[day] = { open: "10:30", close: "10:29", closed: false };
                                 newHours.pickup[day].close = e.target.value;
                                 setFormData({ ...formData, hours: newHours });
                               }}
@@ -710,7 +710,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                           onCheckedChange={(checked) => {
                             const newHours = { ...formData.hours };
                             if (!newHours.delivery) newHours.delivery = {};
-                            if (!newHours.delivery[day]) newHours.delivery[day] = { open: "10:30", close: "21:30", closed: true };
+                            if (!newHours.delivery[day]) newHours.delivery[day] = { open: "10:30", close: "10:29", closed: true };
                             newHours.delivery[day].closed = !checked;
                             setFormData({ ...formData, hours: newHours });
                           }}
@@ -726,7 +726,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                               onChange={(e) => {
                                 const newHours = { ...formData.hours };
                                 if (!newHours.delivery) newHours.delivery = {};
-                                if (!newHours.delivery[day]) newHours.delivery[day] = { open: "10:30", close: "21:30", closed: false };
+                                if (!newHours.delivery[day]) newHours.delivery[day] = { open: "10:30", close: "10:29", closed: false };
                                 newHours.delivery[day].open = e.target.value;
                                 setFormData({ ...formData, hours: newHours });
                               }}
@@ -735,11 +735,11 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                             <span className="text-gray-400">to</span>
                             <Input
                               type="time"
-                              value={formData.hours.delivery?.[day]?.close || "21:30"}
+                              value={formData.hours.delivery?.[day]?.close || "10:29"}
                               onChange={(e) => {
                                 const newHours = { ...formData.hours };
                                 if (!newHours.delivery) newHours.delivery = {};
-                                if (!newHours.delivery[day]) newHours.delivery[day] = { open: "10:30", close: "21:30", closed: false };
+                                if (!newHours.delivery[day]) newHours.delivery[day] = { open: "10:30", close: "10:29", closed: false };
                                 newHours.delivery[day].close = e.target.value;
                                 setFormData({ ...formData, hours: newHours });
                               }}

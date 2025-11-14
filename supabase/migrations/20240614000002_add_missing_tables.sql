@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS restaurant_settings (
     is_open BOOLEAN DEFAULT true,
     opening_hours TEXT NOT NULL DEFAULT '{"monday":"11:00-22:00","tuesday":"11:00-22:00","wednesday":"11:00-22:00","thursday":"11:00-22:00","friday":"11:00-23:00","saturday":"11:00-23:00","sunday":"12:00-22:00"}',
     pickup_hours TEXT NOT NULL DEFAULT '{"monday":"11:00-22:00","tuesday":"11:00-22:00","wednesday":"11:00-22:00","thursday":"11:00-22:00","friday":"11:00-23:00","saturday":"11:00-23:00","sunday":"12:00-22:00"}',
-    delivery_hours TEXT NOT NULL DEFAULT '{"monday":"11:00-21:30","tuesday":"11:00-21:30","wednesday":"11:00-21:30","thursday":"11:00-21:30","friday":"11:00-22:30","saturday":"11:00-22:30","sunday":"12:00-21:30"}',
+    delivery_hours TEXT NOT NULL DEFAULT '{"monday":"11:00-10:29","tuesday":"11:00-10:29","wednesday":"11:00-10:29","thursday":"11:00-10:29","friday":"11:00-22:30","saturday":"11:00-22:30","sunday":"12:00-10:29"}',
     lunch_buffet_hours TEXT NOT NULL DEFAULT '{"monday":"11:00-15:00","tuesday":"11:00-15:00","wednesday":"11:00-15:00","thursday":"11:00-15:00","friday":"11:00-15:00","saturday":"11:00-15:00","sunday":"12:00-15:00"}',
     special_message TEXT,
     updated_at TIMESTAMP DEFAULT NOW() NOT NULL
@@ -86,6 +86,6 @@ INSERT INTO restaurant_settings (id, is_open, opening_hours, pickup_hours, deliv
 SELECT 1, true, 
     '{"monday":"11:00-22:00","tuesday":"11:00-22:00","wednesday":"11:00-22:00","thursday":"11:00-22:00","friday":"11:00-23:00","saturday":"11:00-23:00","sunday":"12:00-22:00"}',
     '{"monday":"11:00-22:00","tuesday":"11:00-22:00","wednesday":"11:00-22:00","thursday":"11:00-22:00","friday":"11:00-23:00","saturday":"11:00-23:00","sunday":"12:00-22:00"}',
-    '{"monday":"11:00-21:30","tuesday":"11:00-21:30","wednesday":"11:00-21:30","thursday":"11:00-21:30","friday":"11:00-22:30","saturday":"11:00-22:30","sunday":"12:00-21:30"}',
+    '{"monday":"11:00-10:29","tuesday":"11:00-10:29","wednesday":"11:00-10:29","thursday":"11:00-10:29","friday":"11:00-22:30","saturday":"11:00-22:30","sunday":"12:00-10:29"}',
     '{"monday":"11:00-15:00","tuesday":"11:00-15:00","wednesday":"11:00-15:00","thursday":"11:00-15:00","friday":"11:00-15:00","saturday":"11:00-15:00","sunday":"12:00-15:00"}'
 WHERE NOT EXISTS (SELECT 1 FROM restaurant_settings WHERE id = 1);

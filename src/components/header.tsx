@@ -87,6 +87,12 @@ export function Header({ onCartClick }: HeaderProps) {
               >
                 {t("Yhteystiedot", "Contact")}
               </a>
+              <a
+                href="locations"
+                className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium"
+              >
+                {t("Ruokapisteet", "Locations")}
+              </a>
             </nav>
 
             {/* Desktop Actions */}
@@ -261,6 +267,13 @@ export function Header({ onCartClick }: HeaderProps) {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {t("Yhteystiedot", "Contact")}
+                </a>
+                <a
+                  href="locations"
+                  className="block text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium py-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {t("Ruokapisteet", "Locations")}
                 </a>
               </div>
 
