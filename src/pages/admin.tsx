@@ -17,6 +17,8 @@ import { ProductManagementModal } from "@/components/product-management-modal";
 import { ToppingsManagementModal } from "@/components/toppings-management-modal-supabase";
 import { RestaurantSettingsModal } from "@/components/restaurant-settings-modal";
 import { RestaurantSiteConfig } from "@/components/restaurant-site-config";
+import { CategoryManagementModal } from "@/components/category-management-modal";
+import { BranchManagementModal } from "@/components/branch-management-modal";
 import { OrderDetailModal } from "@/components/order-detail-modal";
 import { PermissionsDialog } from "@/components/permissions-dialog";
 import { PrinterStatusIndicator } from "@/components/printer-status-indicator";
@@ -87,6 +89,8 @@ export default function Admin() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [autoRefresh, setAutoRefresh] = useState(true);  const [showProductModal, setShowProductModal] = useState(false);
   const [showToppingsModal, setShowToppingsModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showBranchModal, setShowBranchModal] = useState(false);
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
   const [showSiteConfigModal, setShowSiteConfigModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -1612,7 +1616,24 @@ export default function Admin() {
                   >
                     <Tag className="w-4 h-4 mr-2" />
                     {adminT("Täytteiden hallinta", "Toppings Management", "إدارة الإضافات")}
-                  </Button>                  <Button 
+                  </Button>
+                  <Button 
+                    onClick={() => setShowCategoryModal(true)}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Coffee className="w-4 h-4 mr-2" />
+                    {adminT("Kategorioiden hallinta", "Category Management", "إدارة الفئات")}
+                  </Button>
+                  <Button 
+                    onClick={() => setShowBranchModal(true)}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Store className="w-4 h-4 mr-2" />
+                    {adminT("Toimipisteiden hallinta", "Branch Management", "إدارة الفروع")}
+                  </Button>
+                  <Button 
                     onClick={() => setShowDiscoveryModal(true)}
                     variant="outline"
                     className="w-full justify-start"
@@ -1730,6 +1751,18 @@ export default function Admin() {
       <PrinterManagementModal
         isOpen={showDiscoveryModal}
         onClose={() => setShowDiscoveryModal(false)}
+      />
+
+      {/* Category Management Modal */}
+      <CategoryManagementModal
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+      />
+
+      {/* Branch Management Modal */}
+      <BranchManagementModal
+        isOpen={showBranchModal}
+        onClose={() => setShowBranchModal(false)}
       />
     </div>
   );

@@ -10,6 +10,24 @@ export const categories = pgTable("categories", {
   isActive: boolean("is_active").default(true),
 });
 
+export const branches = pgTable("branches", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameEn: text("name_en").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  postalCode: text("postal_code").notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  isActive: boolean("is_active").default(true),
+  displayOrder: integer("display_order").default(0),
+  openingHours: jsonb("opening_hours"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const menuItems = pgTable("menu_items", {
   id: serial("id").primaryKey(),
   categoryId: integer("category_id").references(() => categories.id),
@@ -41,6 +59,7 @@ export const orders = pgTable("orders", {
   customerEmail: text("customer_email"),
   deliveryAddress: text("delivery_address"),
   orderType: text("order_type").notNull(), // 'delivery', 'pickup'
+  branchId: integer("branch_id").references(() => branches.id),
   status: text("status").notNull().default("pending"), // 'pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).default("0"),
@@ -158,6 +177,12 @@ export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
 });
 
+export const insertBranchSchema = createInsertSchema(branches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertMenuItemSchema = createInsertSchema(menuItems).omit({
   id: true,
 });
@@ -211,6 +236,7 @@ export const insertRestaurantConfigSchema = createInsertSchema(restaurantConfig)
 });
 
 export type Category = typeof categories.$inferSelect;
+export type Branch = typeof branches.$inferSelect;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
@@ -224,6 +250,7 @@ export type RestaurantSettings = typeof restaurantSettings.$inferSelect;
 export type RestaurantConfig = typeof restaurantConfig.$inferSelect;
 
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type InsertBranch = z.infer<typeof insertBranchSchema>;
 export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;

@@ -293,3 +293,206 @@ export function useSupabaseDeleteTopping() {
     },
   });
 }
+
+// Create category
+export function useSupabaseCreateCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      console.log('📂 Creating category in Supabase:', data);
+      
+      const dbData = convertCamelToSnake(data);
+      
+      const { data: createdData, error } = await supabase
+        .from('categories')
+        .insert([dbData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Failed to create category:', error);
+        handleSupabaseError(error);
+      }
+
+      console.log('✅ Category created successfully:', createdData?.id);
+      return formatSupabaseResponse(createdData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supabase-categories"] });
+    },
+  });
+}
+
+// Update category
+export function useSupabaseUpdateCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      console.log('📂 Updating category in Supabase:', id, data);
+      
+      const dbData = convertCamelToSnake(data);
+      
+      const { data: updatedData, error } = await supabase
+        .from('categories')
+        .update(dbData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Failed to update category:', error);
+        handleSupabaseError(error);
+      }
+
+      console.log('✅ Category updated successfully:', updatedData?.id);
+      return formatSupabaseResponse(updatedData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supabase-categories"] });
+    },
+  });
+}
+
+// Delete category
+export function useSupabaseDeleteCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      console.log('📂 Deleting category from Supabase:', id);
+      
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('❌ Failed to delete category:', error);
+        handleSupabaseError(error);
+      }
+
+      console.log('✅ Category deleted successfully:', id);
+      return { id };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supabase-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["supabase-menu-items"] });
+    },
+  });
+}
+
+// Get all branches
+export function useSupabaseBranches() {
+  const { user } = useSupabaseAuth();
+  
+  return useQuery({
+    queryKey: ["supabase-branches"],
+    queryFn: async () => {
+      console.log('🏪 Fetching branches from Supabase...');
+      
+      const { data, error } = await supabase
+        .from('branches')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (error) {
+        console.error('❌ Failed to fetch branches:', error);
+        handleSupabaseError(error);
+      }
+
+      console.log('✅ Branches fetched successfully:', data?.length || 0, 'branches');
+      return formatSupabaseResponse(data) || [];
+    },
+    enabled: !!user,
+  });
+}
+
+// Create branch
+export function useSupabaseCreateBranch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      console.log('🏪 Creating branch in Supabase:', data);
+      
+      const dbData = convertCamelToSnake(data);
+      
+      const { data: createdData, error } = await supabase
+        .from('branches')
+        .insert([dbData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Failed to create branch:', error);
+        handleSupabaseError(error);
+      }
+
+      console.log('✅ Branch created successfully:', createdData?.id);
+      return formatSupabaseResponse(createdData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supabase-branches"] });
+    },
+  });
+}
+
+// Update branch
+export function useSupabaseUpdateBranch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      console.log('🏪 Updating branch in Supabase:', id, data);
+      
+      const dbData = convertCamelToSnake(data);
+      
+      const { data: updatedData, error } = await supabase
+        .from('branches')
+        .update(dbData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Failed to update branch:', error);
+        handleSupabaseError(error);
+      }
+
+      console.log('✅ Branch updated successfully:', updatedData?.id);
+      return formatSupabaseResponse(updatedData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supabase-branches"] });
+    },
+  });
+}
+
+// Delete branch
+export function useSupabaseDeleteBranch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      console.log('🏪 Deleting branch from Supabase:', id);
+      
+      const { error } = await supabase
+        .from('branches')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('❌ Failed to delete branch:', error);
+        handleSupabaseError(error);
+      }
+
+      console.log('✅ Branch deleted successfully:', id);
+      return { id };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supabase-branches"] });
+    },
+  });
+}

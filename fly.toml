@@ -1,8 +1,10 @@
-# fly.toml app configuration file generated for babylon-app on 2025-08-20T00:00:00.000Z
-app = "babylon-app"
-primary_region = "ord"
+# Fly.io configuration for Babylon Admin App
+app = "babylon-admin"
+primary_region = "arn"
 
 [build]
+  [build.args]
+    NODE_VERSION = "20"
 
 [http_service]
   internal_port = 5000
@@ -12,10 +14,15 @@ primary_region = "ord"
   min_machines_running = 0
   processes = ["app"]
 
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
 [[vm]]
-  memory = "1gb"
   cpu_kind = "shared"
   cpus = 1
+  memory_mb = 512
 
 [env]
   NODE_ENV = "production"

@@ -1,5 +1,5 @@
-# Use the official Node.js image
-FROM node:20-alpine
+# Babylon Admin App - Fly.io Dockerfile
+FROM node:20-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -8,20 +8,31 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install --legacy-peer-deps
+RUN npm ci --legacy-peer-deps
 
-# Copy source code
+# Copy application code
 COPY . .
 
-# Build the application
+# Build frontend and backend
+RUN npm run build:frontend
 RUN npm run build:mobile
 
-# Expose the port
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy built files and dependencies
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+
+# Expose port
 EXPOSE 5000
 
-# Set environment variables
-ENV NODE_ENV=production
-ENV PORT=5000
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:5000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application
+# Start the server
 CMD ["npm", "run", "start:mobile"]
