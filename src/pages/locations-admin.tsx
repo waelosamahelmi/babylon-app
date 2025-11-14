@@ -12,7 +12,6 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, MapPin } from "lucide-react";
 import { Header } from "@/components/header";
-import { Cart } from "@/components/cart";
 
 interface Location {
   id: number;

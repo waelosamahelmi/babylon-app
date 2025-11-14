@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Store, Edit, Clock, MapPin } from "lucide-react";
 import { Header } from "@/components/header";
-import { Cart } from "@/components/cart";
 
 interface Branch {
   id: number;
