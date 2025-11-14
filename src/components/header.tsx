@@ -76,6 +76,18 @@ export function Header({ onCartClick }: HeaderProps) {
                 {t("Menu", "Menu")}
               </a>
               <a
+                href="branches"
+                className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium"
+              >
+                {t("Toimipisteet", "Branches")}
+              </a>
+              <a
+                href="locations"
+                className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium"
+              >
+                {t("Ruokapisteet", "Locations")}
+              </a>
+              <a
                 href="about"
                 className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium"
               >
@@ -86,12 +98,6 @@ export function Header({ onCartClick }: HeaderProps) {
                 className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium"
               >
                 {t("Yhteystiedot", "Contact")}
-              </a>
-              <a
-                href="locations"
-                className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium"
-              >
-                {t("Ruokapisteet", "Locations")}
               </a>
             </nav>
 
@@ -255,6 +261,20 @@ export function Header({ onCartClick }: HeaderProps) {
                   {t("Menu", "Menu")}
                 </a>
                 <a
+                  href="branches"
+                  className="block text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium py-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {t("Toimipisteet", "Branches")}
+                </a>
+                <a
+                  href="locations"
+                  className="block text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium py-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {t("Ruokapisteet", "Locations")}
+                </a>
+                <a
                   href="about"
                   className="block text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium py-2"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -267,13 +287,6 @@ export function Header({ onCartClick }: HeaderProps) {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {t("Yhteystiedot", "Contact")}
-                </a>
-                <a
-                  href="locations"
-                  className="block text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium py-2"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {t("Ruokapisteet", "Locations")}
                 </a>
               </div>
 

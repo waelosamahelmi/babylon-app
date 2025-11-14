@@ -31,7 +31,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_branch_id ON orders(branch_id);
 -- Insert sample branches (Lahti and Tampere)
 INSERT INTO branches (name, name_en, address, city, postal_code, latitude, longitude, phone, email, display_order, is_active)
 VALUES 
-  ('Lahti', 'Lahti', 'Aleksanterinkatu 18', 'Lahti', '15110', 60.98267, 25.66151, '+358 3 782 2440', 'lahti@ravintolababylon.fi', 1, TRUE),
+  ('Lahti', 'Lahti', 'Aleksanterinkatu 18', 'Lahti', '15140', 60.98267, 25.66151, '+358 3 782 2440', 'lahti@ravintolababylon.fi', 1, TRUE),
   ('Tampere', 'Tampere', 'Hämeenkatu 19', 'Tampere', '33200', 61.49772, 23.76093, '+358 3 123 4567', 'tampere@ravintolababylon.fi', 2, TRUE)
 ON CONFLICT DO NOTHING;
 

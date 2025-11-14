@@ -441,7 +441,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                       ...formData, 
                       address: { ...formData.address, street: e.target.value }
                     })}
-                    placeholder="Rauhankatu 19 c"
+                    placeholder="Vapaudenkatu 28"
                   />
                 </div>
                 <div className="space-y-2">
@@ -453,7 +453,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                       ...formData, 
                       address: { ...formData.address, postalCode: e.target.value }
                     })}
-                    placeholder="15110"
+                    placeholder="15140"
                   />
                 </div>
                 <div className="space-y-2">
