@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, X, Upload, Percent, Tag, Save, Trash2, Store } from "lucide-react";
 import type { MenuItem } from "@shared/schema";
+import { MenuItemToppingGroupAssignment } from "./menu-item-topping-group-assignment";
 
 // Form-specific type with optional id and string dates for inputs
 type MenuItemFormData = Omit<MenuItem, 'id' | 'offerStartDate' | 'offerEndDate'> & {
@@ -677,6 +678,14 @@ export function ProductManagementModal({
               </div>
             </div>
           </div>
+
+          {/* Topping Group Assignment - Only show for existing products */}
+          {product && product.id && (
+            <MenuItemToppingGroupAssignment
+              menuItemId={product.id}
+              menuItemName={formData.name}
+            />
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-between pt-4 border-t">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseToppings, useSupabaseCreateTopping, useSupabaseUpdateTopping, useSupabaseDeleteTopping } from "@/hooks/use-supabase-menu";
+import { useSupabaseToppings, useSupabaseCreateTopping, useSupabaseUpdateTopping, useSupabaseDeleteTopping, useSupabaseCategories } from "@/hooks/use-supabase-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +37,7 @@ interface ToppingsManagementModalProps {
 export function ToppingsManagementModal({ isOpen, onClose }: ToppingsManagementModalProps) {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const [showCreateTopping, setShowCreateTopping] = useState(false);
+  const [showFormDialog, setShowFormDialog] = useState(false);
   const [editingTopping, setEditingTopping] = useState<Topping | null>(null);
   const [formData, setFormData] = useState<ToppingFormData>({
     name: "",
@@ -52,6 +52,7 @@ export function ToppingsManagementModal({ isOpen, onClose }: ToppingsManagementM
   });
 
   const { data: toppings, isLoading } = useSupabaseToppings();
+  const { data: categories } = useSupabaseCategories();
   const createToppingMutation = useSupabaseCreateTopping();
   const updateToppingMutation = useSupabaseUpdateTopping();
   const deleteToppingMutation = useSupabaseDeleteTopping();
@@ -82,6 +83,19 @@ export function ToppingsManagementModal({ isOpen, onClose }: ToppingsManagementM
       isRequired: topping.isRequired ?? false,
       displayOrder: topping.displayOrder ?? 0,
     });
+    setShowFormDialog(true);
+  };
+
+  const handleCreateNew = () => {
+    setEditingTopping(null);
+    resetForm();
+    setShowFormDialog(true);
+  };
+
+  const closeFormDialog = () => {
+    setShowFormDialog(false);
+    setEditingTopping(null);
+    resetForm();
   };
 
   const handleCreateTopping = async () => {
@@ -90,8 +104,7 @@ export function ToppingsManagementModal({ isOpen, onClose }: ToppingsManagementM
         ...formData,
         price: parseFloat(formData.price),
       });
-      setShowCreateTopping(false);
-      resetForm();
+      closeFormDialog();
       toast({
         title: t("Onnistui", "Success"),
         description: t("Täyte luotu", "Topping created"),
@@ -108,17 +121,16 @@ export function ToppingsManagementModal({ isOpen, onClose }: ToppingsManagementM
 
   const handleUpdateTopping = async () => {
     if (!editingTopping) return;
-    
+
     try {
-      await updateToppingMutation.mutateAsync({ 
-        id: editingTopping.id, 
+      await updateToppingMutation.mutateAsync({
+        id: editingTopping.id,
         data: {
           ...formData,
           price: parseFloat(formData.price),
         }
       });
-      setEditingTopping(null);
-      resetForm();
+      closeFormDialog();
       toast({
         title: t("Onnistui", "Success"),
         description: t("Täyte päivitetty", "Topping updated"),
@@ -164,7 +176,7 @@ export function ToppingsManagementModal({ isOpen, onClose }: ToppingsManagementM
             <h3 className="text-lg font-medium">
               {t("Kaikki täytteet", "All Toppings", "جميع الإضافات")}
             </h3>
-            <Button onClick={() => setShowCreateTopping(true)}>
+            <Button onClick={handleCreateNew}>
               {t("Luo uusi täyte", "Create New Topping", "إنشاء إضافة جديدة")}
             </Button>
           </div>          {/* Toppings List */}
@@ -220,157 +232,150 @@ export function ToppingsManagementModal({ isOpen, onClose }: ToppingsManagementM
             </div>
           )}
 
-          {/* Create/Edit Form */}
-          {(showCreateTopping || editingTopping) && (
-            <Card>
-              <CardContent className="p-6">
-                <h4 className="font-medium mb-4">
-                  {editingTopping 
-                    ? t("Muokkaa täytettä", "Edit Topping") 
-                    : t("Luo uusi täyte", "Create New Topping")
-                  }
-                </h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">{t("Nimi (FI)", "Name (FI)")}</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder={t("Esim. Pepperoni", "e.g. Pepperoni")}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="nameEn">{t("Nimi (EN)", "Name (EN)")}</Label>
-                    <Input
-                      id="nameEn"
-                      value={formData.nameEn}
-                      onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                      placeholder="e.g. Pepperoni"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="nameAr">{t("Nimi (AR)", "Name (AR)")}</Label>
-                    <Input
-                      id="nameAr"
-                      value={formData.nameAr}
-                      onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-                      placeholder="مثال: بيبروني"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="price">{t("Hinta", "Price")}</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="category">{t("Kategoria", "Category")}</Label>
-                    <Select 
-                      value={formData.category} 
-                      onValueChange={(value) => setFormData({ ...formData, category: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pizza">Pizza</SelectItem>
-                        <SelectItem value="kebab">Kebab</SelectItem>
-                        <SelectItem value="chicken">Chicken</SelectItem>
-                        <SelectItem value="wings">Wings</SelectItem>
-                        <SelectItem value="burger">Burger</SelectItem>
-                        <SelectItem value="drink">Drink</SelectItem>
-                        <SelectItem value="salad">Salad</SelectItem>
-                        <SelectItem value="kids">Kids</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="type">{t("Tyyppi", "Type")}</Label>
-                    <Select 
-                      value={formData.type} 
-                      onValueChange={(value) => setFormData({ ...formData, type: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="topping">Topping</SelectItem>
-                        <SelectItem value="sauce">Sauce</SelectItem>
-                        <SelectItem value="extra">Extra</SelectItem>
-                        <SelectItem value="size">Size</SelectItem>
-                        <SelectItem value="base">Base</SelectItem>
-                        <SelectItem value="spice">Spice</SelectItem>
-                        <SelectItem value="drink">Drink</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="displayOrder">{t("Järjestys", "Display Order")}</Label>
-                    <Input
-                      id="displayOrder"
-                      type="number"
-                      value={formData.displayOrder}
-                      onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-4 mt-4">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="isActive"
-                      checked={formData.isActive}
-                      onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                    />
-                    <Label htmlFor="isActive">{t("Aktiivinen", "Active")}</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="isRequired"
-                      checked={formData.isRequired}
-                      onCheckedChange={(checked) => setFormData({ ...formData, isRequired: checked })}
-                    />
-                    <Label htmlFor="isRequired">{t("Pakollinen", "Required")}</Label>
-                  </div>
-                </div>
-                
-                <div className="flex gap-2 mt-6">
-                  <Button
-                    onClick={editingTopping ? handleUpdateTopping : handleCreateTopping}
-                    disabled={!formData.name || !formData.nameEn}
-                  >
-                    {editingTopping ? t("Päivitä", "Update") : t("Luo", "Create")}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setShowCreateTopping(false);
-                      setEditingTopping(null);
-                      resetForm();
-                    }}
-                  >
-                    {t("Peruuta", "Cancel")}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </DialogContent>
+
+      {/* Create/Edit Form Dialog */}
+      <Dialog open={showFormDialog} onOpenChange={closeFormDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTopping
+                ? t("Muokkaa täytettä", "Edit Topping")
+                : t("Luo uusi täyte", "Create New Topping")
+              }
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">{t("Nimi (FI)", "Name (FI)")}</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder={t("Esim. Pepperoni", "e.g. Pepperoni")}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="nameEn">{t("Nimi (EN)", "Name (EN)")}</Label>
+                <Input
+                  id="nameEn"
+                  value={formData.nameEn}
+                  onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                  placeholder="e.g. Pepperoni"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="nameAr">{t("Nimi (AR)", "Name (AR)")}</Label>
+                <Input
+                  id="nameAr"
+                  value={formData.nameAr}
+                  onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
+                  placeholder="مثال: بيبروني"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="price">{t("Hinta", "Price")}</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="category">{t("Kategoria", "Category")}</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories?.map((category: any) => (
+                      <SelectItem key={category.id} value={category.name.toLowerCase()}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="type">{t("Tyyppi", "Type")}</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) => setFormData({ ...formData, type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="topping">Topping</SelectItem>
+                    <SelectItem value="sauce">Sauce</SelectItem>
+                    <SelectItem value="extra">Extra</SelectItem>
+                    <SelectItem value="size">Size</SelectItem>
+                    <SelectItem value="base">Base</SelectItem>
+                    <SelectItem value="spice">Spice</SelectItem>
+                    <SelectItem value="drink">Drink</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="displayOrder">{t("Järjestys", "Display Order")}</Label>
+                <Input
+                  id="displayOrder"
+                  type="number"
+                  value={formData.displayOrder}
+                  onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isActive"
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                />
+                <Label htmlFor="isActive">{t("Aktiivinen", "Active")}</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isRequired"
+                  checked={formData.isRequired}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isRequired: checked })}
+                />
+                <Label htmlFor="isRequired">{t("Pakollinen", "Required")}</Label>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={editingTopping ? handleUpdateTopping : handleCreateTopping}
+                disabled={!formData.name || !formData.nameEn}
+              >
+                {editingTopping ? t("Päivitä", "Update") : t("Luo", "Create")}
+              </Button>
+              <Button variant="outline" onClick={closeFormDialog}>
+                {t("Peruuta", "Cancel")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

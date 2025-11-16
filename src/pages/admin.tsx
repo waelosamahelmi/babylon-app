@@ -15,6 +15,7 @@ import { LoginModal } from "@/components/login-modal";
 import { ProductManagementModal } from "@/components/product-management-modal";
 
 import { ToppingsManagementModal } from "@/components/toppings-management-modal-supabase";
+import { ToppingGroupManagementModal } from "@/components/topping-group-management-modal";
 import { RestaurantSettingsModal } from "@/components/restaurant-settings-modal";
 import { RestaurantSiteConfig } from "@/components/restaurant-site-config";
 import { CategoryManagementModal } from "@/components/category-management-modal";
@@ -90,6 +91,7 @@ export default function Admin() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [autoRefresh, setAutoRefresh] = useState(true);  const [showProductModal, setShowProductModal] = useState(false);
   const [showToppingsModal, setShowToppingsModal] = useState(false);
+  const [showToppingGroupsModal, setShowToppingGroupsModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
@@ -1644,13 +1646,21 @@ export default function Admin() {
                     <Globe className="w-4 h-4 mr-2" />
                     {adminT("Sivuston asetukset", "Site Configuration", "إعدادات الموقع")}
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => setShowToppingsModal(true)}
                     variant="outline"
                     className="w-full justify-start"
                   >
                     <Tag className="w-4 h-4 mr-2" />
                     {adminT("Täytteiden hallinta", "Toppings Management", "إدارة الإضافات")}
+                  </Button>
+                  <Button
+                    onClick={() => setShowToppingGroupsModal(true)}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Tag className="w-4 h-4 mr-2" />
+                    {adminT("Täydennysryhmät", "Topping Groups", "مجموعات الإضافات")}
                   </Button>
                   <Button 
                     onClick={() => setShowCategoryModal(true)}
@@ -1750,7 +1760,14 @@ export default function Admin() {
       <ToppingsManagementModal
         isOpen={showToppingsModal}
         onClose={() => setShowToppingsModal(false)}
-      />      <RestaurantSettingsModal
+      />
+
+      <ToppingGroupManagementModal
+        isOpen={showToppingGroupsModal}
+        onClose={() => setShowToppingGroupsModal(false)}
+      />
+
+      <RestaurantSettingsModal
         isOpen={showRestaurantModal}
         onClose={() => setShowRestaurantModal(false)}
       />

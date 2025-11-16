@@ -91,8 +91,8 @@ export function BranchManagementModal({ isOpen, onClose }: BranchManagementModal
     try {
       const branchData = {
         ...formData,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
+        latitude: parseFloat(formData.latitude),
+        longitude: parseFloat(formData.longitude),
       };
 
       if (editingId) {
@@ -114,9 +114,10 @@ export function BranchManagementModal({ isOpen, onClose }: BranchManagementModal
       resetForm();
       refetch();
     } catch (error) {
+      console.error('Branch save error:', error);
       toast({
         title: t("Virhe", "Error"),
-        description: t("Toiminto epäonnistui", "Operation failed"),
+        description: error instanceof Error ? error.message : t("Toiminto epäonnistui", "Operation failed"),
         variant: "destructive",
       });
     }

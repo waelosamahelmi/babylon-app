@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/language-context";
-import { Plus, Edit, Trash2, Save, X, GripVertical } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, GripVertical, ChevronDown, ChevronUp } from "lucide-react";
+import { CategoryToppingGroupAssignment } from "./category-topping-group-assignment";
 
 interface CategoryManagementModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export function CategoryManagementModal({ isOpen, onClose }: CategoryManagementM
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [expandedCategoryId, setExpandedCategoryId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     nameEn: "",
@@ -220,6 +222,17 @@ export function CategoryManagementModal({ isOpen, onClose }: CategoryManagementM
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => setExpandedCategoryId(expandedCategoryId === category.id ? null : category.id)}
+                        >
+                          {expandedCategoryId === category.id ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleEdit(category)}
                         >
                           <Edit className="w-4 h-4" />
@@ -233,6 +246,14 @@ export function CategoryManagementModal({ isOpen, onClose }: CategoryManagementM
                         </Button>
                       </div>
                     </div>
+
+                    {/* Topping Group Assignment - shown when expanded */}
+                    {expandedCategoryId === category.id && (
+                      <CategoryToppingGroupAssignment
+                        categoryId={category.id}
+                        categoryName={category.name}
+                      />
+                    )}
                   </CardContent>
                 </Card>
               ))

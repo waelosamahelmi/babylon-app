@@ -194,7 +194,7 @@ export function useRemoveToppingGroupFromCategory() {
   return useMutation({
     mutationFn: async ({ categoryId, toppingGroupId }: { categoryId: number; toppingGroupId: number }) => {
       console.log('➖ Removing topping group from category:', { categoryId, toppingGroupId });
-      
+
       const { error } = await supabase
         .from('category_topping_groups')
         .delete()
@@ -210,6 +210,101 @@ export function useRemoveToppingGroupFromCategory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["category-topping-groups"] });
+    },
+  });
+}
+
+// Get menu item topping groups
+export function useMenuItemToppingGroups(menuItemId?: number) {
+  const { user } = useSupabaseAuth();
+
+  return useQuery({
+    queryKey: menuItemId ? ["menu-item-topping-groups", menuItemId] : ["menu-item-topping-groups"],
+    queryFn: async () => {
+      console.log('📋 Fetching menu item topping groups...', menuItemId);
+
+      let query = supabase
+        .from('menu_item_topping_groups')
+        .select(`
+          *,
+          topping_groups (
+            *,
+            topping_group_items (
+              *,
+              toppings (*)
+            )
+          )
+        `);
+
+      if (menuItemId) {
+        query = query.eq('menu_item_id', menuItemId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Failed to fetch menu item topping groups:', error);
+        handleSupabaseError(error);
+      }
+
+      console.log('✅ Menu item topping groups fetched:', data?.length || 0);
+      return formatSupabaseResponse(data) || [];
+    },
+    enabled: !!user,
+  });
+}
+
+// Assign topping group to menu item
+export function useAssignToppingGroupToMenuItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ menuItemId, toppingGroupId }: { menuItemId: number; toppingGroupId: number }) => {
+      console.log('➕ Assigning topping group to menu item:', { menuItemId, toppingGroupId });
+
+      const { data, error } = await supabase
+        .from('menu_item_topping_groups')
+        .insert([{ menu_item_id: menuItemId, topping_group_id: toppingGroupId }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Failed to assign topping group:', error);
+        handleSupabaseError(error);
+      }
+
+      console.log('✅ Topping group assigned to menu item');
+      return formatSupabaseResponse(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menu-item-topping-groups"] });
+    },
+  });
+}
+
+// Remove topping group from menu item
+export function useRemoveToppingGroupFromMenuItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ menuItemId, toppingGroupId }: { menuItemId: number; toppingGroupId: number }) => {
+      console.log('➖ Removing topping group from menu item:', { menuItemId, toppingGroupId });
+
+      const { error } = await supabase
+        .from('menu_item_topping_groups')
+        .delete()
+        .eq('menu_item_id', menuItemId)
+        .eq('topping_group_id', toppingGroupId);
+
+      if (error) {
+        console.error('❌ Failed to remove topping group:', error);
+        handleSupabaseError(error);
+      }
+
+      console.log('✅ Topping group removed from menu item');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menu-item-topping-groups"] });
     },
   });
 }
