@@ -49,6 +49,7 @@ export const menuItems = pgTable("menu_items", {
   // Conditional pricing fields for customizable items (e.g., "Your Choice Pizza")
   hasConditionalPricing: boolean("has_conditional_pricing").default(false),
   includedToppingsCount: integer("included_toppings_count").default(0), // Number of free toppings included in base price
+  branchId: integer("branch_id").references(() => branches.id), // NULL = available at all branches
 });
 
 export const orders = pgTable("orders", {
