@@ -347,6 +347,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orderData = insertOrderSchema.parse(req.body);
       const { items, ...order } = req.body;
       
+      // Log branch info for debugging
+      console.log('📝 Creating order with branch_id:', order.branchId, 'for customer:', order.customerName);
+      
       // Calculate totals
       let subtotal = 0;
       const validatedItems = [];
@@ -410,6 +413,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         smallOrderFee: smallOrderFee.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
       });
+      
+      console.log('✅ Order created:', newOrder.orderNumber, 'with branch_id:', newOrder.branchId);
       
       // Create order items
       for (const item of validatedItems) {

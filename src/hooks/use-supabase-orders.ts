@@ -4,14 +4,14 @@ import { useSupabaseAuth } from "@/lib/supabase-auth-context";
 
 // Get all orders
 export function useSupabaseOrders() {
-  const { user } = useSupabaseAuth();
+  const { user, userBranch, loading } = useSupabaseAuth();
   
   return useQuery({
-    queryKey: ["supabase-orders"],
+    queryKey: ["supabase-orders", userBranch],
     queryFn: async () => {
-      console.log('📦 Fetching orders from Supabase...');
+      console.log('📦 Fetching orders from Supabase...', { userBranch, loading });
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           *,
@@ -19,8 +19,17 @@ export function useSupabaseOrders() {
             *,
             menu_items (*)
           )
-        `)
-        .order('created_at', { ascending: false });
+        `);
+      
+      // Filter by user's branch if they have one assigned
+      if (userBranch !== null && userBranch !== undefined) {
+        query = query.eq('branch_id', userBranch);
+        console.log('🏢 Filtering orders for branch:', userBranch);
+      } else {
+        console.log('⚠️ No branch filter applied - user has no branch assigned');
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
         console.error('❌ Failed to fetch orders:', error);
@@ -28,9 +37,10 @@ export function useSupabaseOrders() {
       }
 
       console.log('✅ Orders fetched successfully:', data?.length || 0, 'orders');
+      console.log('📋 Orders branch_id values:', data?.map(o => ({ id: o.id, orderNumber: o.order_number, branchId: o.branch_id })));
       return formatSupabaseResponse(data) || [];
     },
-    enabled: !!user,
+    enabled: !!user && !loading, // Wait for auth loading to complete before fetching orders
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 }
