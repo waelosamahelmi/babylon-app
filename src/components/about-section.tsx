@@ -194,15 +194,15 @@ export function AboutSection() {
                 <div className="flex items-start space-x-3">
                   <MapPin className="w-5 h-5 text-gray-500 mt-1" />
                   <div>
-                    <p className="font-medium">Pasintie 2</p>
-                    <p className="text-gray-600 dark:text-gray-400">45410 Lahti, Finland</p>
+                    <p className="font-medium">Vapaudenkatu 28</p>
+                    <p className="text-gray-600 dark:text-gray-400">15140 Lahti, Finland</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <Phone className="w-5 h-5 text-gray-500" />
-                  <a href="tel:+358413152619" className="font-medium text-blue-600 hover:underline">
-                    +358 41 3152619
+                  <a href="tel:+35837812222" className="font-medium text-blue-600 hover:underline">
+                    +358-3781-2222
                   </a>
                 </div>
                 

@@ -235,16 +235,16 @@ export function MobileNav() {
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center space-x-2">
                           <Phone className="w-4 h-4 text-green-600" />
-                          <a href="tel:+358413152619" className="text-green-600">
-                            +358 41 3152619
+                          <a href="tel:+35837812222" className="text-green-600">
+                            +358-3781-2222
                           </a>
                         </div>
                         
                         <div className="flex items-start space-x-2">
                           <MapPin className="w-4 h-4 text-red-600 mt-0.5" />
                           <div>
-                            <p>Pasintie 2</p>
-                            <p>45410 Lahti</p>
+                            <p>Vapaudenkatu 28</p>
+                            <p>15140 Lahti</p>
                           </div>
                         </div>
                         

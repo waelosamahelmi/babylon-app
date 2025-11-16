@@ -51,8 +51,8 @@ export function ContactSection() {
                       {t("Osoite", "Address")}
                     </h4>
                     <p className="text-gray-600 dark:text-gray-300">
-                      Pasintie 2<br />
-                      45410 Lahti, Finland
+                      Vapaudenkatu 28<br />
+                      15140 Lahti, Finland
                     </p>
                   </div>
                 </div>
@@ -66,10 +66,10 @@ export function ContactSection() {
                       {t("Puhelin", "Phone")}
                     </h4>
                     <a 
-                      href="tel:+358413152619" 
+                      href="tel:+35837812222" 
                       className="text-blue-600 hover:underline text-lg font-medium"
                     >
-                      +358 41 3152619
+                      +358-3781-2222
                     </a>
                   </div>
                 </div>
@@ -243,7 +243,7 @@ export function ContactSection() {
                   {t("Kartta tulossa pian", "Map coming soon")}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                  Pasintie 2, 45410 Lahti
+                  Vapaudenkatu 28, 15140 Lahti
                 </p>
               </div>
             </div>

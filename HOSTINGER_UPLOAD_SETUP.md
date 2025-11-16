@@ -109,7 +109,7 @@ npm run dev:mobile
 
 Test the connection (using curl or your API client):
 ```bash
-curl -X GET http://localhost:5000/api/test-hostinger \
+curl -X GET https://babylon-admin.fly.dev/api/test-hostinger \
   -H "Authorization: Bearer your_token"
 ```
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/language-context";
 import { useCategories } from "@/hooks/use-menu";
+import { useSupabaseBranches } from "@/hooks/use-supabase-menu";
 import { uploadImageToCloudinary, updateImageInCloudinary } from "@/lib/cloudinary";
 import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -12,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, X, Upload, Percent, Tag, Save, Trash2 } from "lucide-react";
+import { Plus, X, Upload, Percent, Tag, Save, Trash2, Store } from "lucide-react";
 import type { MenuItem } from "@shared/schema";
 
 // Form-specific type with optional id and string dates for inputs
@@ -39,6 +40,7 @@ export function ProductManagementModal({
 }: ProductManagementModalProps) {
   const { t, language } = useLanguage();
   const { data: categories } = useCategories();
+  const { data: branches } = useSupabaseBranches();
   const { data: restaurantConfig } = useRestaurantConfig();
   const { toast } = useToast();
   
@@ -47,6 +49,7 @@ export function ProductManagementModal({
     nameEn: "",
     price: "",
     categoryId: null,
+    branchId: null,
     description: null,
     descriptionEn: null,
     imageUrl: null,
@@ -83,6 +86,7 @@ export function ProductManagementModal({
         nameEn: "",
         price: "",
         categoryId: null,
+        branchId: null,
         description: null,
         descriptionEn: null,
         imageUrl: null,
@@ -308,6 +312,41 @@ export function ProductManagementModal({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Branch Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="branchId" className="flex items-center gap-2">
+                <Store className="w-4 h-4" />
+                {t("Toimipiste", "Branch")}
+              </Label>
+              <Select
+                value={formData.branchId?.toString() || "all"}
+                onValueChange={(value) => setFormData(prev => ({ 
+                  ...prev, 
+                  branchId: value === "all" ? null : parseInt(value)
+                }))}
+              >
+                <SelectTrigger id="branchId">
+                  <SelectValue placeholder={t("Kaikki toimipisteet", "All branches")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    {t("Kaikki toimipisteet (saatavilla kaikkialla)", "All branches (available everywhere)")}
+                  </SelectItem>
+                  {branches?.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {language === "fi" ? branch.name : branch.nameEn}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t(
+                  "Jos 'Kaikki toimipisteet' valitaan, tuote näkyy kaikissa toimipisteissä. Muuten tuote näkyy vain valitussa toimipisteessä.",
+                  "If 'All branches' is selected, the product will be available at all branches. Otherwise, it will only be available at the selected branch."
+                )}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

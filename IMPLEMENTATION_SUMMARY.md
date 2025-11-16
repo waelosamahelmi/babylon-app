@@ -104,11 +104,11 @@ Images are automatically organized by:
 npm run dev:mobile
 
 # Test FTP connection
-curl http://localhost:5000/api/test-hostinger \
+curl https://babylon-admin.fly.dev/api/test-hostinger \
   -H "Authorization: Bearer token"
 
 # Upload test image
-curl -X POST http://localhost:5000/api/upload-image \
+curl -X POST https://babylon-admin.fly.dev/api/upload-image \
   -H "Authorization: Bearer token" \
   -F "image=@test.jpg" \
   -F "folder=menu-items"

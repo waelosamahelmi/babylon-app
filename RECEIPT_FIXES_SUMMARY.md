@@ -176,7 +176,7 @@ Tilaus: #1234                     ← Smaller, cleaner
 ASIAKASTIEDOT
 --------------------------
 Nimi: John Smith
-Puh: +358 40 123 4567             ← FOUND! ✅
+Puh: +358-3781-2222             ← FOUND! ✅
 
 ==========================
   TUOTTEET                        ← Proper margins! ✅

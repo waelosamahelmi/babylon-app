@@ -720,7 +720,7 @@ export class PrinterService {
     
     const receiptData = {
       header: {
-        text: 'Ravintola Babylon\n================\nPasintie 2, 45410 Lahti\n+358 41 3152619',
+        text: 'Ravintola Babylon\n================\nVapaudenkatu 28, 15140 Lahti\n+358-3781-2222',
         alignment: 'center' as const,
         bold: true
       },

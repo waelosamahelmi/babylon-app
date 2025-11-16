@@ -430,8 +430,8 @@ class ThermalPrinterService {
 ==============================
         Ravintola Babylon
 ==============================
-      Pasintie 2, 45410 Lahti
-        +358 41 3152619
+      Vapaudenkatu 28, 15140 Lahti
+        +358-3781-2222
 
 ------------------------------
            TEST PRINT
@@ -466,8 +466,8 @@ printer connectivity.
     receipt += 'Ravintola Babylon' + lineFeed;
     receipt += escNormal + escBoldOff;
     receipt += '==============================' + lineFeed;
-    receipt += 'Pasintie 2, 45410 Lahti' + lineFeed;
-    receipt += '+358 41 3152619' + lineFeed;
+    receipt += 'Vapaudenkatu 28, 15140 Lahti' + lineFeed;
+    receipt += '+358-3781-2222' + lineFeed;
     receipt += 'www.ravintolababylon.fi' + lineFeed;
     receipt += lineFeed;
     

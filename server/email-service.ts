@@ -96,8 +96,8 @@ export async function sendOrderConfirmationEmail(orderData: OrderEmailData): Pro
 
         <div style="text-align: center; margin-top: 30px; color: #666;">
           <p>Thank you for choosing Ravintola Babylon!</p>
-          <p>For any questions, please contact us at +358 41 3152619</p>
-          <p>Pasintie 2, 45410 Lahti</p>
+          <p>For any questions, please contact us at +358-3781-2222</p>
+          <p>Vapaudenkatu 28, 15140 Lahti</p>
         </div>
       </div>
     `;

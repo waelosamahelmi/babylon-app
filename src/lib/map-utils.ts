@@ -2,7 +2,7 @@
 export const RESTAURANT_LOCATION = {
   lat: 60.905728, // Exact restaurant coordinates
   lng: 27.012103,
-  address: "Pasintie 2, 45410 Lahti, Finland"
+  address: "Vapaudenkatu 28, 15140 Lahti, Finland"
 };
 
 // Calculate distance between two coordinates using Haversine formula

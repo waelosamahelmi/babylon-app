@@ -61,7 +61,7 @@ export function HeroVideo() {
             className="text-lg px-8 py-6 bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20"
             asChild
           >
-            <a href="tel:+358413152619">
+            <a href="tel:+35837812222">
               <Phone className="w-6 h-6 mr-3" />
               {t("Soita meille", "Call Us")}
             </a>

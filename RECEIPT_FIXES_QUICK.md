@@ -52,7 +52,7 @@ YHTEENSÄ: 0.00€         ← WRONG TOTAL
 
 ### **After:**
 ```
-Puh: +358 40 123 4567   ← SHOWS! ✅
+Puh: +358-3781-2222   ← SHOWS! ✅
 2x Pizza         24.00€  ← ITEMS! ✅
 YHTEENSÄ:        31.00€  ← CORRECT! ✅
 ==========================  ← FITS! ✅

@@ -120,10 +120,10 @@ export function OrderSuccessModal({ isOpen, onClose, orderType, orderNumber }: O
                   Ravintola Babylon
                 </p>
                 <p className="text-sm text-red-700 dark:text-red-300">
-                  Pasintie 2, 45410 Lahti
+                  Vapaudenkatu 28, 15140 Lahti
                 </p>
                 <p className="text-sm text-red-700 dark:text-red-300">
-                  +358 41 3152619
+                  +358-3781-2222
                 </p>
               </div>
             </CardContent>

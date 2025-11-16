@@ -85,8 +85,8 @@ export function DeliveryMap({ onDeliveryCalculated, initialAddress = "" }: Deliv
         .bindPopup(`
           <div style="text-align: center;">
             <strong>${t("Ravintola Babylon", "Ravintola Babylon")}</strong><br>
-            <small>Pasintie 2, 45410 Lahti</small><br>
-            <small>+358 41 3152619</small>
+            <small>Vapaudenkatu 28, 15140 Lahti</small><br>
+            <small>+358-3781-2222</small>
           </div>
         `);
       

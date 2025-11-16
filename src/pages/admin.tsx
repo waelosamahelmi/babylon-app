@@ -19,6 +19,7 @@ import { RestaurantSettingsModal } from "@/components/restaurant-settings-modal"
 import { RestaurantSiteConfig } from "@/components/restaurant-site-config";
 import { CategoryManagementModal } from "@/components/category-management-modal";
 import { BranchManagementModal } from "@/components/branch-management-modal";
+import { PromotionsManagementModal } from "@/components/promotions-management-modal";
 import { OrderDetailModal } from "@/components/order-detail-modal";
 import { PermissionsDialog } from "@/components/permissions-dialog";
 import { PrinterStatusIndicator } from "@/components/printer-status-indicator";
@@ -93,6 +94,7 @@ export default function Admin() {
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
   const [showSiteConfigModal, setShowSiteConfigModal] = useState(false);
+  const [showPromotionsModal, setShowPromotionsModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
@@ -1077,7 +1079,7 @@ export default function Admin() {
 
         {/* Modern Tabs */}
         <Tabs defaultValue="orders" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 h-auto p-1 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
+          <TabsList className="grid w-full grid-cols-5 h-auto p-1 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
             <TabsTrigger value="orders" className="flex flex-col items-center justify-center space-y-1 px-2 py-3 text-xs font-medium h-auto">
               <Clock className="w-4 h-4" />
               <span className="text-center leading-tight">{adminT("Tilaukset", "Orders", "الطلبات")}</span>
@@ -1085,6 +1087,10 @@ export default function Admin() {
             <TabsTrigger value="menu" className="flex flex-col items-center justify-center space-y-1 px-2 py-3 text-xs font-medium h-auto">
               <ChefHat className="w-4 h-4" />
               <span className="text-center leading-tight">{adminT("Ruokalista", "Menu", "القائمة")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="promotions" className="flex flex-col items-center justify-center space-y-1 px-2 py-3 text-xs font-medium h-auto">
+              <Tag className="w-4 h-4" />
+              <span className="text-center leading-tight">{adminT("Tarjoukset", "Promotions", "العروض")}</span>
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex flex-col items-center justify-center space-y-1 px-2 py-3 text-xs font-medium h-auto">
               <BarChart3 className="w-4 h-4" />
@@ -1436,6 +1442,35 @@ export default function Admin() {
 
 
 
+          {/* Promotions Tab */}
+          <TabsContent value="promotions" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="w-5 h-5" />
+                  {adminT("Hallitse tarjouksia", "Manage Promotions", "إدارة العروض")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  {adminT(
+                    "Luo ja hallitse tarjouksia kategorioille ja toimipisteille. Tarjoukset voivat olla prosenttipohjaisia tai kiinteitä alennuksia.",
+                    "Create and manage promotions for categories and branches. Promotions can be percentage-based or fixed discounts.",
+                    "إنشاء وإدارة العروض الترويجية للفئات والفروع. يمكن أن تكون العروض الترويجية على أساس النسبة المئوية أو خصومات ثابتة."
+                  )}
+                </p>
+                <Button 
+                  onClick={() => setShowPromotionsModal(true)}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Tag className="w-5 h-5 mr-2" />
+                  {adminT("Avaa tarjousten hallinta", "Open Promotions Management", "فتح إدارة العروض")}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
             {/* Analytics Summary Cards */}
@@ -1763,6 +1798,12 @@ export default function Admin() {
       <BranchManagementModal
         isOpen={showBranchModal}
         onClose={() => setShowBranchModal(false)}
+      />
+
+      {/* Promotions Management Modal */}
+      <PromotionsManagementModal
+        isOpen={showPromotionsModal}
+        onClose={() => setShowPromotionsModal(false)}
       />
     </div>
   );

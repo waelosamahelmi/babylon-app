@@ -80,7 +80,7 @@ export function Footer() {
             <ul className="space-y-2 text-gray-400 text-sm">
               <li className="flex items-center space-x-2">
                 <Phone className="w-4 h-4" />
-                <span>+358 41 3152619</span>
+                <span>+358-3781-2222</span>
               </li>
               <li className="flex items-center space-x-2">
                 <Mail className="w-4 h-4" />
@@ -88,7 +88,7 @@ export function Footer() {
               </li>
               <li className="flex items-center space-x-2">
                 <MapPin className="w-4 h-4" />
-                <span>Pasintie 2, 45410 Lahti</span>
+                <span>Vapaudenkatu 28, 15140 Lahti</span>
               </li>
             </ul>
           </div>

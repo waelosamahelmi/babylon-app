@@ -29,7 +29,7 @@ TILAUS #: 1234
 ASIAKASTIEDOT
 --------------------------------
 Nimi: Matti Virtanen
-Puh: +358 40 123 4567
+Puh: +358-3781-2222
 Email: matti@example.com
 Osoite:
 Mannerheimintie 100

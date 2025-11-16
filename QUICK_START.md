@@ -33,7 +33,7 @@ cd babylon-app
 npm run dev:mobile
 
 # In another terminal or browser:
-# Visit: http://localhost:5000/api/test-hostinger
+# Visit: https://babylon-admin.fly.dev/api/test-hostinger
 # (You'll need to be authenticated)
 ```
 

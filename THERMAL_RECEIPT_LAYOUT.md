@@ -37,7 +37,7 @@ TILAUS #: 12345
 ASIAKASTIEDOT
 --------------------------------
 Nimi: John Smith
-Puh: +358 40 123 4567
+Puh: +358-3781-2222
 Email: customer@example.com
 Osoite:
 Mannerheimintie 123
@@ -220,7 +220,7 @@ TILAUS #: 1234
 ASIAKASTIEDOT
 --------------------------------
 Nimi: Matti Virtanen
-Puh: +358 40 123 4567
+Puh: +358-3781-2222
 Osoite:
 Mannerheimintie 100
 00100 Helsinki
@@ -412,7 +412,7 @@ adb install -r C:\Projects\restaurant\android-admin-app\android\app\build\output
 Order #1234
 Date: 10/17/2025, 2:30:00 PM
 Customer: Matti Virtanen
-Phone: +358401234567
+Phone: +35837812222
 
 ITEMS:
 --------------------------------
@@ -442,7 +442,7 @@ TILAUS #: 1234
 ASIAKASTIEDOT
 --------------------------------
 Nimi: Matti Virtanen
-Puh: +358 40 123 4567
+Puh: +358-3781-2222
 Osoite:
 Mannerheimintie 100
 00100 Helsinki

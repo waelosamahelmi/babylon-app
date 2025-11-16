@@ -63,7 +63,8 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
     socialMedia: {
       facebook: "",
       instagram: "",
-      twitter: ""
+      twitter: "",
+      tiktok: ""
     },
     
     // Hours
@@ -486,7 +487,7 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
             {/* Social Media */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Social Media</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="facebook">Facebook URL</Label>
                   <Input
@@ -521,6 +522,18 @@ export function RestaurantSiteConfig({ onClose }: RestaurantSiteConfigProps) {
                       socialMedia: { ...formData.socialMedia, twitter: e.target.value }
                     })}
                     placeholder="https://twitter.com/..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tiktok">TikTok URL</Label>
+                  <Input
+                    id="tiktok"
+                    value={formData.socialMedia.tiktok || ""}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      socialMedia: { ...formData.socialMedia, tiktok: e.target.value }
+                    })}
+                    placeholder="https://www.tiktok.com/@..."
                   />
                 </div>
               </div>
