@@ -38,6 +38,15 @@ export function BranchManagementModal({ isOpen, onClose }: BranchManagementModal
     email: "",
     displayOrder: 0,
     isActive: true,
+    openingHours: {
+      monday: { open: "10:30", close: "22:00", closed: false },
+      tuesday: { open: "10:30", close: "22:00", closed: false },
+      wednesday: { open: "10:30", close: "22:00", closed: false },
+      thursday: { open: "10:30", close: "22:00", closed: false },
+      friday: { open: "10:30", close: "23:00", closed: false },
+      saturday: { open: "11:00", close: "23:00", closed: false },
+      sunday: { open: "12:00", close: "21:00", closed: false },
+    },
   });
 
   const resetForm = () => {
@@ -53,6 +62,15 @@ export function BranchManagementModal({ isOpen, onClose }: BranchManagementModal
       email: "",
       displayOrder: 0,
       isActive: true,
+      openingHours: {
+        monday: { open: "10:30", close: "22:00", closed: false },
+        tuesday: { open: "10:30", close: "22:00", closed: false },
+        wednesday: { open: "10:30", close: "22:00", closed: false },
+        thursday: { open: "10:30", close: "22:00", closed: false },
+        friday: { open: "10:30", close: "23:00", closed: false },
+        saturday: { open: "11:00", close: "23:00", closed: false },
+        sunday: { open: "12:00", close: "21:00", closed: false },
+      },
     });
     setEditingId(null);
     setIsAdding(false);
@@ -65,12 +83,21 @@ export function BranchManagementModal({ isOpen, onClose }: BranchManagementModal
       address: branch.address,
       city: branch.city,
       postalCode: branch.postalCode,
-      latitude: branch.latitude,
-      longitude: branch.longitude,
+      latitude: String(branch.latitude || ""),
+      longitude: String(branch.longitude || ""),
       phone: branch.phone,
       email: branch.email || "",
       displayOrder: branch.displayOrder || 0,
       isActive: branch.isActive !== undefined ? branch.isActive : true,
+      openingHours: branch.openingHours || {
+        monday: { open: "10:30", close: "22:00", closed: false },
+        tuesday: { open: "10:30", close: "22:00", closed: false },
+        wednesday: { open: "10:30", close: "22:00", closed: false },
+        thursday: { open: "10:30", close: "22:00", closed: false },
+        friday: { open: "10:30", close: "23:00", closed: false },
+        saturday: { open: "11:00", close: "23:00", closed: false },
+        sunday: { open: "12:00", close: "21:00", closed: false },
+      },
     });
     setEditingId(branch.id);
     setIsAdding(false);
@@ -281,6 +308,74 @@ export function BranchManagementModal({ isOpen, onClose }: BranchManagementModal
                     </Label>
                   </div>
                 </div>
+
+                {/* Opening Hours Section */}
+                <div className="space-y-4 border-t pt-4">
+                  <Label className="text-base font-semibold">
+                    {t("Aukioloajat", "Opening Hours")}
+                  </Label>
+                  <div className="grid grid-cols-1 gap-3">
+                    {Object.entries(formData.openingHours).map(([day, hours]) => (
+                      <div key={day} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center space-x-2 w-32">
+                          <Switch
+                            checked={!hours.closed}
+                            onCheckedChange={(checked) => setFormData({
+                              ...formData,
+                              openingHours: {
+                                ...formData.openingHours,
+                                [day]: { ...hours, closed: !checked }
+                              }
+                            })}
+                          />
+                          <Label className="text-sm font-medium capitalize">
+                            {t(
+                              day === 'monday' ? 'Ma' : day === 'tuesday' ? 'Ti' : day === 'wednesday' ? 'Ke' :
+                              day === 'thursday' ? 'To' : day === 'friday' ? 'Pe' : day === 'saturday' ? 'La' : 'Su',
+                              day === 'monday' ? 'Mon' : day === 'tuesday' ? 'Tue' : day === 'wednesday' ? 'Wed' :
+                              day === 'thursday' ? 'Thu' : day === 'friday' ? 'Fri' : day === 'saturday' ? 'Sat' : 'Sun'
+                            )}
+                          </Label>
+                        </div>
+                        {!hours.closed && (
+                          <>
+                            <Input
+                              type="time"
+                              value={hours.open}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                openingHours: {
+                                  ...formData.openingHours,
+                                  [day]: { ...hours, open: e.target.value }
+                                }
+                              })}
+                              className="w-32"
+                            />
+                            <span className="text-sm">-</span>
+                            <Input
+                              type="time"
+                              value={hours.close}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                openingHours: {
+                                  ...formData.openingHours,
+                                  [day]: { ...hours, close: e.target.value }
+                                }
+                              })}
+                              className="w-32"
+                            />
+                          </>
+                        )}
+                        {hours.closed && (
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {t("Suljettu", "Closed")}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex gap-2">
                   <Button onClick={handleSave} className="flex-1">
                     <Save className="w-4 h-4 mr-2" />

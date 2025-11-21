@@ -6,8 +6,9 @@ import { insertOrderSchema, insertOrderItemSchema, insertToppingSchema, insertMe
 import { authService, type AuthUser } from "./auth";
 import { updateMenuItemImages, addImageToMenuItem, getMenuItemsWithoutImages } from "./image-updater";
 import { upload, uploadImageToSupabase, deleteImageFromSupabase, ensureStorageBucket } from "./file-upload";
-import { testHostingerConnection } from "./hostinger-upload";
+import { uploadImageToHostinger, testHostingerConnection } from "./hostinger-upload";
 import { z } from "zod";
+import nodemailer from "nodemailer";
 
 // Extend Express session interface
 declare module "express-session" {
@@ -86,6 +87,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     req.session.destroy(() => {
       res.json({ message: "Logged out successfully" });
     });
+  });
+
+  // Email Marketing API
+  app.post("/api/send-email", async (req, res) => {
+    try {
+      const { to, subject, html, replyTo } = req.body;
+
+      if (!to || !Array.isArray(to) || to.length === 0) {
+        return res.status(400).json({ error: "Recipients (to) are required and must be an array" });
+      }
+
+      if (!subject || !html) {
+        return res.status(400).json({ error: "Subject and HTML content are required" });
+      }
+
+      console.log(`📧 Sending marketing email to ${to.length} recipients`);
+      console.log(`📧 Subject: ${subject}`);
+
+      // Create nodemailer transporter for Hostinger SMTP
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.hostinger.com',
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+          user: 'no-reply@ravintolababylon.fi',
+          pass: process.env.SMTP_PASSWORD || 'your-password-here' // Set this in .env
+        }
+      });
+
+      // Send email to all recipients
+      const info = await transporter.sendMail({
+        from: '"Ravintola Babylon" <no-reply@ravintolababylon.fi>',
+        to: to.join(', '), // Join all recipient emails
+        subject: subject,
+        html: html,
+        replyTo: replyTo || 'info@ravintolababylon.fi'
+      });
+
+      console.log(`✅ Marketing email sent successfully: ${info.messageId}`);
+      console.log(`📬 Recipients: ${to.length}`);
+
+      res.json({ 
+        success: true, 
+        messageId: info.messageId,
+        recipientCount: to.length 
+      });
+    } catch (error) {
+      console.error('❌ Failed to send marketing email:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to send email'
+      });
+    }
   });
 
   app.get("/api/auth/me", (req, res) => {
@@ -531,21 +584,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const file = req.file;
       const restaurantName = req.body.restaurantName || 'default-restaurant';
-      const folder = req.body.folder || 'menu';
+      const folder = req.body.folder || 'menu-items';
       
       if (!file) {
+        console.error('❌ No file provided in request');
         return res.status(400).json({ error: "Image file is required" });
       }
       
-      console.log('📸 Uploading image to Cloudinary for restaurant:', restaurantName, 'folder:', folder);
+      console.log('📸 Uploading image for folder:', folder);
+      console.log('📁 File details:', {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size
+      });
       
-      // Upload image to Cloudinary with restaurant-specific folder
-      const imageUrl = await uploadImageToSupabase(file, restaurantName, folder);
+      // Upload to Hostinger FTP (using plain FTP, not FTPS)
+      console.log('📡 Uploading to Hostinger FTP...');
+      const imageUrl = await uploadImageToHostinger(file, folder);
+      console.log('✅ Image uploaded successfully:', imageUrl);
       
       res.json({ imageUrl });
     } catch (error) {
-      console.error("Error uploading image:", error);
-      res.status(500).json({ error: "Failed to upload image" });
+      console.error("❌ Error uploading image:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({ 
+        error: "Failed to upload image",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

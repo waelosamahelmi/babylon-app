@@ -81,9 +81,10 @@ export default function BranchesAdmin() {
     },
   });
 
-  // Update branch opening hours
+  // Update opening hours
   const updateHoursMutation = useMutation({
     mutationFn: async ({ id, opening_hours }: { id: number; opening_hours: any }) => {
+      console.log('Updating hours for branch:', id, opening_hours);
       const { data, error } = await supabase
         .from("branches")
         .update({ opening_hours })
@@ -91,7 +92,11 @@ export default function BranchesAdmin() {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating hours:', error);
+        throw error;
+      }
+      console.log('Hours updated successfully:', data);
       return data;
     },
     onSuccess: () => {
@@ -150,6 +155,8 @@ export default function BranchesAdmin() {
 
   const handleSaveHours = (hours: any) => {
     if (!editingBranch) return;
+    console.log('handleSaveHours called with:', hours);
+    console.log('editingBranch:', editingBranch);
     updateHoursMutation.mutate({ id: editingBranch.id, opening_hours: hours });
   };
 

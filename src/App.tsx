@@ -14,6 +14,7 @@ import Admin from "@/pages/admin";
 import Login from "@/pages/login";
 import LocationsAdmin from "@/pages/locations-admin";
 import BranchesAdmin from "@/pages/branches-admin";
+import LounasAdmin from "@/pages/lounas-admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/locations" component={LocationsAdmin} />
       <Route path="/branches" component={BranchesAdmin} />
+      <Route path="/lounas" component={LounasAdmin} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -17,6 +17,17 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Skip caching for Vite dev server requests
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith('/@') || 
+      url.pathname.endsWith('.tsx') || 
+      url.pathname.endsWith('.ts') ||
+      url.pathname.includes('/@react-refresh') ||
+      url.pathname.includes('/@vite/') ||
+      url.hostname === 'localhost' && url.port === '5174') {
+    return; // Let browser handle these requests normally
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/language-context";
 import { useCategories } from "@/hooks/use-menu";
 import { useSupabaseBranches } from "@/hooks/use-supabase-menu";
-import { uploadImageToCloudinary, updateImageInCloudinary } from "@/lib/cloudinary";
 import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
+import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -202,13 +202,34 @@ export function ProductManagementModal({
   const handleImageUpload = async (file: File) => {
     setIsUploading(true);
     try {
-      // Get restaurant name for folder organization
-      const restaurantName = restaurantConfig?.name || restaurantConfig?.nameEn || 'default-restaurant';
+      console.log('📸 Uploading image via server to Hostinger FTP...');
       
-      // Upload image to Cloudinary with restaurant-specific folder
-      const imageUrl = formData.id 
-        ? await updateImageInCloudinary(formData.imageUrl, file, restaurantName, 'menu-items')
-        : await uploadImageToCloudinary(file, restaurantName, 'menu-items');
+      // Get Supabase session for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Create FormData for server upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('image', file);
+      formDataToSend.append('folder', 'menu-items');
+      
+      // Upload via server API (which uses Hostinger FTP)
+      const API_URL = import.meta.env.VITE_API_URL || 'https://babylon-admin.fly.dev';
+      const response = await fetch(`${API_URL}/api/upload-image`, {
+        method: 'POST',
+        body: formDataToSend,
+        credentials: 'include',
+        headers: session?.access_token ? {
+          'Authorization': `Bearer ${session.access_token}`
+        } : {}
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const { imageUrl } = await response.json();
+      console.log('✅ Image uploaded successfully:', imageUrl);
       
       // Update form data with new image URL
       setFormData(prev => ({ 

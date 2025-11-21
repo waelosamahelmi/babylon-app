@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, useEffect } from "react";
 
-type Language = "fi" | "en" | "ar";
+type Language = "fi" | "en" | "ar" | "ru" | "sv";
 
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (fiText: string, enText?: string, arText?: string) => string;
+  t: (fiText: string, enText?: string, arText?: string, ruText?: string, svText?: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -17,7 +17,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const savedLanguage = localStorage.getItem("language") as Language;
     // Check if we're on admin page for Arabic support
     const isAdminPage = window.location.pathname.includes('/admin');
-    const validLanguages = isAdminPage ? ["fi", "en", "ar"] : ["fi", "en"];
+    const validLanguages = isAdminPage ? ["fi", "en", "ar", "ru", "sv"] : ["fi", "en", "ru", "sv"];
     
     if (savedLanguage && validLanguages.includes(savedLanguage)) {
       setLanguage(savedLanguage);
@@ -33,12 +33,18 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("language", lang);
   };
 
-  const t = (fiText: string, enText?: string, arText?: string) => {
+  const t = (fiText: string, enText?: string, arText?: string, ruText?: string, svText?: string) => {
     if (language === "en" && enText) {
       return enText;
     }
     if (language === "ar" && arText) {
       return arText;
+    }
+    if (language === "ru" && ruText) {
+      return ruText;
+    }
+    if (language === "sv" && svText) {
+      return svText;
     }
     return fiText;
   };

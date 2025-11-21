@@ -8,7 +8,7 @@ const FTP_CONFIG = {
   host: process.env.HOSTINGER_FTP_HOST || 'ftp.ravintolababylon.fi',
   user: process.env.HOSTINGER_FTP_USER,
   password: process.env.HOSTINGER_FTP_PASSWORD,
-  secure: true, // Use FTPS (FTP over SSL)
+  secure: true, // Use FTPS (FTP over SSL) with cert validation disabled
   port: 21,
 };
 
@@ -35,14 +35,28 @@ export async function uploadImageToHostinger(
 
     console.log('📡 Connecting to Hostinger FTP...');
     
-    // Connect to FTP server
+    // Temporarily disable TLS certificate validation
+    const originalTLSReject = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    
+    // Connect to FTP server with FTPS
     await client.access({
       host: FTP_CONFIG.host,
       user: FTP_CONFIG.user,
       password: FTP_CONFIG.password,
-      secure: FTP_CONFIG.secure,
+      secure: true,
+      secureOptions: {
+        rejectUnauthorized: false
+      },
       port: FTP_CONFIG.port,
     });
+    
+    // Restore original TLS setting
+    if (originalTLSReject) {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = originalTLSReject;
+    } else {
+      delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    }
 
     console.log('✅ Connected to Hostinger FTP');
 
@@ -61,11 +75,12 @@ export async function uploadImageToHostinger(
     const randomString = Math.random().toString(36).substring(2, 8);
     const fileName = `${timestamp}-${randomString}.webp`;
 
-    // Build remote path structure: /uploads/YYYY/MM/folder/filename
+    // Build remote path structure: /public_html/uploads/YYYY/MM/folder/filename
+    // Note: images subdomain points to /public_html, so files must be inside /public_html/
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
-    const remotePath = `/uploads/${year}/${month}/${folder}/${fileName}`;
+    const remotePath = `/${year}/${month}/${folder}/${fileName}`;
 
     // Ensure directory exists (create if needed)
     const remoteDir = path.dirname(remotePath).replace(/\\/g, '/');
@@ -80,7 +95,8 @@ export async function uploadImageToHostinger(
     console.log('✅ Image uploaded successfully to Hostinger');
 
     // Build public URL
-    const publicUrl = `${IMAGE_CDN_URL}${remotePath}`;
+    // Since images.ravintolababylon.fi points to /public_html, we need /uploads/... in the URL
+    const publicUrl = `${IMAGE_CDN_URL}/uploads/${year}/${month}/${folder}/${fileName}`;
     console.log('🔗 Public URL:', publicUrl);
 
     return publicUrl;

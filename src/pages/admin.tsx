@@ -19,6 +19,7 @@ import { ToppingGroupManagementModal } from "@/components/topping-group-manageme
 import { RestaurantSettingsModal } from "@/components/restaurant-settings-modal";
 import { RestaurantSiteConfig } from "@/components/restaurant-site-config";
 import { CategoryManagementModal } from "@/components/category-management-modal";
+import { EmailMarketing } from "@/components/email-marketing";
 import { BranchManagementModal } from "@/components/branch-management-modal";
 import { PromotionsManagementModal } from "@/components/promotions-management-modal";
 import { OrderDetailModal } from "@/components/order-detail-modal";
@@ -64,9 +65,11 @@ import {
   Globe,
   Moon,
   Sun,
-  LogOut,  Menu,
+  LogOut,
+  Menu,
   X,
   Smartphone,
+  Mail,
   Calendar,
   Loader2,
   Wifi,
@@ -77,6 +80,7 @@ export default function Admin() {
   const { t, language, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const { data: orders, isLoading: ordersLoading, refetch: refetchOrders } = useSupabaseOrders();
   const { data: menuItems, isLoading: menuLoading } = useSupabaseMenuItems();
   const { data: categories } = useSupabaseCategories();
@@ -1081,7 +1085,7 @@ export default function Admin() {
 
         {/* Modern Tabs */}
         <Tabs defaultValue="orders" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 h-auto p-1 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
+          <TabsList className="grid w-full grid-cols-6 h-auto p-1 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
             <TabsTrigger value="orders" className="flex flex-col items-center justify-center space-y-1 px-2 py-3 text-xs font-medium h-auto">
               <Clock className="w-4 h-4" />
               <span className="text-center leading-tight">{adminT("Tilaukset", "Orders", "الطلبات")}</span>
@@ -1101,6 +1105,10 @@ export default function Admin() {
             <TabsTrigger value="settings" className="flex flex-col items-center justify-center space-y-1 px-2 py-3 text-xs font-medium h-auto">
               <Settings className="w-4 h-4" />
               <span className="text-center leading-tight">{adminT("Asetukset", "Settings", "الإعدادات")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="marketing" className="flex flex-col items-center justify-center space-y-1 px-2 py-3 text-xs font-medium h-auto">
+              <Mail className="w-4 h-4" />
+              <span className="text-center leading-tight">{adminT("Markkinointi", "Marketing", "التسويق")}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1679,6 +1687,14 @@ export default function Admin() {
                     {adminT("Toimipisteiden hallinta", "Branch Management", "إدارة الفروع")}
                   </Button>
                   <Button 
+                    onClick={() => navigate("/lounas")}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <UtensilsCrossed className="w-4 h-4 mr-2" />
+                    {adminT("Lounas-valikko", "Lunch Menu", "قائمة الغداء")}
+                  </Button>
+                  <Button 
                     onClick={() => setShowDiscoveryModal(true)}
                     variant="outline"
                     className="w-full justify-start"
@@ -1689,6 +1705,11 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Marketing Tab */}
+          <TabsContent value="marketing" className="space-y-4">
+            <EmailMarketing />
           </TabsContent>
         </Tabs>
       </div>
