@@ -10,8 +10,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MapPin } from "lucide-react";
-import { Header } from "@/components/header";
+import { Plus, Edit, Trash2, MapPin, ArrowLeft, Moon, Sun, Globe, Menu, X, LogOut } from "lucide-react";
+import { useLocation } from "wouter";
+import { useTheme } from "@/lib/theme-context";
+import { useSupabaseAuth } from "@/lib/supabase-auth-context";
 
 interface Location {
   id: number;
@@ -33,10 +35,14 @@ const iconOptions = [
 ];
 
 export default function LocationsAdmin() {
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [, navigate] = useLocation();
+  const { theme, toggleTheme } = useTheme();
+  const { signOut } = useSupabaseAuth();
+  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [formData, setFormData] = useState<Partial<Location>>({
@@ -193,7 +199,159 @@ export default function LocationsAdmin() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header onCartClick={() => setIsCartOpen(true)} />
+      {/* Header - matching lounas-admin style */}
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/")}
+                className="hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                {t("Ruokapisteet", "Food Locations", "مواقع الطعام", "Точки питания", "Matplatser")}
+              </h1>
+            </div>
+
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center gap-3">
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                <Button
+                  variant={language === "fi" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setLanguage("fi")}
+                  className="text-xs"
+                >
+                  🇫🇮 FI
+                </Button>
+                <Button
+                  variant={language === "en" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setLanguage("en")}
+                  className="text-xs"
+                >
+                  🇺🇸 EN
+                </Button>
+                <Button
+                  variant={language === "ar" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setLanguage("ar")}
+                  className="text-xs"
+                >
+                  🇸🇦 AR
+                </Button>
+              </div>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={toggleTheme}
+                className="hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => signOut()}
+                className="hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                {t("Kirjaudu ulos", "Logout", "تسجيل الخروج", "Выход", "Logga ut")}
+              </Button>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden"
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div className="px-4 py-3 space-y-3">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                  {t("Kieli", "Language", "اللغة", "Язык", "Språk")}
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => {
+                      setLanguage("fi");
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`px-3 py-2 rounded text-sm text-center ${
+                      language === "fi" 
+                        ? "bg-blue-500 text-white" 
+                        : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    }`}
+                  >
+                    🇫🇮 FI
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLanguage("en");
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`px-3 py-2 rounded text-sm text-center ${
+                      language === "en" 
+                        ? "bg-blue-500 text-white" 
+                        : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    }`}
+                  >
+                    🇺🇸 EN
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLanguage("ar");
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`px-3 py-2 rounded text-sm text-center ${
+                      language === "ar" 
+                        ? "bg-blue-500 text-white" 
+                        : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    }`}
+                  >
+                    🇸🇦 AR
+                  </button>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={toggleTheme}
+                className="w-full justify-start"
+              >
+                {theme === "dark" ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+                {theme === "dark" 
+                  ? t("Vaalea teema", "Light Mode", "الوضع الفاتح", "Светлый режим", "Ljust läge")
+                  : t("Tumma teema", "Dark Mode", "الوضع الداكن", "Тёмный режим", "Mörkt läge")
+                }
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => signOut()}
+                className="w-full justify-start"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                {t("Kirjaudu ulos", "Logout", "تسجيل الخروج", "Выход", "Logga ut")}
+              </Button>
+            </div>
+          </div>
+        )}
+      </header>
       
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
@@ -424,8 +582,6 @@ export default function LocationsAdmin() {
           </div>
         )}
       </div>
-
-      <Cart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </div>
   );
 }

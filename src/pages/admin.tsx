@@ -73,7 +73,8 @@ import {
   Calendar,
   Loader2,
   Wifi,
-  Bluetooth
+  Bluetooth,
+  MapPin
 } from "lucide-react";
 
 export default function Admin() {
@@ -1685,6 +1686,14 @@ export default function Admin() {
                   >
                     <Store className="w-4 h-4 mr-2" />
                     {adminT("Toimipisteiden hallinta", "Branch Management", "إدارة الفروع")}
+                  </Button>
+                  <Button 
+                    onClick={() => navigate("/locations")}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <MapPin className="w-4 h-4 mr-2" />
+                    {adminT("Ruokapisteet", "Food Locations", "مواقع الطعام")}
                   </Button>
                   <Button 
                     onClick={() => navigate("/lounas")}
