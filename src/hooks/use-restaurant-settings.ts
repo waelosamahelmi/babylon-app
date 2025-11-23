@@ -50,6 +50,21 @@ export function useUpdateRestaurantSettings() {
     mutationFn: async (settingsData: any) => {
       console.log('⚙️ Updating restaurant settings in Supabase:', settingsData);
       
+      // Convert camelCase to snake_case for database
+      const dbData: any = {
+        updated_at: new Date().toISOString()
+      };
+      
+      if (settingsData.isOpen !== undefined) dbData.is_open = settingsData.isOpen;
+      if (settingsData.openingHours !== undefined) dbData.opening_hours = settingsData.openingHours;
+      if (settingsData.pickupHours !== undefined) dbData.pickup_hours = settingsData.pickupHours;
+      if (settingsData.deliveryHours !== undefined) dbData.delivery_hours = settingsData.deliveryHours;
+      if (settingsData.lunchBuffetHours !== undefined) dbData.lunch_buffet_hours = settingsData.lunchBuffetHours;
+      if (settingsData.specialMessage !== undefined) dbData.special_message = settingsData.specialMessage;
+      if (settingsData.defaultPrinterId !== undefined) dbData.default_printer_id = settingsData.defaultPrinterId;
+      if (settingsData.printerAutoReconnect !== undefined) dbData.printer_auto_reconnect = settingsData.printerAutoReconnect;
+      if (settingsData.printerTabSticky !== undefined) dbData.printer_tab_sticky = settingsData.printerTabSticky;
+      
       // Try to update first, if no rows exist, insert
       const { data: existingData } = await supabase
         .from('restaurant_settings')
@@ -61,10 +76,7 @@ export function useUpdateRestaurantSettings() {
         // Update existing settings
         const { data, error } = await supabase
           .from('restaurant_settings')
-          .update({
-            ...settingsData,
-            updated_at: new Date().toISOString()
-          })
+          .update(dbData)
           .eq('id', existingData.id)
           .select()
           .single();
@@ -76,12 +88,17 @@ export function useUpdateRestaurantSettings() {
         
         result = data;
       } else {
-        // Insert new settings
+        // Insert new settings with defaults
         const { data, error } = await supabase
           .from('restaurant_settings')
           .insert([{
-            ...settingsData,
-            updated_at: new Date().toISOString()
+            is_open: true,
+            opening_hours: "10:00-22:00",
+            pickup_hours: "10:00-10:29",
+            delivery_hours: "11:00-21:00",
+            lunch_buffet_hours: "11:00-15:00",
+            special_message: "",
+            ...dbData
           }])
           .select()
           .single();
