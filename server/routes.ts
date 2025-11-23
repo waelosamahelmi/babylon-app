@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
@@ -7,6 +8,7 @@ import { authService, type AuthUser } from "./auth";
 import { updateMenuItemImages, addImageToMenuItem, getMenuItemsWithoutImages } from "./image-updater";
 import { upload, uploadImageToSupabase, deleteImageFromSupabase, ensureStorageBucket } from "./file-upload";
 import { uploadImageToHostinger, testHostingerConnection } from "./hostinger-upload";
+import { createPaymentIntent, confirmPayment, getPaymentIntent, handleWebhook } from "./stripe";
 import { z } from "zod";
 import nodemailer from "nodemailer";
 
@@ -88,6 +90,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Logged out successfully" });
     });
   });
+
+  // ===== STRIPE PAYMENT ROUTES =====
+  
+  // Create payment intent
+  app.post("/api/stripe/create-payment-intent", createPaymentIntent);
+  
+  // Confirm payment (optional)
+  app.post("/api/stripe/confirm-payment", confirmPayment);
+  
+  // Get payment intent status
+  app.get("/api/stripe/payment-intent/:paymentIntentId", getPaymentIntent);
+  
+  // Stripe webhook (raw body needed for signature verification)
+  app.post("/api/stripe/webhook", express.raw({ type: 'application/json' }), handleWebhook);
 
   // Email Marketing API
   app.post("/api/send-email", async (req, res) => {
