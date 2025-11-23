@@ -148,6 +148,7 @@ export const restaurantSettings = pgTable("restaurant_settings", {
   printerAutoReconnect: boolean("printer_auto_reconnect").default(true),
   printerTabSticky: boolean("printer_tab_sticky").default(true),
   // Stripe payment settings
+  stripeEnabled: boolean("stripe_enabled").default(false),
   stripePublishableKey: text("stripe_publishable_key"),
   stripeSecretKey: text("stripe_secret_key"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
