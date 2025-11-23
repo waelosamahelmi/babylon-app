@@ -67,9 +67,7 @@ router.post('/create-payment-intent', async (req, res) => {
       amount: Math.round(amount * 100), // Convert to smallest currency unit (öre for SEK)
       currency: currency.toLowerCase(),
       metadata,
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      // Removed automatic_payment_methods to use Stripe Dashboard settings
     });
 
     res.json({
