@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/language-context";
 import { useCart } from "@/lib/cart-context";
 import { useCreateOrder } from "@/hooks/use-orders";
+import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { Bike, ShoppingBag, CreditCard, Banknote } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DeliveryMap } from "@/components/delivery-map";
 import { OrderSuccessModal } from "@/components/order-success-modal";
+import { StripeCheckoutElement } from "@/components/stripe-checkout-element";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -27,6 +29,19 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
   const { items, totalPrice, clearCart } = useCart();
   const { toast } = useToast();
   const createOrder = useCreateOrder();
+  const { data: restaurantSettings } = useRestaurantSettings();
+  
+  // Load payment methods from database
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState([
+    { id: 'cash', nameFi: 'Käteinen', nameEn: 'Cash', enabled: true },
+    { id: 'card', nameFi: 'Kortti', nameEn: 'Card', enabled: true },
+  ]);
+  
+  useEffect(() => {
+    if (restaurantSettings?.paymentMethods && Array.isArray(restaurantSettings.paymentMethods)) {
+      setAvailablePaymentMethods(restaurantSettings.paymentMethods.filter((m: any) => m.enabled));
+    }
+  }, [restaurantSettings]);
 
   // No longer need to fetch toppings since we store them as objects
   // const { data: allToppings = [] } = useQuery({
@@ -58,6 +73,15 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successOrderNumber, setSuccessOrderNumber] = useState<string>("");
+  const [showStripePayment, setShowStripePayment] = useState(false);
+  const [stripePaymentIntentId, setStripePaymentIntentId] = useState<string>("");
+
+  // Check if selected payment method requires Stripe
+  const isStripePaymentMethod = () => {
+    const selectedMethod = availablePaymentMethods.find(m => m.id === formData.paymentMethod);
+    return selectedMethod && selectedMethod.id !== 'cash' && selectedMethod.id !== 'card' && 
+           restaurantSettings?.stripeEnabled === true;
+  };
 
   const handleDeliveryCalculated = (fee: number, distance: number, address: string) => {
     setDeliveryInfo({ fee, distance, address });
@@ -106,12 +130,27 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
       return;
     }
 
+    // If Stripe payment method is selected, show Stripe checkout
+    if (isStripePaymentMethod()) {
+      setShowStripePayment(true);
+      return;
+    }
+
+    // Process regular order
+    await processOrder();
+  };
+
+  const processOrder = async (paymentIntentId?: string) => {
+    }
+
+  const processOrder = async (paymentIntentId?: string) => {
     try {
       const orderData = {
         ...formData,
         subtotal: totalPrice.toFixed(2),
         deliveryFee: deliveryFee.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
+        stripePaymentIntentId: paymentIntentId,
         items: items.map(item => ({
           menuItemId: item.menuItem.id,
           quantity: item.quantity,
@@ -151,8 +190,40 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
     }));
   };
 
+  const handleStripePaymentSuccess = async (paymentIntentId: string) => {
+    setStripePaymentIntentId(paymentIntentId);
+    setShowStripePayment(false);
+    await processOrder(paymentIntentId);
+  };
+
+  const handleStripePaymentCancel = () => {
+    setShowStripePayment(false);
+  };
+
   return (
     <>
+      {/* Stripe Payment Modal */}
+      {showStripePayment && restaurantSettings?.stripePublishableKey && (
+        <Dialog open={showStripePayment} onOpenChange={setShowStripePayment}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {t("Maksu", "Payment")}
+              </DialogTitle>
+            </DialogHeader>
+            <StripeCheckoutElement
+              amount={totalAmount}
+              onSuccess={handleStripePaymentSuccess}
+              onCancel={handleStripePaymentCancel}
+              customerEmail={formData.customerEmail}
+              customerName={formData.customerName}
+              stripePublishableKey={restaurantSettings.stripePublishableKey}
+              stripePaymentMethodsConfig={restaurantSettings.stripePaymentMethodsConfig}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -307,16 +378,30 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
               onValueChange={(value) => handleInputChange("paymentMethod", value)}
             >
               <div className="space-y-3">
-                <Label className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-red-600 transition-colors">
-                  <RadioGroupItem value="cash" className="text-red-600" />
-                  <Banknote className="w-5 h-5 text-green-600" />
-                  <span className="font-medium">{t("Käteinen", "Cash")}</span>
-                </Label>
-                <Label className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-red-600 transition-colors">
-                  <RadioGroupItem value="card" className="text-red-600" />
-                  <CreditCard className="w-5 h-5 text-blue-600" />
-                  <span className="font-medium">{t("Kortti", "Card")}</span>
-                </Label>
+                {availablePaymentMethods.map((method) => {
+                  // Dynamically select icon based on method.icon value
+                  const PaymentIcon = 
+                    method.icon === 'banknote' ? Banknote :
+                    method.icon === 'credit-card' ? CreditCard :
+                    method.icon === 'wallet' || method.icon === 'smartphone' ? CreditCard :
+                    // Default icons for legacy data
+                    method.id === 'cash' ? Banknote :
+                    method.id === 'card' ? CreditCard : 
+                    CreditCard;
+                  
+                  return (
+                    <Label 
+                      key={method.id}
+                      className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-red-600 transition-colors"
+                    >
+                      <RadioGroupItem value={method.id} className="text-red-600" />
+                      <PaymentIcon className="w-5 h-5 text-blue-600" />
+                      <span className="font-medium">
+                        {language === "fi" ? method.nameFi : method.nameEn}
+                      </span>
+                    </Label>
+                  );
+                })}
               </div>
             </RadioGroup>
           </div>

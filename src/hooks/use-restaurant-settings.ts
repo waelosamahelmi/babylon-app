@@ -36,7 +36,18 @@ export function useRestaurantSettings() {
       }
 
       console.log('✅ Restaurant settings fetched successfully');
-      return formatSupabaseResponse(data) || {};
+      const formatted = formatSupabaseResponse(data) || {};
+      
+      // Parse payment_methods if it's a string
+      if (formatted.paymentMethods && typeof formatted.paymentMethods === 'string') {
+        try {
+          formatted.paymentMethods = JSON.parse(formatted.paymentMethods);
+        } catch (e) {
+          console.error('Failed to parse payment methods:', e);
+        }
+      }
+      
+      return formatted;
     },
     enabled: !!user,
   });
@@ -64,6 +75,10 @@ export function useUpdateRestaurantSettings() {
       if (settingsData.defaultPrinterId !== undefined) dbData.default_printer_id = settingsData.defaultPrinterId;
       if (settingsData.printerAutoReconnect !== undefined) dbData.printer_auto_reconnect = settingsData.printerAutoReconnect;
       if (settingsData.printerTabSticky !== undefined) dbData.printer_tab_sticky = settingsData.printerTabSticky;
+      if (settingsData.paymentMethods !== undefined) dbData.payment_methods = settingsData.paymentMethods;
+      if (settingsData.stripeEnabled !== undefined) dbData.stripe_enabled = settingsData.stripeEnabled;
+      if (settingsData.stripePublishableKey !== undefined) dbData.stripe_publishable_key = settingsData.stripePublishableKey;
+      if (settingsData.stripeSecretKey !== undefined) dbData.stripe_secret_key = settingsData.stripeSecretKey;
       
       // Try to update first, if no rows exist, insert
       const { data: existingData } = await supabase

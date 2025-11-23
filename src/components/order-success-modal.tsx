@@ -69,14 +69,35 @@ export function OrderSuccessModal({ isOpen, onClose, orderType, orderNumber }: O
               {t("Kiitos tilauksestasi!", "Thank you for your order!")}
             </p>
             
-            {/* Time Estimate */}
+            {/* New Information Card */}
+            <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200">
+              <CardContent className="p-4">
+                <div className="space-y-2 text-center">
+                  <Clock className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {t(
+                      "Tilauksesi on vastaanotettu! Odota, kunnes joku hyväksyy tilauksesi saadaksesi tietää, kuinka kauan se kestää.",
+                      "Your order has been placed successfully! Please wait until someone accepts your order to know how long it will take."
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                    {t(
+                      "Saat myös sähköpostin lisätiedoilla.",
+                      "You will also receive an email with more information."
+                    )}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Time Estimate - Kept for reference but now with disclaimer */}
             <Card className={`${orderType === "delivery" ? "bg-green-50 dark:bg-green-900/20 border-green-200" : "bg-blue-50 dark:bg-blue-900/20 border-blue-200"}`}>
               <CardContent className="p-6">
                 <div className="flex flex-col items-center space-y-3">
                   {estimate.icon}
                   <div className="text-center">
                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
-                      {t("Arvioitu valmistumisaika", "Estimated preparation time")}
+                      {t("Arvioitu valmistumisaika (vahvistetaan pian)", "Estimated preparation time (will be confirmed soon)")}
                     </p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                       {t(estimate.time, estimate.timeEn)}

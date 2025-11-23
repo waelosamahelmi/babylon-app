@@ -11,6 +11,7 @@ import { useTheme } from "@/lib/theme-context";
 import { useAndroid } from "@/lib/android-context";
 import { usePrinter } from "@/lib/printer-context";
 import { useLocation } from "wouter";
+import { sendOrderAcceptedEmail } from "@/lib/email-service";
 import { LoginModal } from "@/components/login-modal";
 import { ProductManagementModal } from "@/components/product-management-modal";
 
@@ -18,11 +19,16 @@ import { ToppingsManagementModal } from "@/components/toppings-management-modal-
 import { ToppingGroupManagementModal } from "@/components/topping-group-management-modal";
 import { RestaurantSettingsModal } from "@/components/restaurant-settings-modal";
 import { RestaurantSiteConfig } from "@/components/restaurant-site-config";
+import { PaymentMethodsModal } from "@/components/payment-methods-modal";
+import { StripeSettingsModal } from "@/components/stripe-settings-modal";
 import { CategoryManagementModal } from "@/components/category-management-modal";
 import { EmailMarketing } from "@/components/email-marketing";
 import { BranchManagementModal } from "@/components/branch-management-modal";
 import { PromotionsManagementModal } from "@/components/promotions-management-modal";
+import { AnalyticsExportModal } from "@/components/analytics-export-modal";
+import { PaymentMethodsAnalytics } from "@/components/payment-methods-analytics";
 import { OrderDetailModal } from "@/components/order-detail-modal";
+import { OrderAcceptDialog } from "@/components/order-accept-dialog";
 import { PermissionsDialog } from "@/components/permissions-dialog";
 import { PrinterStatusIndicator } from "@/components/printer-status-indicator";
 import { PrintPreviewModal } from "@/components/print-preview-modal";
@@ -74,7 +80,10 @@ import {
   Loader2,
   Wifi,
   Bluetooth,
-  MapPin
+  MapPin,
+  CreditCard,
+  Zap,
+  Download
 } from "lucide-react";
 
 export default function Admin() {
@@ -101,13 +110,18 @@ export default function Admin() {
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
   const [showSiteConfigModal, setShowSiteConfigModal] = useState(false);
+  const [showPaymentMethodsModal, setShowPaymentMethodsModal] = useState(false);
+  const [showStripeSettingsModal, setShowStripeSettingsModal] = useState(false);
   const [showPromotionsModal, setShowPromotionsModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showAnalyticsExportModal, setShowAnalyticsExportModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [showOrderDetailModal, setShowOrderDetailModal] = useState(false);
+  const [showOrderAcceptDialog, setShowOrderAcceptDialog] = useState(false);
+  const [orderToAccept, setOrderToAccept] = useState<any>(null);
   const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
   
   // Restaurant busy status
@@ -311,15 +325,61 @@ export default function Admin() {
   });
 
   // Define handleStatusUpdate early to avoid hook order issues
-  const handleStatusUpdate = useCallback(async (orderId: number, status: string) => {
+  const handleStatusUpdate = useCallback(async (orderId: number, status: string, prepTime?: number) => {
     try {
-      console.log(`🔄 Updating order ${orderId} to status ${status}`);
+      console.log(`🔄 Updating order ${orderId} to status ${status}`, prepTime ? `with prep time ${prepTime} mins` : '');
       
-      await updateOrderStatus.mutateAsync({ id: orderId, status });
+      // Update order status in database with prep time if provided
+      const updateData: any = { id: orderId, status };
+      if (prepTime !== undefined) {
+        updateData.prep_time = prepTime;
+      }
+      
+      await updateOrderStatus.mutateAsync(updateData);
       
       // Stop notification sound when any order is processed
       const soundManager = NotificationSoundManager.getInstance();
       soundManager.stopNotificationSound();
+      
+      // If order is being accepted, send email to customer
+      if (status === "accepted" && prepTime !== undefined) {
+        const order = orders?.find((o: any) => o.id === orderId);
+        if (order && (order.customer_email || order.customerEmail)) {
+          // Send order accepted email
+          const emailData = {
+            customerName: order.customer_name || order.customerName || 'Customer',
+            customerEmail: order.customer_email || order.customerEmail,
+            orderNumber: order.id?.toString() || orderId.toString(),
+            orderItems: (order.items || []).map((item: any) => ({
+              name: item.name || item.menuItem?.name || 'Unknown Item',
+              quantity: item.quantity || 1,
+              price: parseFloat(item.price || '0'),
+              toppings: item.toppings?.map((t: any) => t.name || t) || []
+            })),
+            subtotal: parseFloat(order.subtotal || order.total_amount || '0'),
+            deliveryFee: parseFloat(order.delivery_fee || order.deliveryFee || '0'),
+            totalAmount: parseFloat(order.total_amount || order.totalAmount || '0'),
+            orderType: (order.order_type || order.orderType || 'pickup') as 'delivery' | 'pickup',
+            deliveryAddress: order.delivery_address || order.deliveryAddress,
+            branchName: 'Ravintola Babylon',
+            branchPhone: '+358-3781-2222',
+            branchAddress: 'Vapaudenkatu 28, 15140 Lahti',
+            specialInstructions: order.special_instructions || order.specialInstructions,
+            paymentMethod: order.payment_method || order.paymentMethod || 'Cash',
+            prepTime: prepTime
+          };
+          
+          sendOrderAcceptedEmail(emailData).then(result => {
+            if (result.success) {
+              console.log('✅ Order accepted email sent to customer');
+            } else {
+              console.warn('⚠️ Failed to send order accepted email:', result.error);
+            }
+          }).catch(err => {
+            console.error('❌ Error sending order accepted email:', err);
+          });
+        }
+      }
       
       // If order is being accepted, automatically print if printer is connected
       if (status === "accepted" && activePrinter) {
@@ -1205,7 +1265,8 @@ export default function Admin() {
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleStatusUpdate(order.id, "accepted");
+                                      setOrderToAccept(order);
+                                      setShowOrderAcceptDialog(true);
                                     }}
                                     className="bg-green-600 hover:bg-green-700"
                                   >
@@ -1484,6 +1545,20 @@ export default function Admin() {
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
+            {/* Analytics Header with Export Button */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {adminT("Analytiikka", "Analytics", "التحليلات")}
+              </h2>
+              <Button
+                onClick={() => setShowAnalyticsExportModal(true)}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {adminT("Vie raportti", "Export Report", "تصدير التقرير")}
+              </Button>
+            </div>
+
             {/* Analytics Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white border-0 shadow-lg">
@@ -1542,6 +1617,9 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Payment Methods Analytics */}
+            <PaymentMethodsAnalytics orders={filteredOrders} />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Order Status Breakdown */}
@@ -1654,6 +1732,22 @@ export default function Admin() {
                   >
                     <Globe className="w-4 h-4 mr-2" />
                     {adminT("Sivuston asetukset", "Site Configuration", "إعدادات الموقع")}
+                  </Button>
+                  <Button 
+                    onClick={() => setShowPaymentMethodsModal(true)}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    {adminT("Maksutavat", "Payment Methods", "طرق الدفع")}
+                  </Button>
+                  <Button 
+                    onClick={() => setShowStripeSettingsModal(true)}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Zap className="w-4 h-4 mr-2 text-purple-600" />
+                    {adminT("Stripe-asetukset", "Stripe Settings", "إعدادات سترايب")}
                   </Button>
                   <Button
                     onClick={() => setShowToppingsModal(true)}
@@ -1802,6 +1896,23 @@ export default function Admin() {
         onClose={() => setShowRestaurantModal(false)}
       />
 
+      <PaymentMethodsModal
+        isOpen={showPaymentMethodsModal}
+        onClose={() => setShowPaymentMethodsModal(false)}
+        onOpenStripeSettings={() => setShowStripeSettingsModal(true)}
+      />
+
+      <StripeSettingsModal
+        isOpen={showStripeSettingsModal}
+        onClose={() => setShowStripeSettingsModal(false)}
+      />
+
+      <AnalyticsExportModal
+        isOpen={showAnalyticsExportModal}
+        onClose={() => setShowAnalyticsExportModal(false)}
+        orders={filteredOrders}
+      />
+
       {/* Site Configuration Modal */}
       <Dialog open={showSiteConfigModal} onOpenChange={setShowSiteConfigModal}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -1820,6 +1931,22 @@ export default function Admin() {
           setSelectedOrder(null);
         }}
         onStatusUpdate={handleStatusUpdate}      />
+
+      <OrderAcceptDialog
+        isOpen={showOrderAcceptDialog}
+        onClose={() => {
+          setShowOrderAcceptDialog(false);
+          setOrderToAccept(null);
+        }}
+        onAccept={(prepTime) => {
+          if (orderToAccept) {
+            handleStatusUpdate(orderToAccept.id, "accepted", prepTime);
+            setShowOrderAcceptDialog(false);
+            setOrderToAccept(null);
+          }
+        }}
+        order={orderToAccept}
+      />
 
       <PermissionsDialog
 
