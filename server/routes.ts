@@ -514,6 +514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })),
             subtotal: parseFloat(subtotal.toString()),
             deliveryFee: parseFloat(deliveryFee.toString()),
+            smallOrderFee: parseFloat(smallOrderFee.toString()),
             totalAmount: parseFloat(totalAmount.toString()),
             orderType: (newOrder.orderType as 'delivery' | 'pickup') || 'pickup',
             deliveryAddress: newOrder.deliveryAddress || undefined,
