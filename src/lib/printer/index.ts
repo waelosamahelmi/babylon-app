@@ -6,6 +6,13 @@
 export { PrinterService } from './printer-service';
 export { ESCPOSFormatter } from './escpos-formatter';
 export {
+  imageUrlToBitmap,
+  generateQRCodeBitmap,
+  bitmapToESCPOS,
+  ICONS,
+  createDecorativeLine
+} from './image-utils';
+export {
   type PrinterDevice,
   type PrinterCapabilities,
   type PrinterMetadata,

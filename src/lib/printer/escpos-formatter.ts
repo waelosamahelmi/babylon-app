@@ -1,9 +1,16 @@
 /**
  * ESC/POS Thermal Printer Command Formatter
- * Optimized for Android network printing with comprehensive command support
+ * Modern design with logo, QR code, and visual enhancements
  */
 
 import { ReceiptData, ReceiptSection, ReceiptItem, ESC_POS } from './types';
+import { 
+  imageUrlToBitmap, 
+  generateQRCodeBitmap, 
+  bitmapToESCPOS, 
+  ICONS,
+  createDecorativeLine 
+} from './image-utils';
 
 export class ESCPOSFormatter {
   private commands: number[] = [];
@@ -160,6 +167,14 @@ export class ESCPOSFormatter {
   }
 
   /**
+   * Add a newline
+   */
+  newLine(): ESCPOSFormatter {
+    this.commands.push(...ESC_POS.FEED_LINE);
+    return this;
+  }
+
+  /**
    * Add multiple empty lines
    */
   lines(count: number): ESCPOSFormatter {
@@ -203,9 +218,593 @@ export class ESCPOSFormatter {
   }
 
   /**
-   * Format a complete receipt with enhanced ESC/POS commands for professional presentation
+   * Format a complete receipt with modern design, logo, and QR code
    */
-  static formatReceipt(receiptData: ReceiptData, originalOrder?: any): Uint8Array {
+  static async formatReceipt(receiptData: ReceiptData, originalOrder?: any): Promise<Uint8Array> {
+    const formatter = new ESCPOSFormatter();
+
+    try {
+      // ============================================
+      // HEADER SECTION WITH LOGO
+      // ============================================
+      
+      // Download and print logo
+      try {
+        const logoUrl = 'https://ravintolababylon.fi/wp-content/uploads/2023/06/logo-header-01.webp';
+        const logoBitmap = await imageUrlToBitmap(logoUrl, 384); // 384 dots = 48mm for 8 dots/mm printer
+        
+        formatter
+          .align('center')
+          .lines(1);
+        
+        // Add logo image commands
+        const logoCommands = bitmapToESCPOS(logoBitmap);
+        formatter.commands.push(...logoCommands);
+        
+        formatter.lines(2);
+      } catch (error) {
+        console.error('Failed to load logo:', error);
+        // Fallback to text header if logo fails
+        formatter
+          .align('center')
+          .size('double')
+          .bold(true)
+          .line('Ravintola Babylon')
+          .bold(false)
+          .size('normal')
+          .lines(1);
+      }
+
+      // Decorative separator
+      formatter
+        .align('center')
+        .bold(true)
+        .text(createDecorativeLine('═', 48))
+        .newLine()
+        .bold(false)
+        .lines(1);
+
+      // ============================================
+      // ORDER HEADER
+      // ============================================
+      
+      formatter
+        .align('center')
+        .size('large')
+        .bold(true)
+        .text(`${ICONS.RECEIPT}  TILAUS #${receiptData.orderNumber}  ${ICONS.RECEIPT}`)
+        .newLine()
+        .bold(false)
+        .size('normal')
+        .lines(1);
+
+      // Date and time with icon
+      formatter
+        .align('center')
+        .bold(true)
+        .text(`${ICONS.CLOCK} ${receiptData.timestamp.toLocaleDateString('fi-FI')} - ${receiptData.timestamp.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`)
+        .newLine()
+        .bold(false)
+        .lines(1);
+
+      formatter
+        .align('center')
+        .bold(true)
+        .text(createDecorativeLine('─', 48))
+        .newLine()
+        .bold(false)
+        .lines(1);
+
+      // ============================================
+      // ORDER TYPE & PAYMENT
+      // ============================================
+      
+      const orderTypeText = receiptData.orderType === 'delivery' ? 'KOTIINKULJETUS' : 'NOUTO';
+      const orderIcon = receiptData.orderType === 'delivery' ? ICONS.DELIVERY : ICONS.PICKUP;
+      
+      formatter
+        .align('center')
+        .size('large')
+        .bold(true)
+        .text(`${orderIcon}  ${orderTypeText}  ${orderIcon}`)
+        .newLine()
+        .bold(false)
+        .size('normal')
+        .lines(1);
+
+      // Payment method with icon
+      if (receiptData.paymentMethod) {
+        const paymentIcon = receiptData.paymentMethod.toLowerCase().includes('card') || 
+                           receiptData.paymentMethod.toLowerCase().includes('stripe') ? 
+                           ICONS.CARD : ICONS.CASH;
+        
+        formatter
+          .align('center')
+          .bold(true)
+          .size('normal')
+          .text(`${paymentIcon} ${receiptData.paymentMethod.toUpperCase()}`)
+          .newLine()
+          .bold(false)
+          .lines(1);
+      }
+
+      formatter
+        .align('center')
+        .bold(true)
+        .text(createDecorativeLine('═', 48))
+        .newLine()
+        .bold(false)
+        .lines(1);
+
+      // ============================================
+      // CUSTOMER INFORMATION
+      // ============================================
+      
+      if (receiptData.customerName || receiptData.customerPhone || receiptData.customerEmail || receiptData.deliveryAddress) {
+        formatter
+          .align('center')
+          .bold(true)
+          .underline(true)
+          .size('large')
+          .line('ASIAKASTIEDOT')
+          .underline(false)
+          .bold(false)
+          .size('normal')
+          .lines(1);
+
+        formatter
+          .align('left')
+          .bold(true)
+          .text(createDecorativeLine('─', 48))
+          .newLine()
+          .bold(false)
+          .lines(1);
+
+        if (receiptData.customerName) {
+          formatter
+            .align('left')
+            .bold(true)
+            .size('normal')
+            .text(`${ICONS.STAR} Nimi: `)
+            .bold(false)
+            .text(receiptData.customerName)
+            .newLine()
+            .lines(1);
+        }
+
+        if (receiptData.customerPhone) {
+          formatter
+            .align('left')
+            .bold(true)
+            .text(`${ICONS.PHONE} Puh: `)
+            .bold(false)
+            .text(receiptData.customerPhone)
+            .newLine()
+            .lines(1);
+        }
+
+        if (receiptData.customerEmail) {
+          formatter
+            .align('left')
+            .bold(true)
+            .text(`${ICONS.EMAIL} Email: `)
+            .bold(false);
+          
+          const emailLine = receiptData.customerEmail;
+          if (emailLine.length > 38) {
+            formatter.line(emailLine.substring(0, 38));
+            formatter.text('        ' + emailLine.substring(38)).newLine();
+          } else {
+            formatter.text(emailLine).newLine();
+          }
+          formatter.lines(1);
+        }
+
+        if (receiptData.deliveryAddress) {
+          formatter
+            .align('left')
+            .bold(true)
+            .size('normal')
+            .text(`${ICONS.LOCATION} Osoite:`)
+            .newLine()
+            .bold(false)
+            .lines(1);
+          
+          const addressLines = receiptData.deliveryAddress.split('\n');
+          addressLines.forEach(line => {
+            formatter
+              .text('  ')
+              .bold(true)
+              .size('normal')
+              .text(line.trim())
+              .newLine()
+              .bold(false);
+          });
+          formatter.lines(1);
+        }
+
+        formatter
+          .align('left')
+          .bold(true)
+          .text(createDecorativeLine('─', 48))
+          .newLine()
+          .bold(false)
+          .lines(1);
+      }
+
+      // ============================================
+      // ITEMS SECTION
+      // ============================================
+      
+      formatter
+        .align('center')
+        .bold(true)
+        .text(createDecorativeLine('═', 48))
+        .newLine()
+        .size('double')
+        .underline(true)
+        .text(`${ICONS.FOOD}  TUOTTEET  ${ICONS.FOOD}`)
+        .newLine()
+        .underline(false)
+        .bold(false)
+        .size('normal')
+        .text(createDecorativeLine('═', 48))
+        .newLine()
+        .lines(1);
+
+      formatter.align('left');
+
+      console.log(`🖨️ [ESC/POS] Formatting ${receiptData.items.length} items`);
+      
+      for (const item of receiptData.items) {
+        console.log(`🖨️ [ESC/POS] Processing item: "${item.name}"`);
+        
+        // Extract size information for better display
+        let displayName = item.name;
+        let itemSize = 'normal';
+        
+        // Method 1: Check if item name already contains size in parentheses
+        const sizeInNameMatch = item.name.match(/^(.+?)\s*\(([^)]+)\)$/);
+        if (sizeInNameMatch) {
+          displayName = sizeInNameMatch[1].trim();
+          itemSize = sizeInNameMatch[2].trim();
+        } else if (item.notes) {
+          // Method 2: Extract size from notes/special instructions
+          const sizeMatch = item.notes.match(/Size:\s*([^;]+)/i);
+          if (sizeMatch) {
+            itemSize = sizeMatch[1].trim();
+            if (itemSize && itemSize !== 'normal' && itemSize !== 'regular') {
+              displayName = `${displayName} (${itemSize})`;
+            }
+          }
+        } else if (originalOrder) {
+          // Method 3: Check original order item data for size information
+          const originalItems = originalOrder.orderItems || originalOrder.order_items || originalOrder.items || [];
+          const matchingOriginalItem = originalItems.find((oi: any) => 
+            (oi.menuItems?.name || oi.menu_items?.name || oi.name) === item.name.replace(/\s*\([^)]+\)$/, '')
+          );
+          
+          if (matchingOriginalItem) {
+            const specialInstructions = matchingOriginalItem.specialInstructions || 
+                                      matchingOriginalItem.special_instructions || '';
+            const sizeMatch = specialInstructions.match(/Size:\s*([^;]+)/i);
+            if (sizeMatch) {
+              itemSize = sizeMatch[1].trim();
+              if (itemSize && itemSize !== 'normal' && itemSize !== 'regular') {
+                displayName = `${displayName} (${itemSize})`;
+              }
+            }
+          }
+        }
+
+        // Item box separator
+        formatter
+          .bold(true)
+          .text(createDecorativeLine('┄', 48))
+          .newLine()
+          .bold(false)
+          .lines(1);
+        
+        // Main item line with quantity and price
+        const itemName = `${ICONS.BOX} ${item.quantity}x ${displayName}`;
+        const itemPrice = `€${item.totalPrice.toFixed(2)}`;
+        
+        formatter
+          .bold(true)
+          .size('large')
+          .columns(itemName, itemPrice)
+          .bold(false)
+          .size('normal')
+          .lines(1);
+
+        // Toppings with enhanced formatting and conditional pricing support
+        if (item.toppings && item.toppings.length > 0) {
+          const originalItems = originalOrder ? (originalOrder.orderItems || originalOrder.order_items || originalOrder.items || []) : [];
+          const matchingOriginalItem = originalItems.find((oi: any) => 
+            (oi.menuItems?.name || oi.menu_items?.name || oi.name) === item.name.replace(/\s*\([^)]+\)$/, '')
+          );
+          
+          // Check for conditional pricing
+          const menuItemData = matchingOriginalItem ? 
+            (matchingOriginalItem.menuItems || matchingOriginalItem.menu_items || matchingOriginalItem.menuItem || {}) : {};
+          const hasConditionalPricing = menuItemData.hasConditionalPricing || menuItemData.has_conditional_pricing || false;
+          const includedToppingsCount = menuItemData.includedToppingsCount || menuItemData.included_toppings_count || 0;
+          
+          // Legacy support: Check if this is "Your Choice Pizza" (product ID 93)
+          const isYourChoicePizza = matchingOriginalItem && 
+                   (matchingOriginalItem.menuItemId === 93 || 
+                    matchingOriginalItem.menu_item_id === 93 ||
+                    matchingOriginalItem.menuItems?.id === 93 ||
+                    matchingOriginalItem.menu_items?.id === 93);
+          
+          // Determine number of free toppings
+          const freeToppingCount = hasConditionalPricing ? includedToppingsCount : (isYourChoicePizza ? 4 : 0);
+          
+          // Count how many paid toppings have been made free so far
+          let freeCount = 0;
+          
+          formatter
+            .bold(true)
+            .text(`  ${ICONS.ARROW_RIGHT} Lisätäytteet:`)
+            .newLine()
+            .bold(false)
+            .lines(1);
+          
+          for (let i = 0; i < item.toppings.length; i++) {
+            const topping = item.toppings[i];
+            let adjustedPrice = topping.price;
+            
+            // Apply conditional pricing or legacy "first 4 free" logic
+            if (freeToppingCount > 0 && topping.price > 0 && freeCount < freeToppingCount) {
+              adjustedPrice = 0;
+              freeCount++;
+            } else {
+              // Apply size-based pricing adjustments for paid toppings
+              if (itemSize === "perhe" || itemSize === "family") {
+                adjustedPrice = topping.price * 2;
+              } else if ((itemSize === "large" || itemSize === "iso") && Math.abs(topping.price - 1.00) < 0.01) {
+                adjustedPrice = 2.00;
+              }
+            }
+            
+            const toppingLine = `    ${ICONS.BULLET} ${topping.name}`;
+            let toppingPrice = '';
+            
+            if (freeToppingCount > 0 && topping.price > 0 && freeCount <= freeToppingCount && adjustedPrice === 0) {
+              toppingPrice = `${ICONS.CHECK} ILMAINEN`;
+            } else if (adjustedPrice > 0) {
+              toppingPrice = `+€${adjustedPrice.toFixed(2)}`;
+            }
+            
+            if (toppingPrice) {
+              formatter.bold(true).columns(toppingLine, toppingPrice).bold(false);
+            } else {
+              formatter.text(toppingLine).newLine();
+            }
+          }
+          
+          formatter.lines(1);
+        }
+
+        // Special instructions
+        if (item.notes) {
+          const cleanedNotes = item.notes
+            .split(';')
+            .filter(part => !part.trim().toLowerCase().startsWith('size:'))
+            .filter(part => !part.trim().toLowerCase().startsWith('toppings:'))
+            .map(part => part.trim())
+            .filter(part => part.length > 0)
+            .join('; ');
+            
+          if (cleanedNotes) {
+            formatter
+              .bold(true)
+              .text(`  ${ICONS.ARROW_RIGHT} Huom: `)
+              .bold(false)
+              .text(cleanedNotes)
+              .newLine()
+              .lines(1);
+          }
+        }
+      }
+
+      // ============================================
+      // ORDER-LEVEL SPECIAL INSTRUCTIONS
+      // ============================================
+      
+      if (originalOrder?.specialInstructions || originalOrder?.special_instructions) {
+        const instructions = originalOrder.specialInstructions || originalOrder.special_instructions;
+        
+        formatter
+          .lines(1)
+          .bold(true)
+          .text(createDecorativeLine('═', 48))
+          .newLine()
+          .align('center')
+          .size('large')
+          .underline(true)
+          .line('ERIKOISOHJEET')
+          .underline(false)
+          .bold(false)
+          .size('normal')
+          .text(createDecorativeLine('─', 48))
+          .newLine()
+          .lines(1)
+          .align('left');
+        
+        // Split long instructions
+        const words = instructions.split(' ');
+        let currentLine = '';
+        
+        words.forEach((word: string) => {
+          if ((currentLine + ' ' + word).length > 46) {
+            if (currentLine) {
+              formatter.bold(true).text('  ' + currentLine).newLine().bold(false);
+              currentLine = word;
+            } else {
+              formatter.bold(true).text('  ' + word.substring(0, 46)).newLine().bold(false);
+            }
+          } else {
+            currentLine = currentLine ? currentLine + ' ' + word : word;
+          }
+        });
+        
+        if (currentLine) {
+          formatter.bold(true).text('  ' + currentLine).newLine().bold(false);
+        }
+        
+        formatter
+          .lines(1)
+          .bold(true)
+          .text(createDecorativeLine('─', 48))
+          .newLine()
+          .bold(false)
+          .lines(1);
+      }
+
+      // ============================================
+      // TOTALS SECTION
+      // ============================================
+      
+      formatter
+        .lines(1)
+        .bold(true)
+        .text(createDecorativeLine('═', 48))
+        .newLine()
+        .align('center')
+        .size('double')
+        .underline(true)
+        .line('YHTEENVETO')
+        .underline(false)
+        .bold(false)
+        .size('normal')
+        .text(createDecorativeLine('═', 48))
+        .newLine()
+        .lines(1)
+        .align('left');
+
+      if (originalOrder) {
+        if (originalOrder.subtotal) {
+          formatter
+            .bold(true)
+            .size('normal')
+            .columns('Välisumma:', `€${parseFloat(originalOrder.subtotal).toFixed(2)}`)
+            .bold(false);
+        }
+
+        if (originalOrder.deliveryFee && parseFloat(originalOrder.deliveryFee) > 0) {
+          formatter
+            .bold(true)
+            .size('normal')
+            .columns(`${ICONS.DELIVERY} Toimitusmaksu:`, `€${parseFloat(originalOrder.deliveryFee).toFixed(2)}`)
+            .bold(false);
+        }
+
+        if (originalOrder.smallOrderFee && parseFloat(originalOrder.smallOrderFee) > 0) {
+          formatter
+            .bold(true)
+            .size('normal')
+            .columns('Pientilauslisä:', `€${parseFloat(originalOrder.smallOrderFee).toFixed(2)}`)
+            .bold(false);
+        }
+
+        if (originalOrder.discount && parseFloat(originalOrder.discount) > 0) {
+          formatter
+            .bold(true)
+            .size('normal')
+            .columns('Alennus:', `-€${parseFloat(originalOrder.discount).toFixed(2)}`)
+            .bold(false);
+        }
+      }
+
+      formatter
+        .lines(1)
+        .bold(true)
+        .text(createDecorativeLine('═', 48))
+        .newLine()
+        .align('center')
+        .size('double')
+        .bold(true)
+        .text(`YHTEENSÄ: €${receiptData.total.toFixed(2)}`)
+        .newLine()
+        .bold(false)
+        .size('normal')
+        .text(createDecorativeLine('═', 48))
+        .newLine()
+        .lines(2);
+
+      // ============================================
+      // QR CODE SECTION
+      // ============================================
+      
+      try {
+        formatter
+          .align('center')
+          .bold(true)
+          .size('normal')
+          .text(`${ICONS.QR} SKANNAA VERKKOSIVULLE ${ICONS.QR}`)
+          .newLine()
+          .bold(false)
+          .lines(1);
+
+        // Generate QR code for website
+        const qrBitmap = await generateQRCodeBitmap('https://ravintolababylon.fi', 200);
+        const qrCommands = bitmapToESCPOS(qrBitmap);
+        formatter.commands.push(...qrCommands);
+        
+        formatter
+          .lines(1)
+          .bold(true)
+          .text('ravintolababylon.fi')
+          .newLine()
+          .bold(false)
+          .lines(2);
+      } catch (error) {
+        console.error('Failed to generate QR code:', error);
+        // Fallback to text URL
+        formatter
+          .align('center')
+          .bold(true)
+          .line('Vieraile verkkosivuillamme:')
+          .line('ravintolababylon.fi')
+          .bold(false)
+          .lines(2);
+      }
+
+      // ============================================
+      // FOOTER
+      // ============================================
+      
+      formatter
+        .align('center')
+        .bold(true)
+        .text(createDecorativeLine('═', 48))
+        .newLine()
+        .size('large')
+        .text(`${ICONS.HEART}  Kiitos tilauksestasi!  ${ICONS.HEART}`)
+        .newLine()
+        .size('normal')
+        .line('Tervetuloa uudelleen!')
+        .bold(false)
+        .text(createDecorativeLine('═', 48))
+        .newLine()
+        .lines(3);
+
+      // Final cut
+      formatter.cut();
+
+      return new Uint8Array(formatter.commands);
+    } catch (error) {
+      console.error('Error formatting receipt:', error);
+      // Fallback to basic receipt on error
+      return ESCPOSFormatter.formatBasicReceipt(receiptData, originalOrder);
+    }
+  }
+
+  /**
+   * Fallback basic receipt format (original design)
+   */
+  static formatBasicReceipt(receiptData: ReceiptData, originalOrder?: any): Uint8Array {
     const formatter = new ESCPOSFormatter();
 
     // Header - Restaurant name with enhanced formatting

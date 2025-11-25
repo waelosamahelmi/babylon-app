@@ -83,9 +83,8 @@ export function PrintPreviewModal({
     generatePreview();
   }, [receiptData, printOptions]);
 
-  const generatePreview = () => {
+  const generatePreview = async () => {
     try {
-      const formatter = new ESCPOSFormatter();
       const capabilities = {
         paperWidth: printOptions.paperWidth,
         supportsImages: true,
@@ -95,10 +94,7 @@ export function PrintPreviewModal({
         maxLineLength: printOptions.paperWidth === 58 ? 32 : printOptions.paperWidth === 80 ? 48 : 56
       };
 
-      // Format the receipt to get raw data
-      const rawData = formatter.formatReceipt(receiptData, capabilities);
-      
-      // Convert to preview text (simplified representation)
+      // Generate text preview (simplified representation)
       const lines = generateTextPreview(receiptData, capabilities);
       setPreviewLines(lines);
 

@@ -143,7 +143,12 @@ export function OrderAcceptDialog({ isOpen, onClose, onAccept, order }: OrderAcc
                 <div 
                   ref={scrollContainerRef}
                   className="flex overflow-x-auto gap-2 pb-2 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200"
-                  style={{ scrollbarWidth: 'thin' }}
+                  style={{ 
+                    scrollbarWidth: 'thin',
+                    touchAction: 'pan-x' 
+                  }}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
                 >
                   {timeOptions.map((time) => (
                     <button

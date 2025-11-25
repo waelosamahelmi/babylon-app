@@ -11,7 +11,7 @@ import { useTheme } from "@/lib/theme-context";
 import { useAndroid } from "@/lib/android-context";
 import { usePrinter } from "@/lib/printer-context";
 import { useLocation } from "wouter";
-import { sendOrderAcceptedEmail } from "@/lib/email-service";
+import { sendOrderAcceptedEmail, sendOrderCancelledEmail, sendOrderDeliveredEmail } from "@/lib/email-service";
 import { LoginModal } from "@/components/login-modal";
 import { ProductManagementModal } from "@/components/product-management-modal";
 
@@ -377,6 +377,100 @@ export default function Admin() {
             }
           }).catch(err => {
             console.error('❌ Error sending order accepted email:', err);
+          });
+        }
+      }
+      
+      // If order is being cancelled, send cancellation email and process refund for online payments
+      if (status === "cancelled") {
+        const order = orders?.find((o: any) => o.id === orderId);
+        if (order && (order.customer_email || order.customerEmail)) {
+          const paymentMethod = order.payment_method || order.paymentMethod || 'cash';
+          const isOnlinePayment = paymentMethod.toLowerCase().includes('card') || 
+                                 paymentMethod.toLowerCase().includes('online') || 
+                                 paymentMethod.toLowerCase().includes('stripe') ||
+                                 paymentMethod.toLowerCase().includes('credit') ||
+                                 paymentMethod.toLowerCase().includes('debit');
+          
+          const totalAmount = parseFloat(order.total_amount || order.totalAmount || '0');
+          
+          // TODO: Implement Stripe refund API call here
+          // If payment was made via Stripe, issue a refund
+          let refundAmount = undefined;
+          if (isOnlinePayment && totalAmount > 0) {
+            refundAmount = totalAmount;
+            console.log(`💳 Refund needed for order ${orderId}: €${refundAmount}`);
+            // Example: await stripe.refunds.create({ payment_intent: order.stripe_payment_id });
+          }
+          
+          const emailData = {
+            customerName: order.customer_name || order.customerName || 'Customer',
+            customerEmail: order.customer_email || order.customerEmail,
+            orderNumber: order.id?.toString() || orderId.toString(),
+            orderItems: (order.items || []).map((item: any) => ({
+              name: item.name || item.menuItem?.name || 'Unknown Item',
+              quantity: item.quantity || 1,
+              price: parseFloat(item.price || '0'),
+            })),
+            subtotal: parseFloat(order.subtotal || order.total_amount || '0'),
+            deliveryFee: parseFloat(order.delivery_fee || order.deliveryFee || '0'),
+            totalAmount: totalAmount,
+            orderType: (order.order_type || order.orderType || 'pickup') as 'delivery' | 'pickup',
+            deliveryAddress: order.delivery_address || order.deliveryAddress,
+            branchName: 'Ravintola Babylon',
+            branchPhone: '+358-3781-2222',
+            branchAddress: 'Vapaudenkatu 28, 15140 Lahti',
+            specialInstructions: order.special_instructions || order.specialInstructions,
+            paymentMethod: paymentMethod,
+            refundAmount: refundAmount
+          };
+          
+          sendOrderCancelledEmail(emailData).then(result => {
+            if (result.success) {
+              console.log('✅ Order cancellation email sent to customer');
+            } else {
+              console.warn('⚠️ Failed to send order cancellation email:', result.error);
+            }
+          }).catch(err => {
+            console.error('❌ Error sending order cancellation email:', err);
+          });
+        }
+      }
+      
+      // If order is being marked as delivered, send delivery confirmation email with review link
+      if (status === "delivered") {
+        const order = orders?.find((o: any) => o.id === orderId);
+        if (order && (order.customer_email || order.customerEmail)) {
+          const emailData = {
+            customerName: order.customer_name || order.customerName || 'Customer',
+            customerEmail: order.customer_email || order.customerEmail,
+            orderNumber: order.id?.toString() || orderId.toString(),
+            orderItems: (order.items || []).map((item: any) => ({
+              name: item.name || item.menuItem?.name || 'Unknown Item',
+              quantity: item.quantity || 1,
+              price: parseFloat(item.price || '0'),
+            })),
+            subtotal: parseFloat(order.subtotal || order.total_amount || '0'),
+            deliveryFee: parseFloat(order.delivery_fee || order.deliveryFee || '0'),
+            totalAmount: parseFloat(order.total_amount || order.totalAmount || '0'),
+            orderType: (order.order_type || order.orderType || 'pickup') as 'delivery' | 'pickup',
+            deliveryAddress: order.delivery_address || order.deliveryAddress,
+            branchName: 'Ravintola Babylon',
+            branchPhone: '+358-3781-2222',
+            branchAddress: 'Vapaudenkatu 28, 15140 Lahti',
+            specialInstructions: order.special_instructions || order.specialInstructions,
+            paymentMethod: order.payment_method || order.paymentMethod || 'Cash',
+            reviewLink: 'https://share.google/lgfzGpNmPplzeeIBI'
+          };
+          
+          sendOrderDeliveredEmail(emailData).then(result => {
+            if (result.success) {
+              console.log('✅ Order delivered email sent to customer');
+            } else {
+              console.warn('⚠️ Failed to send order delivered email:', result.error);
+            }
+          }).catch(err => {
+            console.error('❌ Error sending order delivered email:', err);
           });
         }
       }

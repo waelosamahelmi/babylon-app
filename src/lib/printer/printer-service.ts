@@ -904,7 +904,7 @@ export class PrinterService {
       let printData: Uint8Array;
       
       if (job.content.type === 'receipt' && typeof job.content.data === 'object') {
-        printData = ESCPOSFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
+        printData = await ESCPOSFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
       } else if (job.content.type === 'text' && typeof job.content.data === 'string') {
         printData = ESCPOSFormatter.formatText(job.content.data);
       } else if (job.content.data instanceof Uint8Array) {

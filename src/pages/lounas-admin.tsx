@@ -467,7 +467,7 @@ export default function LounasAdmin() {
                           </CardTitle>
                           {dayMenus.length > 0 && (
                             <div className="text-xl font-bold text-primary">
-                              {dayMenus[0].price.toFixed(2)} €
+                              {dayMenus[0].price} €
                             </div>
                           )}
                         </div>
