@@ -18,6 +18,9 @@ export function useSupabaseOrders() {
           order_items (
             *,
             menu_items (*)
+          ),
+          restaurant_settings!inner (
+            payment_methods
           )
         `);
       
@@ -61,6 +64,9 @@ export function useSupabaseOrder(id: number) {
           order_items (
             *,
             menu_items (*)
+          ),
+          restaurant_settings!inner (
+            payment_methods
           )
         `)
         .eq('id', id)

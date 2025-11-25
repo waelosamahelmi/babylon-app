@@ -77,6 +77,14 @@ export class Z92PrinterService {
     lines.push('================================');
     lines.push(`Order #${order.id || order.number || 'N/A'}`);
     lines.push(`Date: ${new Date().toLocaleString()}`);
+    
+    // Expected delivery time
+    if (order.estimatedDeliveryTime || order.estimated_delivery_time) {
+      const deliveryTime = new Date(order.estimatedDeliveryTime || order.estimated_delivery_time);
+      lines.push(`Expected Delivery:`);
+      lines.push(`${deliveryTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`);
+    }
+    
     lines.push('--------------------------------');
     
     if (order.items && Array.isArray(order.items)) {
