@@ -142,10 +142,20 @@ export class DirectPrintService {
     lines.push(centerText('Ravintola Babylon'));
     lines.push(centerText('================'));
     
-    // Order number and date - Smaller text (normal)
+    // Order number and date - Smaller text
+    lines.push('<small>');
     lines.push(`Tilaus: #${order.orderNumber || order.id || 'N/A'}`);
     const orderDate = order.createdAt || order.created_at ? new Date(order.createdAt || order.created_at) : new Date();
     lines.push(`${orderDate.toLocaleDateString('fi-FI')} ${orderDate.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`);
+    
+    // Expected delivery time
+    if (order.estimatedDeliveryTime || order.estimated_delivery_time) {
+      const deliveryTime = new Date(order.estimatedDeliveryTime || order.estimated_delivery_time);
+      lines.push(`Arvioitu toimitusaika:`);
+      lines.push(`${deliveryTime.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`);
+    }
+    lines.push('</small>');
+    
     lines.push('================');
     
     // Customer info - Check multiple possible field names
@@ -155,6 +165,7 @@ export class DirectPrintService {
     const deliveryAddress = order.deliveryAddress || order.delivery_address || order.address;
     
     if (customerName || customerPhone || customerEmail) {
+      lines.push('<small>');
       lines.push('ASIAKASTIEDOT');
       lines.push('--------------------------');
       
@@ -191,18 +202,58 @@ export class DirectPrintService {
         });
       }
       lines.push('--------------------------');
+      lines.push('</small>');
     }
     
     // Order type and payment
     const orderType = order.orderType === 'delivery' ? 'KOTIINKULJETUS' : 'NOUTO';
     lines.push(`Tyyppi: ${orderType}`);
     if (order.paymentMethod) {
-      const paymentMap: { [key: string]: string } = {
-        'card': 'KORTTI',
-        'cash': 'KÄTEINEN',
-        'online': 'VERKKOMAKSU'
-      };
-      const paymentText = paymentMap[order.paymentMethod.toLowerCase()] || order.paymentMethod.toUpperCase();
+      // Check if order has payment method name already
+      let paymentText = '';
+      
+      if (order.paymentMethodName) {
+        // Use the name from the order if available
+        paymentText = order.paymentMethodName;
+      } else if (order.restaurant_settings?.payment_methods || order.restaurantSettings?.payment_methods) {
+        // Extract payment methods from the joined restaurant_settings
+        const paymentMethods = order.restaurant_settings?.payment_methods || order.restaurantSettings?.payment_methods;
+        const method = paymentMethods.find((pm: any) => pm.id === order.paymentMethod);
+        if (method) {
+          paymentText = method.nameFi || method.nameEn || method.name || order.paymentMethod.toUpperCase();
+        } else {
+          // Fallback to basic mapping for standard methods
+          const paymentMap: { [key: string]: string } = {
+            'card': 'KORTTI',
+            'cash': 'KÄTEINEN',
+            'online': 'VERKKOMAKSU'
+          };
+          paymentText = paymentMap[order.paymentMethod.toLowerCase()] || order.paymentMethod.toUpperCase();
+        }
+      } else if (order.paymentMethods && Array.isArray(order.paymentMethods)) {
+        // Try to find the payment method in the settings array (legacy)
+        const method = order.paymentMethods.find((pm: any) => pm.id === order.paymentMethod);
+        if (method) {
+          paymentText = method.nameFi || method.nameEn || method.name || order.paymentMethod.toUpperCase();
+        } else {
+          // Fallback to basic mapping for standard methods
+          const paymentMap: { [key: string]: string } = {
+            'card': 'KORTTI',
+            'cash': 'KÄTEINEN',
+            'online': 'VERKKOMAKSU'
+          };
+          paymentText = paymentMap[order.paymentMethod.toLowerCase()] || order.paymentMethod.toUpperCase();
+        }
+      } else {
+        // Fallback to basic mapping for standard methods
+        const paymentMap: { [key: string]: string } = {
+          'card': 'KORTTI',
+          'cash': 'KÄTEINEN',
+          'online': 'VERKKOMAKSU'
+        };
+        paymentText = paymentMap[order.paymentMethod.toLowerCase()] || order.paymentMethod.toUpperCase();
+      }
+      
       lines.push(`Maksutapa: ${paymentText}`);
     }
     

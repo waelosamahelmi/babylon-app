@@ -45,7 +45,7 @@ export function OrderAcceptDialog({ isOpen, onClose, onAccept, order }: OrderAcc
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[55vh] pr-4">
+        <div className="max-h-[55vh] overflow-y-auto pr-4">
           <div className="space-y-4">
             {/* Order Information */}
             <Card>
@@ -142,26 +142,28 @@ export function OrderAcceptDialog({ isOpen, onClose, onAccept, order }: OrderAcc
                 {/* Swipeable Time Options */}
                 <div 
                   ref={scrollContainerRef}
-                  className="flex overflow-x-auto gap-2 pb-2 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200"
+                  className="flex overflow-x-scroll gap-2 pb-2 -mx-4 px-4"
                   style={{ 
-                    scrollbarWidth: 'thin',
-                    touchAction: 'pan-x' 
+                    WebkitOverflowScrolling: 'touch',
+                    scrollSnapType: 'x mandatory'
                   }}
                   onTouchStart={(e) => e.stopPropagation()}
                   onTouchMove={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
                   {timeOptions.map((time) => (
                     <button
                       key={time}
                       onClick={() => setSelectedTime(time)}
                       className={`
-                        flex-shrink-0 snap-start px-6 py-4 rounded-lg font-semibold
+                        flex-shrink-0 px-6 py-4 rounded-lg font-semibold
                         transition-all duration-200 min-w-[100px]
                         ${selectedTime === time 
                           ? 'bg-green-600 text-white shadow-lg scale-105' 
                           : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600'
                         }
                       `}
+                      style={{ scrollSnapAlign: 'start' }}
                     >
                       <div className="text-center">
                         <div className="text-2xl">{time}</div>
@@ -177,7 +179,7 @@ export function OrderAcceptDialog({ isOpen, onClose, onAccept, order }: OrderAcc
               </CardContent>
             </Card>
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="flex gap-2">
           <Button

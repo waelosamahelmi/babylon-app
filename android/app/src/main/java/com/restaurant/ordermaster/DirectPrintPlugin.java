@@ -100,6 +100,16 @@ public class DirectPrintPlugin extends Plugin {
     }
 
     /**
+     * Process text to convert simple HTML tags to proper HTML
+     */
+    private String processTextWithHtmlTags(String text) {
+        // Convert <small> tags to span with class
+        text = text.replace("<small>", "</pre><div class='small'><pre>")
+                   .replace("</small>", "</pre></div><pre>");
+        return text;
+    }
+
+    /**
      * Build HTML content for receipt with proper Finnish formatting
      */
     private String buildReceiptHtml(String text) {
@@ -115,10 +125,10 @@ public class DirectPrintPlugin extends Plugin {
                "body { " +
                "  width: 58mm; " +
                "  margin: 0 10mm; " +  // 10mm left and right margins
-               "  padding: 2mm 0; " +  // Reduced from 5mm to 2mm padding
+               "  padding: 3mm 0; " +  // Increased padding for better spacing
                "  font-family: 'Arial', 'Helvetica', sans-serif; " +
-               "  font-size: 10pt; " +  // Reduced from 12pt to 10pt
-               "  line-height: 1.1; " +  // Reduced from 1.4 to 1.1
+               "  font-size: 14pt; " +  // Increased from 10pt to 14pt for better readability
+               "  line-height: 1.6; " +  // Increased from 1.1 to 1.6 for more space between lines
                "  font-weight: bold; " +
                "}" +
                "pre { " +
@@ -127,33 +137,37 @@ public class DirectPrintPlugin extends Plugin {
                "  word-wrap: break-word; " +
                "  font-family: 'Arial', 'Helvetica', sans-serif; " +
                "  font-weight: bold; " +
-               "  font-size: 10pt; " +  // Reduced from 12pt to 10pt
-               "  line-height: 1.1; " +  // Added line-height control
+               "  font-size: 14pt; " +  // Increased from 10pt to 14pt
+               "  line-height: 1.6; " +  // Increased from 1.1 to 1.6
                "}" +
                ".header { " +
                "  text-align: center; " +
-               "  font-size: 13pt; " +  // Reduced from 16pt to 13pt
+               "  font-size: 18pt; " +  // Increased from 13pt to 18pt
                "  font-weight: bold; " +
-               "  margin-bottom: 2mm; " +  // Reduced from 3mm to 2mm
+               "  margin-bottom: 4mm; " +  // Increased from 2mm to 4mm
                "}" +
                ".section-title { " +
-               "  font-size: 11pt; " +  // Reduced from 14pt to 11pt
+               "  font-size: 15pt; " +  // Increased from 11pt to 15pt
                "  font-weight: bold; " +
-               "  margin-top: 2mm; " +  // Reduced from 3mm to 2mm
-               "  margin-bottom: 1mm; " +  // Reduced from 2mm to 1mm
+               "  margin-top: 4mm; " +  // Increased from 2mm to 4mm
+               "  margin-bottom: 2mm; " +  // Increased from 1mm to 2mm
                "}" +
                ".item-line { " +
-               "  margin: 0.5mm 0; " +  // Reduced from 1mm to 0.5mm
+               "  margin: 1.5mm 0; " +  // Increased from 0.5mm to 1.5mm
                "}" +
                ".total-line { " +
-               "  font-size: 11pt; " +  // Reduced from 14pt to 11pt
+               "  font-size: 16pt; " +  // Increased from 11pt to 16pt
                "  font-weight: bold; " +
-               "  margin-top: 2mm; " +  // Reduced from 3mm to 2mm
+               "  margin-top: 4mm; " +  // Increased from 2mm to 4mm
+               "}" +
+               ".small { " +
+               "  font-size: 11pt; " +  // Smaller font for order number and customer info
+               "  line-height: 1.4; " +
                "}" +
                "</style>" +
                "</head>" +
                "<body>" +
-               "<pre>" + text + "</pre>" +
+               "<pre>" + processTextWithHtmlTags(text) + "</pre>" +
                "</body>" +
                "</html>";
     }
