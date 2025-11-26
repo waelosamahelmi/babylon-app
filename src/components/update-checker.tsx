@@ -4,14 +4,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Download, Loader2, RefreshCw } from 'lucide-react';
 
 export function UpdateChecker() {
-  const { updateAvailable, updateInfo, checking, checkForUpdates, downloadUpdate } = useAppUpdater();
+  const { updateAvailable, updateInfo, checking, checkForUpdates, downloadUpdate, skipUpdate } = useAppUpdater();
 
   if (!updateAvailable || !updateInfo) {
     return null;
   }
 
   return (
-    <Dialog open={updateAvailable}>
+    <Dialog open={updateAvailable} onOpenChange={(open) => !open && skipUpdate()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -47,7 +47,7 @@ export function UpdateChecker() {
         <DialogFooter className="flex-col gap-2 sm:flex-row">
           <Button
             variant="outline"
-            onClick={() => window.location.reload()}
+            onClick={skipUpdate}
             className="w-full sm:w-auto"
           >
             Later

@@ -35,6 +35,9 @@ export function LounasSettingsModal({
 
   const [startTime, setStartTime] = useState("10:30");
   const [endTime, setEndTime] = useState("14:00");
+  const [priceText, setPriceText] = useState("");
+  const [priceTextEn, setPriceTextEn] = useState("");
+  const [isEnabled, setIsEnabled] = useState(true);
   const [servesSunday, setServesSunday] = useState(false);
   const [servesMonday, setServesMonday] = useState(true);
   const [servesTuesday, setServesTuesday] = useState(true);
@@ -47,6 +50,9 @@ export function LounasSettingsModal({
     if (currentSettings) {
       setStartTime(formatTime(currentSettings.start_time));
       setEndTime(formatTime(currentSettings.end_time));
+      setPriceText(currentSettings.price_text || "");
+      setPriceTextEn(currentSettings.price_text_en || "");
+      setIsEnabled(currentSettings.is_enabled ?? true);
       setServesSunday(currentSettings.serves_sunday);
       setServesMonday(currentSettings.serves_monday);
       setServesTuesday(currentSettings.serves_tuesday);
@@ -65,6 +71,9 @@ export function LounasSettingsModal({
         branch_id: branchId,
         start_time: formatTimeForDB(startTime),
         end_time: formatTimeForDB(endTime),
+        price_text: priceText || null,
+        price_text_en: priceTextEn || null,
+        is_enabled: isEnabled,
         serves_sunday: servesSunday,
         serves_monday: servesMonday,
         serves_tuesday: servesTuesday,
@@ -120,6 +129,56 @@ export function LounasSettingsModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Enable/Disable Lounas */}
+          <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <div className="flex-1">
+              <Label htmlFor="is-enabled" className="cursor-pointer font-semibold">
+                {t("Lounas käytössä", "Lounas Enabled", "الغداء مفعّل", "Обед включен", "Lunch aktiverad")}
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t("Näytä lounas-sivu verkkosivustolla", "Show lounas page on website", "إظهار صفحة الغداء على الموقع", "Показать страницу обеда на сайте", "Visa lunchsidan på webbplatsen")}
+              </p>
+            </div>
+            <Switch
+              id="is-enabled"
+              checked={isEnabled}
+              onCheckedChange={setIsEnabled}
+            />
+          </div>
+
+          {/* Price Text */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm">
+              {t("Hinta-tieto", "Price Information", "معلومات السعر", "Информация о цене", "Prisinformation")}
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="price-text">
+                  {t("Hinta (suomeksi)", "Price (Finnish)", "السعر (بالفنلندية)", "Цена (на финском)", "Pris (finska)")}
+                </Label>
+                <Input
+                  id="price-text"
+                  type="text"
+                  placeholder={t("esim. 12 euroa / henkilö", "e.g. 12 euros per person", "مثلاً 12 يورو / شخص", "напр. 12 евро / человек", "t.ex. 12 euro / person")}
+                  value={priceText}
+                  onChange={(e) => setPriceText(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="price-text-en">
+                  {t("Hinta (englanniksi)", "Price (English)", "السعر (بالإنجليزية)", "Цена (на английском)", "Pris (engelska)")}
+                </Label>
+                <Input
+                  id="price-text-en"
+                  type="text"
+                  placeholder="e.g. 12 euros per person"
+                  value={priceTextEn}
+                  onChange={(e) => setPriceTextEn(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Time Settings */}
           <div className="space-y-4">
             <h3 className="font-semibold text-sm">

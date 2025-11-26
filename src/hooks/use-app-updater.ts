@@ -10,14 +10,31 @@ interface UpdateInfo {
   fileSize: string;
 }
 
+const SKIPPED_VERSION_KEY = 'plateos_skipped_update_version';
+
 export function useAppUpdater() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [checking, setChecking] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState<string>('1.0.0');
 
   const GITHUB_REPO = 'waelosamahelmi/babylon-app';
   const CHECK_INTERVAL = 1000 * 60 * 60; // Check every hour
-  const CURRENT_VERSION = '1.0.0'; // Update this with each release
+
+  // Get current app version on mount
+  useEffect(() => {
+    const getAppVersion = async () => {
+      try {
+        const info = await CapacitorApp.getInfo();
+        setCurrentVersion(info.version);
+      } catch (error) {
+        console.error('Error getting app version:', error);
+        // Fallback to package.json version
+        setCurrentVersion('1.0.0');
+      }
+    };
+    getAppVersion();
+  }, []);
 
   const checkForUpdates = async () => {
     try {
@@ -46,8 +63,11 @@ export function useAppUpdater() {
         return;
       }
 
+      // Check if user skipped this version
+      const skippedVersion = localStorage.getItem(SKIPPED_VERSION_KEY);
+      
       // Compare versions
-      if (isNewerVersion(latestVersion, CURRENT_VERSION)) {
+      if (isNewerVersion(latestVersion, currentVersion) && latestVersion !== skippedVersion) {
         const updateInfo: UpdateInfo = {
           version: latestVersion,
           downloadUrl: apkAsset.browser_download_url,
@@ -57,9 +77,6 @@ export function useAppUpdater() {
 
         setUpdateInfo(updateInfo);
         setUpdateAvailable(true);
-        
-        // Show update dialog
-        await showUpdateDialog(updateInfo);
       }
     } catch (error) {
       console.error('Error checking for updates:', error);
@@ -86,10 +103,13 @@ export function useAppUpdater() {
     }
   };
 
-  const downloadUpdate = async (url: string) => {
+  const downloadUpdate = async (url?: string) => {
     try {
+      const downloadUrl = url || updateInfo?.downloadUrl;
+      if (!downloadUrl) return;
+      
       // Open download URL in browser
-      await Browser.open({ url });
+      await Browser.open({ url: downloadUrl });
       
       // Show instructions
       await Dialog.alert({
@@ -98,6 +118,13 @@ export function useAppUpdater() {
       });
     } catch (error) {
       console.error('Error downloading update:', error);
+    }
+  };
+
+  const skipUpdate = () => {
+    if (updateInfo) {
+      localStorage.setItem(SKIPPED_VERSION_KEY, updateInfo.version);
+      setUpdateAvailable(false);
     }
   };
 
@@ -128,14 +155,22 @@ export function useAppUpdater() {
 
   // Check when app becomes active
   useEffect(() => {
-    const listener = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
-      if (isActive) {
-        checkForUpdates();
-      }
-    });
+    let listenerHandle: any;
+    
+    const setupListener = async () => {
+      listenerHandle = await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) {
+          checkForUpdates();
+        }
+      });
+    };
+    
+    setupListener();
 
     return () => {
-      listener.remove();
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
     };
   }, []);
 
@@ -144,6 +179,7 @@ export function useAppUpdater() {
     updateInfo,
     checking,
     checkForUpdates: manualCheckForUpdates,
-    downloadUpdate: updateInfo ? () => downloadUpdate(updateInfo.downloadUrl) : undefined
+    downloadUpdate,
+    skipUpdate
   };
 }

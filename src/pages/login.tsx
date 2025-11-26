@@ -36,6 +36,14 @@ export default function Login() {
         return;
       }
       if (user) {
+        // Auto-request all permissions after successful login
+        if (isAndroid) {
+          await Promise.all([
+            requestNetworkPermission(),
+            requestNotificationPermission(),
+            requestBluetoothPermission()
+          ]);
+        }
         setLocation("/admin");
       }
     } catch (err) {
@@ -60,59 +68,14 @@ export default function Login() {
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
               <Smartphone className="h-8 w-8 text-orange-600 mr-2" />
-              <CardTitle className="text-2xl">Ravintola Babylon</CardTitle>
-            </div>            {isAndroid && (
-              <p className="text-sm text-muted-foreground">
-                Kitchen Management System
-              </p>
-            )}
+              <CardTitle className="text-2xl">PlateOS</CardTitle>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Kitchen Management System
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Network Status for Android Apps */}
-            {isAndroid && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">System Status</h3>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Wifi className="h-4 w-4" />
-                    <Label>Network Connection</Label>
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    hasNetworkPermission ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
-                    {hasNetworkPermission ? 'Available' : 'No Permission'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Bell className="h-4 w-4" />
-                    <Label>Permissions</Label>
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    hasNetworkPermission ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {hasNetworkPermission ? 'Ready' : 'Pending'}
-                  </span>
-                </div>
-
-                {!hasNetworkPermission && (
-                  <Button 
-                    onClick={handlePermissionRequest}
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                  >
-                    <Smartphone className="w-4 h-4 mr-2" />
-                    Enable Permissions
-                  </Button>
-                )}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
+            <form onSubmit={handleSubmit} className="space-y-4">\n              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
@@ -150,31 +113,7 @@ export default function Login() {
               </Button>
             </form>
           </CardContent>
-        </Card>        {/* System Information for Android Apps */}
-        {isAndroid && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Smartphone className="w-5 h-5" />
-                App Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <AlertDescription>
-                  This is the native Android version of the babylon Kitchen Management System.
-                  Make sure you have a stable internet connection for the best experience.
-                </AlertDescription>
-              </Alert>
-              
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>• Real-time order notifications</p>
-                <p>• Offline-capable interface</p>
-                <p>• Native Android performance</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        </Card>
       </div>
     </div>
   );

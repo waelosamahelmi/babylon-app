@@ -18,6 +18,12 @@ export interface LounasSettings {
   info_text_ar: string | null;
   info_text_ru: string | null;
   info_text_sv: string | null;
+  price_text: string | null;
+  price_text_en: string | null;
+  price_text_ar: string | null;
+  price_text_ru: string | null;
+  price_text_sv: string | null;
+  is_enabled: boolean;
   created_at: string;
   updated_at: string;
 }

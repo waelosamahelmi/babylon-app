@@ -20,6 +20,7 @@ import { RestaurantSettingsModal } from "@/components/restaurant-settings-modal"
 import { RestaurantSiteConfig } from "@/components/restaurant-site-config";
 import { PaymentMethodsModal } from "@/components/payment-methods-modal-new";
 import { StripeSettingsModal } from "@/components/stripe-settings-modal";
+import { ManualUpdateButton } from "@/components/update-checker";
 import { CategoryManagementModal } from "@/components/category-management-modal";
 import { EmailMarketing } from "@/components/email-marketing";
 import { BranchManagementModal } from "@/components/branch-management-modal";
@@ -2154,6 +2155,7 @@ export default function Admin() {
                     <Printer className="w-4 h-4 mr-2" />
                     {adminT("Tulostimet", "Printers", "الطابعات")}
                   </Button>
+                  <ManualUpdateButton />
                 </CardContent>
               </Card>
             </div>
