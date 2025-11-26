@@ -43,6 +43,8 @@ android/app/release/
 android/app/debug/
 *.apk
 *.aab
+*.keystore
+*.jks
 
 # Capacitor
 .capacitor/
