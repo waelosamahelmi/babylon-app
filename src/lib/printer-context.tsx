@@ -154,11 +154,11 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
             name: 'Direct Printer (Z92)',
             address: 'system://direct-print',
             type: 'network', // Use 'network' type to show in list
-            isConnected: true, // Auto-connect!
+            isConnected: false, // Don't auto-connect
             status: 'idle'
           };
           
-          // Add to printers list
+          // Add to printers list (but don't set as active)
           setPrinters(prev => {
             const exists = prev.find(p => p.id === 'direct-print-system');
             if (exists) {
@@ -167,16 +167,17 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
             return [directPrinterDevice, ...prev];
           });
           
-          // Set as active printer
-          setActivePrinter(directPrinterDevice);
-          setConnectionStatus('Connected');
-          
-          console.log('✅ Direct Printer added and set as active!');
-          
-          toast({
-            title: "Direct Printer Connected",
-            description: "System printer ready for 58mm thermal printing",
+          // Only set as active if no other printer is active
+          setActivePrinter(prev => {
+            if (prev) {
+              console.log('⚠️ Active printer already exists, not overriding with Direct Printer');
+              return prev;
+            }
+            console.log('✅ No active printer, setting Direct Printer as active');
+            return directPrinterDevice;
           });
+          
+          console.log('✅ Direct Printer added to available printers!');
         } else {
           console.log('⚠️ Direct Printer not available on this device');
         }
