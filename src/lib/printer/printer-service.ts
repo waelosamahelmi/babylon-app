@@ -1033,6 +1033,9 @@ export class PrinterService {
   private async sendViaHTTP(device: PrinterDevice, data: Uint8Array): Promise<boolean> {
     const endpoints = ['/print', '/api/print', '/raw-print', '/'];
     
+    // Convert to standard Uint8Array to avoid TypeScript type issues
+    const standardData = new Uint8Array(data);
+    
     for (const endpoint of endpoints) {
       try {
         const url = `http://${device.address}:${device.port}${endpoint}`;
@@ -1042,9 +1045,9 @@ export class PrinterService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/octet-stream',
-            'Content-Length': data.length.toString()
+            'Content-Length': standardData.length.toString()
           },
-          body: data,
+          body: new Blob([standardData]),
           mode: 'no-cors',
           signal: AbortSignal.timeout(5000)
         });
