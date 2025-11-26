@@ -19,6 +19,7 @@ import { ProductManagementModal } from "@/components/product-management-modal";
 import { ToppingGroupManagementModal } from "@/components/topping-group-management-modal";
 import { RestaurantSettingsModal } from "@/components/restaurant-settings-modal";
 import { RestaurantSiteConfig } from "@/components/restaurant-site-config";
+import { ThemeLayoutSettings } from "@/components/theme-layout-settings";
 import { PaymentMethodsModal } from "@/components/payment-methods-modal-new";
 import { StripeSettingsModal } from "@/components/stripe-settings-modal";
 import { ManualUpdateButton } from "@/components/update-checker";
@@ -86,7 +87,8 @@ import {
   Zap,
   Download,
   Wallet,
-  Banknote
+  Banknote,
+  Palette
 } from "lucide-react";
 
 export default function Admin() {
@@ -113,6 +115,7 @@ export default function Admin() {
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
   const [showSiteConfigModal, setShowSiteConfigModal] = useState(false);
+  const [showThemeLayoutModal, setShowThemeLayoutModal] = useState(false);
   const [showPaymentMethodsModal, setShowPaymentMethodsModal] = useState(false);
   const [showStripeSettingsModal, setShowStripeSettingsModal] = useState(false);
   const [showPromotionsModal, setShowPromotionsModal] = useState(false);
@@ -2102,6 +2105,14 @@ export default function Admin() {
                     {adminT("Sivuston asetukset", "Site Configuration", "إعدادات الموقع")}
                   </Button>
                   <Button 
+                    onClick={() => setShowThemeLayoutModal(true)}
+                    variant="outline"
+                    className="w-full justify-start bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800"
+                  >
+                    <Palette className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" />
+                    {adminT("Teema & ulkoasu", "Theme & Layout", "المظهر والتخطيط")}
+                  </Button>
+                  <Button 
                     onClick={() => setShowPaymentMethodsModal(true)}
                     variant="outline"
                     className="w-full justify-start"
@@ -2268,6 +2279,16 @@ export default function Admin() {
             <DialogTitle>Restaurant Site Configuration</DialogTitle>
           </DialogHeader>
           <RestaurantSiteConfig onClose={() => setShowSiteConfigModal(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Theme & Layout Settings Modal */}
+      <Dialog open={showThemeLayoutModal} onOpenChange={setShowThemeLayoutModal}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Theme & Layout Settings</DialogTitle>
+          </DialogHeader>
+          <ThemeLayoutSettings onClose={() => setShowThemeLayoutModal(false)} />
         </DialogContent>
       </Dialog>
 

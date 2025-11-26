@@ -176,6 +176,7 @@ export const restaurantConfig = pgTable("restaurant_config", {
   services: jsonb("services").notNull().default('{}'),
   deliveryConfig: jsonb("delivery_config").notNull().default('{}'),
   theme: jsonb("theme").notNull().default('{}'),
+  pageLayoutVariants: jsonb("page_layout_variants").notNull().default('{"home":"variant1","menu":"variant1","about":"variant1","header":"variant1","footer":"variant1","cart":"variant1","checkout":"variant1"}'),
   logo: jsonb("logo").notNull().default('{}'),
   about: jsonb("about").notNull().default('{}'),
   hero: jsonb("hero").notNull().default('{}'),
