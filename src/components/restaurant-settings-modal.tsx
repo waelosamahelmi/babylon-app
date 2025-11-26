@@ -44,6 +44,7 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
   
   // Local state
   const [isForceOpen, setIsForceOpen] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
   const [specialMessage, setSpecialMessage] = useState("");
   const [autoAcceptEnabled, setAutoAcceptEnabled] = useState(false);
   const [autoAcceptDeliveryTime, setAutoAcceptDeliveryTime] = useState("30");
@@ -53,6 +54,7 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
   useEffect(() => {
     if (isOpen && restaurantSettings) {
       setIsForceOpen(restaurantSettings.isOpen ?? false);
+      setIsBusy(restaurantSettings.isBusy ?? false);
       setSpecialMessage(restaurantSettings.specialMessage ?? "");
     }
   }, [isOpen, restaurantSettings]);
@@ -79,6 +81,7 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
       // Save restaurant settings to database
       await updateSettings.mutateAsync({
         isOpen: isForceOpen,
+        isBusy: isBusy,
         specialMessage: specialMessage,
         openingHours: "Managed via Site Configuration",
         pickupHours: "Managed via Site Configuration", 
@@ -164,7 +167,7 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Settings className="w-5 h-5" />
-            <span>{t("ravintolan tiedot", "Restaurant Info")}</span>
+            <span>{t("ravintolan asetukset", "Restaurant Settings")}</span>
           </DialogTitle>
         </DialogHeader>
         
@@ -179,30 +182,71 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                {/* Current Status Badge */}
+                <div className="flex items-center justify-center pb-4">
                   <Badge 
                     variant={status === "open" ? "default" : "secondary"}
-                    className={status === "open" ? "bg-green-500" : "bg-red-500"}
+                    className={`text-lg px-6 py-2 ${status === "open" ? "bg-green-500" : "bg-red-500"}`}
                   >
                     {status === "open" ? t("AVOINNA", "OPEN") : t("SULJETTU", "CLOSED")}
                   </Badge>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={isForceOpen}
-                      onCheckedChange={setIsForceOpen}
-                    />
-                    <Label>{t("Pakota auki (ohittaa aukioloajat)", "Force Open (Override Hours)")}</Label>
-                  </div>
                 </div>
-                {!isForceOpen && (
-                  <div className="text-sm text-gray-600">
-                    {t("Aukioloaikojen mukaan", "Following scheduled hours")}
+
+                <Separator />
+
+                {/* Force Open */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex flex-col">
+                    <Label className="font-semibold">{t("Pakota auki", "Force Open")}</Label>
+                    <span className="text-xs text-gray-500 mt-1">
+                      {t("Ohittaa aukioloajat ja pitää ravintolan auki", "Override hours and keep restaurant open")}
+                    </span>
+                  </div>
+                  <Switch
+                    checked={isForceOpen}
+                    onCheckedChange={setIsForceOpen}
+                  />
+                </div>
+
+                {/* Busy Status */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex flex-col">
+                    <Label className="font-semibold">{t("Kiireinen", "Busy")}</Label>
+                    <span className="text-xs text-gray-500 mt-1">
+                      {t("Näyttää asiakkaille että ravintola on kiireinen", "Shows customers that restaurant is busy")}
+                    </span>
+                  </div>
+                  <Switch
+                    checked={isBusy}
+                    onCheckedChange={setIsBusy}
+                  />
+                </div>
+
+                {/* Auto Accept */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex flex-col">
+                    <Label className="font-semibold">{t("Automaattinen hyväksyntä", "Automatic Acceptance")}</Label>
+                    <span className="text-xs text-gray-500 mt-1">
+                      {t("Hyväksyy tilaukset automaattisesti", "Accepts orders automatically")}
+                    </span>
+                  </div>
+                  <Switch
+                    checked={autoAcceptEnabled}
+                    onCheckedChange={setAutoAcceptEnabled}
+                  />
+                </div>
+
+                {/* Status Messages */}
+                {isForceOpen && (
+                  <div className="text-sm text-orange-600 bg-orange-50 p-3 rounded border border-orange-200">
+                    <AlertCircle className="w-4 h-4 inline mr-1" />
+                    {t("Ravintola on pakotettu auki aukioloajoista riippumatta", "Restaurant is forced open regardless of scheduled hours")}
                   </div>
                 )}
-                {isForceOpen && (
-                  <div className="text-sm text-orange-600 bg-orange-50 p-2 rounded">
+                {isBusy && (
+                  <div className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded border border-yellow-200">
                     <AlertCircle className="w-4 h-4 inline mr-1" />
-                    {t("ravintola on pakotettu auki aukioloajoista riippumatta", "Restaurant is forced open regardless of scheduled hours")}
+                    {t("Ravintola näkyy kiireisenä asiakkaille", "Restaurant appears busy to customers")}
                   </div>
                 )}
               </div>
@@ -246,26 +290,16 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
           </Card>
 
           {/* Auto-Accept Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5" />
-                <span>{t("Automaattinen hyväksyntä", "Auto-Accept Orders")}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base">{t("Ota käyttöön automaattinen hyväksyntä", "Enable automatic order acceptance")}</Label>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {t("Kaikki uudet tilaukset hyväksytään automaattisesti ja tulostetaan", "All new orders will be automatically accepted and printed")}
-                  </div>
-                </div>
-                <Switch checked={autoAcceptEnabled} onCheckedChange={setAutoAcceptEnabled} />
-              </div>
-              
-              {autoAcceptEnabled && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+          {autoAcceptEnabled && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Timer className="w-5 h-5" />
+                  <span>{t("Automaattisen hyväksynnän ajat", "Auto-Accept Times")}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="flex items-center space-x-2">
                       <Truck className="w-4 h-4" />
@@ -310,9 +344,9 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
                     </Select>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           <Separator />
 

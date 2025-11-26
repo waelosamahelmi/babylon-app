@@ -16,7 +16,7 @@ import { Bike, ShoppingBag, CreditCard, Banknote } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DeliveryMap } from "@/components/delivery-map";
 import { OrderSuccessModal } from "@/components/order-success-modal";
-import { StripeCheckoutElement } from "@/components/stripe-checkout-element";
+import { StripePaymentModal } from "@/components/stripe-payment-modal";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -79,8 +79,8 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
   // Check if selected payment method requires Stripe
   const isStripePaymentMethod = () => {
     const selectedMethod = availablePaymentMethods.find(m => m.id === formData.paymentMethod);
-    return selectedMethod && selectedMethod.id !== 'cash' && selectedMethod.id !== 'card' && 
-           restaurantSettings?.stripeEnabled === true;
+    // Check if it's the 'stripe' payment method (online payment)
+    return selectedMethod && selectedMethod.id === 'stripe' && restaurantSettings?.stripeEnabled === true;
   };
 
   const handleDeliveryCalculated = (fee: number, distance: number, address: string) => {
@@ -145,12 +145,16 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
 
   const processOrder = async (paymentIntentId?: string) => {
     try {
+      // Set payment status based on payment method
+      const paymentStatus = paymentIntentId ? 'paid' : 'pending';
+      
       const orderData = {
         ...formData,
         subtotal: totalPrice.toFixed(2),
         deliveryFee: deliveryFee.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
         stripePaymentIntentId: paymentIntentId,
+        paymentStatus: paymentStatus,
         items: items.map(item => ({
           menuItemId: item.menuItem.id,
           quantity: item.quantity,
@@ -203,26 +207,25 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
   return (
     <>
       {/* Stripe Payment Modal */}
-      {showStripePayment && restaurantSettings?.stripePublishableKey && (
-        <Dialog open={showStripePayment} onOpenChange={setShowStripePayment}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                {t("Maksu", "Payment")}
-              </DialogTitle>
-            </DialogHeader>
-            <StripeCheckoutElement
-              amount={totalAmount}
-              onSuccess={handleStripePaymentSuccess}
-              onCancel={handleStripePaymentCancel}
-              customerEmail={formData.customerEmail}
-              customerName={formData.customerName}
-              stripePublishableKey={restaurantSettings.stripePublishableKey}
-              stripePaymentMethodsConfig={restaurantSettings.stripePaymentMethodsConfig}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+      <StripePaymentModal
+        isOpen={showStripePayment}
+        onClose={() => setShowStripePayment(false)}
+        amount={totalAmount}
+        currency="eur"
+        orderMetadata={{
+          customerName: formData.customerName,
+          customerEmail: formData.customerEmail || '',
+          orderType: formData.orderType,
+        }}
+        onPaymentSuccess={handleStripePaymentSuccess}
+        onPaymentFailed={(error) => {
+          toast({
+            title: t("Maksu epäonnistui", "Payment Failed"),
+            description: error,
+            variant: "destructive",
+          });
+        }}
+      />
 
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

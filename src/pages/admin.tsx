@@ -15,11 +15,10 @@ import { sendOrderAcceptedEmail, sendOrderCancelledEmail, sendOrderDeliveredEmai
 import { LoginModal } from "@/components/login-modal";
 import { ProductManagementModal } from "@/components/product-management-modal";
 
-import { ToppingsManagementModal } from "@/components/toppings-management-modal-supabase";
 import { ToppingGroupManagementModal } from "@/components/topping-group-management-modal";
 import { RestaurantSettingsModal } from "@/components/restaurant-settings-modal";
 import { RestaurantSiteConfig } from "@/components/restaurant-site-config";
-import { PaymentMethodsModal } from "@/components/payment-methods-modal";
+import { PaymentMethodsModal } from "@/components/payment-methods-modal-new";
 import { StripeSettingsModal } from "@/components/stripe-settings-modal";
 import { CategoryManagementModal } from "@/components/category-management-modal";
 import { EmailMarketing } from "@/components/email-marketing";
@@ -83,7 +82,9 @@ import {
   MapPin,
   CreditCard,
   Zap,
-  Download
+  Download,
+  Wallet,
+  Banknote
 } from "lucide-react";
 
 export default function Admin() {
@@ -104,7 +105,6 @@ export default function Admin() {
   const [availabilityFilter, setAvailabilityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [autoRefresh, setAutoRefresh] = useState(true);  const [showProductModal, setShowProductModal] = useState(false);
-  const [showToppingsModal, setShowToppingsModal] = useState(false);
   const [showToppingGroupsModal, setShowToppingGroupsModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -906,17 +906,49 @@ export default function Admin() {
     return order.createdAt && new Date(order.createdAt) >= weekAgo;
   });
   
-  const monthlyRevenue = filteredOrders
-    .filter(order => {
-      const monthAgo = new Date();
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
-      return order.createdAt && new Date(order.createdAt) >= monthAgo;
-    })
-    .reduce((sum, order) => sum + parseFloat(order.totalAmount || "0"), 0);
-    
-  const averageOrderValue = todayOrders.length > 0 ? todayRevenue / todayOrders.length : 0;
+  const monthlyOrders = filteredOrders.filter(order => {
+    const monthAgo = new Date();
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+    return order.createdAt && new Date(order.createdAt) >= monthAgo;
+  });
   
-  const topMenuItems = menuItems?.slice(0, 5) || [];
+  const monthlyRevenue = monthlyOrders.reduce((sum, order) => sum + parseFloat(order.totalAmount || "0"), 0);
+  const weeklyRevenue = weeklyOrders.reduce((sum, order) => sum + parseFloat(order.totalAmount || "0"), 0);
+    
+  const averageOrderValue = filteredOrders.length > 0 
+    ? filteredOrders.reduce((sum, order) => sum + parseFloat(order.totalAmount || "0"), 0) / filteredOrders.length 
+    : 0;
+  
+  // Calculate most ordered items from orders
+  const itemOrderCounts: Record<string, { count: number; revenue: number; name: string; nameEn: string }> = {};
+  filteredOrders.forEach(order => {
+    if (order.items && Array.isArray(order.items)) {
+      order.items.forEach((item: any) => {
+        const itemId = item.id || item.menuItemId;
+        if (!itemOrderCounts[itemId]) {
+          itemOrderCounts[itemId] = {
+            count: 0,
+            revenue: 0,
+            name: item.name || '',
+            nameEn: item.nameEn || item.name || ''
+          };
+        }
+        itemOrderCounts[itemId].count += item.quantity || 1;
+        itemOrderCounts[itemId].revenue += parseFloat(item.price || 0) * (item.quantity || 1);
+      });
+    }
+  });
+  
+  const topMenuItems = Object.entries(itemOrderCounts)
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 10)
+    .map(([id, data]) => ({
+      id,
+      name: data.name,
+      nameEn: data.nameEn,
+      count: data.count,
+      revenue: data.revenue
+    }));
   
   const ordersByStatus = {
     pending: filteredOrders.filter(o => o.status === "pending").length,
@@ -926,6 +958,53 @@ export default function Admin() {
     delivered: filteredOrders.filter(o => o.status === "delivered").length,
     cancelled: filteredOrders.filter(o => o.status === "cancelled").length,
   };
+  
+  // Payment method analytics
+  const paymentMethodStats: Record<string, { count: number; revenue: number }> = {};
+  filteredOrders.forEach(order => {
+    const method = order.paymentMethod || 'cash_or_card';
+    const status = order.paymentStatus || 'pending';
+    if (!paymentMethodStats[method]) {
+      paymentMethodStats[method] = { count: 0, revenue: 0 };
+    }
+    paymentMethodStats[method].count++;
+    if (status === 'paid' || method === 'cash_or_card') {
+      paymentMethodStats[method].revenue += parseFloat(order.totalAmount || "0");
+    }
+  });
+  
+  // Order type analytics (delivery vs pickup)
+  const orderTypeStats = {
+    delivery: filteredOrders.filter(o => o.deliveryMethod === 'delivery').length,
+    pickup: filteredOrders.filter(o => o.deliveryMethod === 'pickup').length,
+    deliveryRevenue: filteredOrders
+      .filter(o => o.deliveryMethod === 'delivery')
+      .reduce((sum, o) => sum + parseFloat(o.totalAmount || "0"), 0),
+    pickupRevenue: filteredOrders
+      .filter(o => o.deliveryMethod === 'pickup')
+      .reduce((sum, o) => sum + parseFloat(o.totalAmount || "0"), 0),
+  };
+  
+  // Hourly distribution
+  const ordersByHour: Record<number, number> = {};
+  filteredOrders.forEach(order => {
+    if (order.createdAt) {
+      const hour = new Date(order.createdAt).getHours();
+      ordersByHour[hour] = (ordersByHour[hour] || 0) + 1;
+    }
+  });
+  
+  const peakHour = Object.entries(ordersByHour).sort((a, b) => b[1] - a[1])[0];
+  
+  // Success rate
+  const completedOrders = filteredOrders.filter(o => o.status === 'delivered').length;
+  const cancelledOrders = filteredOrders.filter(o => o.status === 'cancelled').length;
+  const successRate = filteredOrders.length > 0 
+    ? ((completedOrders / filteredOrders.length) * 100).toFixed(1)
+    : '0';
+  const cancellationRate = filteredOrders.length > 0
+    ? ((cancelledOrders / filteredOrders.length) * 100).toFixed(1)
+    : '0';
   return (
     <div className={`min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 ${isAndroid ? 'pt-safe-area-inset-top' : ''}`}>
       {/* Android status bar spacer */}
@@ -1659,8 +1738,11 @@ export default function Admin() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-indigo-100 text-sm font-medium">{adminT("Viikon tilaukset", "Weekly Orders", "طلبات الأسبوع")}</p>
-                      <p className="text-2xl font-bold">{weeklyOrders.length}</p>
+                      <p className="text-indigo-100 text-sm font-medium">{adminT("Kaikki tilaukset", "Total Orders", "إجمالي الطلبات")}</p>
+                      <p className="text-2xl font-bold">{filteredOrders.length}</p>
+                      <p className="text-xs text-indigo-200 mt-1">
+                        {adminT("Viikko", "Week", "أسبوع")}: {weeklyOrders.length}
+                      </p>
                     </div>
                     <div className="bg-white/20 rounded-lg p-3">
                       <Calendar className="w-6 h-6" />
@@ -1673,8 +1755,11 @@ export default function Admin() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-emerald-100 text-sm font-medium">{adminT("Kuukauden liikevaihto", "Monthly Revenue", "إيرادات الشهر")}</p>
+                      <p className="text-emerald-100 text-sm font-medium">{adminT("Kokonaisliikevaihto", "Total Revenue", "إجمالي الإيرادات")}</p>
                       <p className="text-2xl font-bold">€{monthlyRevenue.toFixed(0)}</p>
+                      <p className="text-xs text-emerald-200 mt-1">
+                        {adminT("Viikko", "Week", "أسبوع")}: €{weeklyRevenue.toFixed(0)}
+                      </p>
                     </div>
                     <div className="bg-white/20 rounded-lg p-3">
                       <TrendingUp className="w-6 h-6" />
@@ -1689,6 +1774,9 @@ export default function Admin() {
                     <div>
                       <p className="text-amber-100 text-sm font-medium">{adminT("Keskitilausarvo", "Avg Order Value", "متوسط قيمة الطلب")}</p>
                       <p className="text-2xl font-bold">€{averageOrderValue.toFixed(2)}</p>
+                      <p className="text-xs text-amber-200 mt-1">
+                        {adminT("Onnistumisaste", "Success Rate", "معدل النجاح")}: {successRate}%
+                      </p>
                     </div>
                     <div className="bg-white/20 rounded-lg p-3">
                       <Euro className="w-6 h-6" />
@@ -1703,6 +1791,9 @@ export default function Admin() {
                     <div>
                       <p className="text-rose-100 text-sm font-medium">{adminT("Aktiiviset tilaukset", "Active Orders", "الطلبات النشطة")}</p>
                       <p className="text-2xl font-bold">{ordersByStatus.pending + ordersByStatus.accepted + ordersByStatus.preparing}</p>
+                      <p className="text-xs text-rose-200 mt-1">
+                        {adminT("Peruutukset", "Cancelled", "ملغاة")}: {cancelledOrders} ({cancellationRate}%)
+                      </p>
                     </div>
                     <div className="bg-white/20 rounded-lg p-3">
                       <Clock className="w-6 h-6" />
@@ -1712,8 +1803,167 @@ export default function Admin() {
               </Card>
             </div>
 
-            {/* Payment Methods Analytics */}
-            <PaymentMethodsAnalytics orders={filteredOrders} />
+            {/* Payment & Delivery Analytics Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Payment Methods Breakdown */}
+              <Card className="border-0 shadow-lg bg-white dark:bg-gray-800">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center justify-between">
+                    <span>{adminT("Maksutavat", "Payment Methods", "طرق الدفع")}</span>
+                    <CreditCard className="w-5 h-5 text-blue-600" />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {Object.entries(paymentMethodStats).length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <p className="text-sm">{adminT("Ei maksutietoja", "No payment data", "لا توجد بيانات")}</p>
+                      </div>
+                    ) : (
+                      Object.entries(paymentMethodStats)
+                        .sort((a, b) => b[1].revenue - a[1].revenue)
+                        .map(([method, data]) => {
+                          const percentage = filteredOrders.length > 0 ? (data.count / filteredOrders.length) * 100 : 0;
+                          const methodName = method === 'cash_or_card' 
+                            ? adminT('Käteinen tai kortti', 'Cash or Card', 'نقداً أو بطاقة')
+                            : method === 'stripe'
+                            ? adminT('Verkkomaksu', 'Online Payment', 'دفع إلكتروني')
+                            : method;
+                          
+                          return (
+                            <div key={method} className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  {method === 'cash_or_card' ? (
+                                    <div className="flex items-center -space-x-1">
+                                      <Banknote className="w-5 h-5 text-green-600 z-10" />
+                                      <CreditCard className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                  ) : (
+                                    <Wallet className="w-5 h-5 text-purple-600" />
+                                  )}
+                                  <div>
+                                    <p className="font-medium">{methodName}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                      {data.count} {adminT("tilausta", "orders", "طلبات")}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-bold text-green-600 dark:text-green-400">
+                                    €{data.revenue.toFixed(2)}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {percentage.toFixed(1)}%
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div 
+                                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Delivery Method Breakdown */}
+              <Card className="border-0 shadow-lg bg-white dark:bg-gray-800">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center justify-between">
+                    <span>{adminT("Toimitustapa", "Delivery Method", "طريقة التوصيل")}</span>
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                            <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{adminT("Kotiinkuljetus", "Delivery", "توصيل")}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {orderTypeStats.delivery} {adminT("tilausta", "orders", "طلبات")}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-600 dark:text-green-400">
+                            €{orderTypeStats.deliveryRevenue.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {filteredOrders.length > 0 ? ((orderTypeStats.delivery / filteredOrders.length) * 100).toFixed(1) : 0}%
+                          </p>
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${filteredOrders.length > 0 ? (orderTypeStats.delivery / filteredOrders.length) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                            <Store className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{adminT("Nouto", "Pickup", "استلام")}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {orderTypeStats.pickup} {adminT("tilausta", "orders", "طلبات")}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-600 dark:text-green-400">
+                            €{orderTypeStats.pickupRevenue.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {filteredOrders.length > 0 ? ((orderTypeStats.pickup / filteredOrders.length) * 100).toFixed(1) : 0}%
+                          </p>
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${filteredOrders.length > 0 ? (orderTypeStats.pickup / filteredOrders.length) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {peakHour && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          {adminT("Kiireisin tunti", "Peak Hour", "ساعة الذروة")}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+                            {peakHour[0]}:00 - {parseInt(peakHour[0]) + 1}:00
+                          </Badge>
+                          <span className="font-semibold text-lg">{peakHour[1]} {adminT("tilausta", "orders", "طلبات")}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Payment Methods Analytics (old component) - keeping for backwards compatibility */}
+            <div className="hidden">
+              <PaymentMethodsAnalytics orders={filteredOrders} />
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Order Status Breakdown */}
@@ -1748,21 +1998,42 @@ export default function Admin() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {topMenuItems.map((item, index) => (
-                      <div key={item.id} className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-bold">
-                            {index + 1}
-                          </span>
-                          <span className="font-medium">
-                            {language === "en" ? item.nameEn : item.name}
-                          </span>
-                        </div>
-                        <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                          €{item.price}
-                        </span>
+                    {topMenuItems.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <p className="text-sm">{adminT("Ei tuotetietoja", "No product data", "لا توجد بيانات")}</p>
                       </div>
-                    ))}
+                    ) : (
+                      topMenuItems.map((item, index) => (
+                        <div key={item.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                          <div className="flex items-center space-x-3">
+                            <span className={`w-7 h-7 ${
+                              index === 0 ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400' :
+                              index === 1 ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' :
+                              index === 2 ? 'bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-400' :
+                              'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
+                            } rounded-full flex items-center justify-center text-sm font-bold`}>
+                              {index + 1}
+                            </span>
+                            <div>
+                              <p className="font-medium">
+                                {language === "en" ? item.nameEn : item.name}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {item.count} {adminT("kertaa tilattu", "times ordered", "مرات الطلب")}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-green-600 dark:text-green-400 font-semibold">
+                              €{item.revenue.toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {adminT("liikevaihto", "revenue", "إيرادات")}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1817,7 +2088,7 @@ export default function Admin() {
                     className="w-full justify-start"
                   >
                     <Store className="w-4 h-4 mr-2" />
-                    {adminT("ravintolan tiedot", "Restaurant Info", "معلومات المطعم")}
+                    {adminT("ravintolan asetukset", "Restaurant Settings", "إعدادات المطعم")}
                   </Button>
                   <Button 
                     onClick={() => setShowSiteConfigModal(true)}
@@ -1835,29 +2106,13 @@ export default function Admin() {
                     <CreditCard className="w-4 h-4 mr-2" />
                     {adminT("Maksutavat", "Payment Methods", "طرق الدفع")}
                   </Button>
-                  <Button 
-                    onClick={() => setShowStripeSettingsModal(true)}
-                    variant="outline"
-                    className="w-full justify-start"
-                  >
-                    <Zap className="w-4 h-4 mr-2 text-purple-600" />
-                    {adminT("Stripe-asetukset", "Stripe Settings", "إعدادات سترايب")}
-                  </Button>
-                  <Button
-                    onClick={() => setShowToppingsModal(true)}
-                    variant="outline"
-                    className="w-full justify-start"
-                  >
-                    <Tag className="w-4 h-4 mr-2" />
-                    {adminT("Täytteiden hallinta", "Toppings Management", "إدارة الإضافات")}
-                  </Button>
                   <Button
                     onClick={() => setShowToppingGroupsModal(true)}
                     variant="outline"
                     className="w-full justify-start"
                   >
                     <Tag className="w-4 h-4 mr-2" />
-                    {adminT("Täydennysryhmät", "Topping Groups", "مجموعات الإضافات")}
+                    {adminT("Täytteiden hallinta", "Toppings Management", "إدارة الإضافات")}
                   </Button>
                   <Button 
                     onClick={() => setShowCategoryModal(true)}
@@ -1973,11 +2228,6 @@ export default function Admin() {
           
           setShowProductModal(false);
           setEditingProduct(null);        }}
-      />
-
-      <ToppingsManagementModal
-        isOpen={showToppingsModal}
-        onClose={() => setShowToppingsModal(false)}
       />
 
       <ToppingGroupManagementModal

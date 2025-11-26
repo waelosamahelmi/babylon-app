@@ -1,21 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { usePrinter } from '@/lib/printer-context';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Wifi, 
-  Bluetooth, 
   Printer, 
-  RefreshCw, 
-  Settings, 
   TestTube,
   CheckCircle,
   XCircle,
@@ -23,20 +17,11 @@ import {
   Trash2,
   Plus,
   Power,
-  Search,
   Loader2,
-  Shield,
-  Smartphone,
-  Globe,
-  List,
-  FileText,
-  Bug,
-  Download,
-  Eye
+  Smartphone
 } from 'lucide-react';
 import { PrinterDevice } from '@/lib/printer/types';
 import { useAndroid } from '@/lib/android-context';
-import { logger, LogEntry } from '@/lib/logger';
 
 interface PrinterManagementModalProps {
   isOpen: boolean;
@@ -45,75 +30,25 @@ interface PrinterManagementModalProps {
 
 export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementModalProps) {
   const { toast } = useToast();
-  const { 
-    isAndroid,
-    hasNotificationPermission,
-    hasBluetoothPermission,
-    hasNetworkPermission,
-    requestNotificationPermission,
-    requestBluetoothPermission,
-    requestNetworkPermission
-  } = useAndroid();
+  const { isAndroid } = useAndroid();
   
   const {
     printers,
     activePrinter,
-    isDiscovering,
     isConnecting,
-    connectionStatus,
-    scanProgress,
-    startBluetoothDiscovery,
-    startNetworkDiscovery,
-    stopDiscovery,
     addManualPrinter,
     removePrinter,
     connectToPrinter,
     disconnectFromPrinter,
     testPrint,
-    refreshPrinterStatus
   } = usePrinter();
-  const [activeTab, setActiveTab] = useState('printers');
+  
+  const [printerMode, setPrinterMode] = useState<'direct' | 'network'>('direct');
   const [manualIp, setManualIp] = useState('192.168.1.233');
   const [manualPort, setManualPort] = useState('9100');
   const [manualName, setManualName] = useState('');
-  const [manualMacAddress, setManualMacAddress] = useState('66:11:22:33:44:55');
-  const [manualBluetoothName, setManualBluetoothName] = useState('BluetoothPrint');
   const [selectedPrinterId, setSelectedPrinterId] = useState<string | null>(null);
   const [isAddingManualPrinter, setIsAddingManualPrinter] = useState(false);
-  const [isAddingManualBluetooth, setIsAddingManualBluetooth] = useState(false);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [showLogsModal, setShowLogsModal] = useState(false);
-
-  // Load logs on mount
-  useEffect(() => {
-    setLogs(logger.getLogs());
-    
-    const unsubscribe = logger.subscribe((newLogs) => {
-      setLogs(newLogs);
-    });
-    
-    return unsubscribe;
-  }, []);
-
-  const handleBluetoothScan = async () => {
-    try {
-      await startBluetoothDiscovery();
-    } catch (error) {
-      console.error('Bluetooth scan failed:', error);
-    }
-  };
-
-  const handleNetworkScan = async () => {
-    try {
-      await startNetworkDiscovery();
-    } catch (error) {
-      console.error('Network scan failed:', error);
-    }
-  };
-
-  const handleStopScan = () => {
-    stopDiscovery();
-  };
 
   const handleAddManualPrinter = async () => {
     if (!manualIp.trim()) {
@@ -157,75 +92,6 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
     }
   };
 
-  const handleAddManualBluetooth = async () => {
-    if (!manualMacAddress.trim()) {
-      toast({
-        title: "Invalid MAC Address",
-        description: "Please enter a valid Bluetooth MAC address (e.g., 00:11:22:33:44:55)",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate MAC address format
-    const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
-    if (!macRegex.test(manualMacAddress.trim())) {
-      toast({
-        title: "Invalid MAC Address Format",
-        description: "MAC address must be in format: 00:11:22:33:44:55",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsAddingManualBluetooth(true);
-    
-    try {
-      console.log(`🔄 Adding manual Bluetooth printer: ${manualMacAddress.trim()}`);
-      
-      // Create a Bluetooth printer device directly
-      const bluetoothPrinter: PrinterDevice = {
-        id: `bt-${manualMacAddress.trim().replace(/:/g, '')}`,
-        name: manualBluetoothName.trim() || 'BluetoothPrint',
-        address: manualMacAddress.trim(), // Pure MAC address, no port
-        type: 'bluetooth',
-        isOnline: false,
-        isConnected: false,
-        metadata: {
-          isPaired: true
-        }
-      };
-
-      // Add directly to the printer list without going through network printer flow
-      // Use the addDiscoveredPrinter method or similar that doesn't require network validation
-      console.log('📱 Bluetooth printer object:', bluetoothPrinter);
-      
-      // Dispatch a custom event to notify the printer context
-      const event = new CustomEvent('bluetooth-printer-added', { 
-        detail: bluetoothPrinter 
-      });
-      window.dispatchEvent(event);
-      
-      toast({
-        title: "Bluetooth Printer Added",
-        description: `${bluetoothPrinter.name} has been added successfully. Check the Printers tab to connect to it.`,
-      });
-
-      // Switch to Printers tab automatically
-      setActiveTab('printers');
-      
-    } catch (error: any) {
-      console.error('Failed to add manual Bluetooth printer:', error);
-      toast({
-        title: "Failed to Add Bluetooth Printer",
-        description: error.message || "An error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAddingManualBluetooth(false);
-    }
-  };
-
   const handleConnectPrinter = async (printer: PrinterDevice) => {
     try {
       setSelectedPrinterId(printer.id);
@@ -252,6 +118,7 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
       console.error('Remove printer failed:', error);
     }
   };
+  
   const handleTestPrint = async (printer: PrinterDevice) => {
     try {
       await testPrint(printer.id);
@@ -270,129 +137,6 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
       });
     }
   };
-
-  const handleRequestNotificationPermission = async () => {
-    try {
-      const granted = await requestNotificationPermission();
-      if (granted) {
-        toast({
-          title: "Permission Granted",
-          description: "Notification permissions have been granted successfully",
-        });
-      } else {
-        toast({
-          title: "Permission Denied",
-          description: "Notification permission was denied",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Permission Error",
-        description: error instanceof Error ? error.message : "Failed to request notification permission",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRequestBluetoothPermission = async () => {
-    try {
-      const granted = await requestBluetoothPermission();
-      if (granted) {
-        toast({
-          title: "Permission Granted",
-          description: "Bluetooth permissions have been granted successfully",
-        });
-      } else {
-        toast({
-          title: "Permission Denied",
-          description: "Bluetooth permission was denied",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Permission Error",
-        description: error instanceof Error ? error.message : "Failed to request Bluetooth permission",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRequestNetworkPermission = async () => {
-    try {
-      const granted = await requestNetworkPermission();
-      if (granted) {
-        toast({
-          title: "Permission Granted",
-          description: "Network permissions have been granted successfully",
-        });
-      } else {
-        toast({
-          title: "Permission Denied",
-          description: "Network permission was denied",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Permission Error",
-        description: error instanceof Error ? error.message : "Failed to request network permission",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRequestAllPermissions = async () => {
-    const permissionsToRequest = [];
-    
-    if (!hasNotificationPermission) permissionsToRequest.push('Notifications');
-    if (!hasBluetoothPermission) permissionsToRequest.push('Bluetooth');
-    if (!hasNetworkPermission) permissionsToRequest.push('Network');
-    
-    if (permissionsToRequest.length === 0) {
-      toast({
-        title: "All Permissions Granted",
-        description: "All required permissions are already granted",
-      });
-      return;
-    }
-
-    // Request permissions sequentially
-    if (!hasNotificationPermission) await handleRequestNotificationPermission();
-    if (!hasBluetoothPermission) await handleRequestBluetoothPermission();
-    if (!hasNetworkPermission) await handleRequestNetworkPermission();
-  };
-
-  const handleExportLogs = () => {
-    const logsData = logger.exportLogs();
-    const blob = new Blob([logsData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `printer-logs-${new Date().toISOString().slice(0, 19)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Logs Exported",
-      description: "Printer logs downloaded successfully",
-    });
-  };
-
-  const handleClearLogs = () => {
-    logger.clearLogs();
-    toast({
-      title: "Logs Cleared",
-      description: "All logs have been cleared",
-    });
-  };
-
-  const recentLogs = logs.slice(0, 10);
-  const errorLogs = logs.filter(log => log.level === 'error');
-  const warningLogs = logs.filter(log => log.level === 'warn');
 
   const getStatusIcon = (printer: PrinterDevice) => {
     if (printer.isConnected) {
@@ -413,9 +157,9 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
       return <Badge variant="secondary">Offline</Badge>;
     }
   };
+  
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={`max-w-4xl h-screen max-h-screen flex flex-col ${isAndroid ? 'touch-pan-y overscroll-contain' : 'max-h-[90vh]'}`}>
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
@@ -423,268 +167,69 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
             Printer Management
           </DialogTitle>
           <DialogDescription>
-            Discover, connect, and manage your printers for order processing.
+            Configure your direct printer or network printers for order processing.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
-            <TabsTrigger value="printers">Printers</TabsTrigger>
-            <TabsTrigger value="discovery">Discovery</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+        {/* Mode Switcher */}
+        <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+          <Label className="font-medium">Printer Mode:</Label>
+          <div className="flex gap-2">
+            <Button
+              variant={printerMode === 'direct' ? 'default' : 'outline'}
+              onClick={() => setPrinterMode('direct')}
+              className="flex items-center gap-2"
+            >
+              <Smartphone className="w-4 h-4" />
+              Direct Printer
+            </Button>
+            <Button
+              variant={printerMode === 'network' ? 'default' : 'outline'}
+              onClick={() => setPrinterMode('network')}
+              className="flex items-center gap-2"
+            >
+              <Wifi className="w-4 h-4" />
+              Network Printer
+            </Button>
+          </div>
+        </div>
 
-          <TabsContent value="printers" className="space-y-4">
-            <div className="flex items-center justify-between flex-shrink-0 mb-4">
-              <h3 className="text-lg font-medium">Available Printers</h3>
-              <Button 
-                onClick={() => setActiveTab('discovery')} 
-                variant="outline" 
-                size="sm"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Printer
-              </Button>
-            </div>
-
-            <div className="overflow-auto" style={{ maxHeight: isAndroid ? 'calc(100vh - 250px)' : 'calc(90vh - 200px)' }}>
-              <div className="space-y-3 pr-2">
-                {printers.length === 0 ? (
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="text-center text-muted-foreground">
-                        <Printer className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>No printers found</p>
-                        <p className="text-sm">Use the Discovery tab to find printers</p>
+        <div className="flex-1 overflow-auto mt-4">
+          {printerMode === 'direct' ? (
+            /* Direct Printer Mode */
+            <div className="space-y-4">
+              <Card className="border-2 border-primary">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Printer className="w-5 h-5" />
+                    Direct Printer
+                    <Badge variant="secondary">Built-in</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Use your device's built-in print service. Works directly without additional setup.
+                  </p>
+                  {isAndroid ? (
+                    <>
+                      <div className="flex items-center gap-2 text-green-700">
+                        <CheckCircle className="w-4 h-4" />
+                        <span className="text-sm">Direct printing available on this device</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  printers.map((printer) => (
-                    <Card key={printer.id} className={`${activePrinter?.id === printer.id ? 'ring-2 ring-primary' : ''}`}>
-                      <CardContent className="pt-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            {getStatusIcon(printer)}
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-medium">{printer.name}</h4>
-                                {activePrinter?.id === printer.id && (
-                                  <Badge variant="outline" className="text-xs">Active</Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {printer.type === 'network' ? `${printer.address}:${printer.port}` : 'Bluetooth'}
-                                {printer.metadata?.protocol && ` • ${printer.metadata.protocol}`}
-                              </p>
-                              {printer.metadata?.model && (
-                                <p className="text-xs text-muted-foreground">
-                                  {printer.metadata.manufacturer && `${printer.metadata.manufacturer} `}{printer.metadata.model}
-                                </p>
-                              )}
-                              {printer.metadata?.features && printer.metadata.features.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {printer.metadata.features.slice(0, 3).map((feature, idx) => (
-                                    <Badge key={idx} variant="secondary" className="text-xs px-1 py-0">
-                                      {feature}
-                                    </Badge>
-                                  ))}
-                                  {printer.metadata.features.length > 3 && (
-                                    <Badge variant="secondary" className="text-xs px-1 py-0">
-                                      +{printer.metadata.features.length - 3}
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
-                              {(printer.metadata?.webInterface || printer.metadata?.jobListUrl || printer.metadata?.printUrl) && (
-                                <div className="mt-2 space-y-1">
-                                  {printer.metadata.webInterface && (
-                                    <div className="flex items-center gap-1 text-xs text-blue-600">
-                                      <Globe className="w-3 h-3" />
-                                      <a 
-                                        href={printer.metadata.webInterface} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="hover:underline truncate"
-                                        style={{ maxWidth: '200px' }}
-                                      >
-                                        Web Interface
-                                      </a>
-                                    </div>
-                                  )}
-                                  {printer.metadata.jobListUrl && (
-                                    <div className="flex items-center gap-1 text-xs text-green-600">
-                                      <List className="w-3 h-3" />
-                                      <a 
-                                        href={printer.metadata.jobListUrl} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="hover:underline truncate"
-                                        style={{ maxWidth: '200px' }}
-                                      >
-                                        Job List
-                                      </a>
-                                    </div>
-                                  )}
-                                  {printer.metadata.printUrl && (
-                                    <div className="flex items-center gap-1 text-xs text-purple-600">
-                                      <FileText className="w-3 h-3" />
-                                      <span className="truncate" style={{ maxWidth: '200px' }}>
-                                        Print: {printer.metadata.printUrl.replace(/^https?:\/\//, '')}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {getStatusBadge(printer)}
-                            <div className="flex gap-1">
-                              {printer.isConnected ? (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleTestPrint(printer)}
-                                  >
-                                    <TestTube className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleDisconnectPrinter(printer)}
-                                  >
-                                    <Power className="w-4 h-4" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleConnectPrinter(printer)}
-                                  disabled={isConnecting && selectedPrinterId === printer.id}
-                                >
-                                  {isConnecting && selectedPrinterId === printer.id ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                  ) : (
-                                    <Power className="w-4 h-4" />
-                                  )}
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleRemovePrinter(printer)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </div>
-          </TabsContent>          <TabsContent value="discovery" className="space-y-4">
-            <div className="overflow-auto" style={{ maxHeight: isAndroid ? 'calc(100vh - 200px)' : 'calc(90vh - 150px)' }}>
-              <div className="space-y-6 pr-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Wifi className="w-5 h-5" />
-                        Network Discovery
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Scan for network printers on your local network.
-                      </p>
-                      {isDiscovering ? (
-                        <div className="space-y-2">
-                          <Progress value={scanProgress} />
-                          <div className="flex justify-between text-sm">
-                            <span>Scanning Network...</span>
-                            <span>{Math.round(scanProgress)}%</span>
-                          </div>
-                          <Button onClick={handleStopScan} variant="outline" className="w-full">
-                            Stop Scan
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button onClick={handleNetworkScan} variant="outline" className="w-full">
-                          <Search className="w-4 h-4 mr-2" />
-                          Scan Network
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Bluetooth className="w-5 h-5" />
-                        Bluetooth Discovery
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Scan for Bluetooth-enabled printers nearby.
-                      </p>
-                      {isDiscovering ? (
-                        <div className="space-y-2">
-                          <Progress value={scanProgress} />
-                          <div className="flex justify-between text-sm">
-                            <span>Scanning Bluetooth...</span>
-                            <span>{Math.round(scanProgress)}%</span>
-                          </div>
-                          <Button onClick={handleStopScan} variant="outline" className="w-full">
-                            Stop Scan
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button onClick={handleBluetoothScan} variant="outline" className="w-full">
-                          <Search className="w-4 h-4 mr-2" />
-                          Scan Bluetooth
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Z92 System Print Test - No Printer Selection Needed */}
-                {isAndroid && (
-                  <Card className="border-2 border-primary">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Printer className="w-5 h-5" />
-                        Z92 System Print Test
-                        <Badge variant="secondary">No Setup Required</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Test print using your device's built-in print service (LocalPrintService).
-                        <br />
-                        <strong>Works directly without adding printers!</strong>
-                      </p>
                       <Button 
                         onClick={async () => {
                           try {
-                            console.log('🖨️ Direct system print test requested');
+                            console.log('🖨️ Direct print test requested');
                             const { directPrint } = await import('@/lib/direct-print');
                             await directPrint.testPrint();
                             toast({
-                              title: "System Print Sent",
+                              title: "Test Print Sent",
                               description: "Print dialog should appear. Select your printer if needed.",
                             });
                           } catch (error) {
-                            console.error('❌ System print failed:', error);
+                            console.error('❌ Direct print failed:', error);
                             toast({
-                              title: "System Print Failed",
+                              title: "Test Print Failed",
                               description: error instanceof Error ? error.message : "Unknown error",
                               variant: "destructive",
                             });
@@ -695,491 +240,166 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
                         size="lg"
                       >
                         <TestTube className="w-4 h-4 mr-2" />
-                        Test Print (System)
+                        Test Print
                       </Button>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <Separator />
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Add Network Printer Manually</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <Label htmlFor="ip">IP Address</Label>
-                        <Input
-                          id="ip"
-                          placeholder="192.168.1.233"
-                          value={manualIp}
-                          onChange={(e) => setManualIp(e.target.value)}
-                          disabled={isAddingManualPrinter}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="port">Port</Label>
-                        <Input
-                          id="port"
-                          placeholder="9100"
-                          value={manualPort}
-                          onChange={(e) => setManualPort(e.target.value)}
-                          disabled={isAddingManualPrinter}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="name">Name (Optional)</Label>
-                        <Input
-                          id="name"
-                          placeholder="Thermal Printer"
-                          value={manualName}
-                          onChange={(e) => setManualName(e.target.value)}
-                          disabled={isAddingManualPrinter}
-                        />
-                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 text-yellow-700">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="text-sm">Direct printing is only available on Android devices</span>
                     </div>
-                    <Button 
-                      onClick={handleAddManualPrinter} 
-                      className="w-full"
-                      disabled={isAddingManualPrinter}
-                    >
-                      {isAddingManualPrinter ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Adding Printer...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Printer
-                        </>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Bluetooth className="w-5 h-5" />
-                      Add Bluetooth Printer Manually (Z92)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      For Z92 BluetoothPrint: Use the default MAC address or enter your printer's MAC from Android Settings → Bluetooth.
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="macAddress">MAC Address *</Label>
-                        <Input
-                          id="macAddress"
-                          placeholder="66:11:22:33:44:55"
-                          value={manualMacAddress}
-                          onChange={(e) => setManualMacAddress(e.target.value)}
-                          disabled={isAddingManualBluetooth}
-                          className="font-mono"
-                        />
-                        <p className="text-xs text-green-600 mt-1">
-                          Default: 66:11:22:33:44:55 (BluetoothPrint - Z92)
-                        </p>
-                      </div>
-                      <div>
-                        <Label htmlFor="btName">Name (Optional)</Label>
-                        <Input
-                          id="btName"
-                          placeholder="BluetoothPrint"
-                          value={manualBluetoothName}
-                          onChange={(e) => setManualBluetoothName(e.target.value)}
-                          disabled={isAddingManualBluetooth}
-                        />
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={handleAddManualBluetooth} 
-                      className="w-full"
-                      disabled={isAddingManualBluetooth}
-                    >
-                      {isAddingManualBluetooth ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Adding Z92 Printer...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Z92 BluetoothPrint Printer
-                        </>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {activePrinter && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Active Printer Status</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span>Active Printer:</span>
-                          <Badge>{activePrinter.name}</Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Connection Status:</span>
-                          <Badge variant={activePrinter.isConnected ? 'default' : 'secondary'}>
-                            {activePrinter.isConnected ? 'Connected' : 'Disconnected'}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Type:</span>
-                          <span className="text-sm">{activePrinter.type}</span>
-                        </div>
-                        {activePrinter.type === 'network' && (
-                          <div className="flex items-center justify-between">
-                            <span>Address:</span>
-                            <span className="text-sm">{activePrinter.address}:{activePrinter.port}</span>
-                          </div>
-                        )}
-                        <Separator />
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => refreshPrinterStatus(activePrinter.id)}
-                            variant="outline"
-                            size="sm"
-                          >
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Refresh Status
-                          </Button>
-                          <Button
-                            onClick={() => handleTestPrint(activePrinter)}
-                            variant="outline"
-                            size="sm"
-                          >
-                            <TestTube className="w-4 h-4 mr-2" />
-                            Test Print
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-          </TabsContent>          <TabsContent value="settings" className="space-y-4">
-            <div className="overflow-auto" style={{ maxHeight: isAndroid ? 'calc(100vh - 200px)' : 'calc(90vh - 150px)' }}>
-              <div className="space-y-6 pr-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-blue-700 flex items-center gap-2">
-                      <Smartphone className="w-5 h-5" />
-                      Platform Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span>Platform:</span>
-                      <Badge variant={isAndroid ? 'default' : 'secondary'}>
-                        {isAndroid ? 'Android App' : 'Web Browser'}
-                      </Badge>
+          ) : (
+            /* Network Printer Mode */
+            <div className="space-y-4">
+              {/* Manual Network Printer Addition */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Add Network Printer</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="ip">IP Address</Label>
+                      <Input
+                        id="ip"
+                        placeholder="192.168.1.233"
+                        value={manualIp}
+                        onChange={(e) => setManualIp(e.target.value)}
+                        disabled={isAddingManualPrinter}
+                      />
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {isAndroid ? (
-                        <p>✅ Running as native Android app with full printing capabilities</p>
-                      ) : (
-                        <p>⚠️ Running in web browser with limited printing capabilities</p>
-                      )}
+                    <div>
+                      <Label htmlFor="port">Port</Label>
+                      <Input
+                        id="port"
+                        placeholder="9100"
+                        value={manualPort}
+                        onChange={(e) => setManualPort(e.target.value)}
+                        disabled={isAddingManualPrinter}
+                      />
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-purple-700 flex items-center gap-2">
-                      <Shield className="w-5 h-5" />
-                      App Permissions
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span>Notifications</span>
-                          {hasNotificationPermission ? (
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <XCircle className="w-4 h-4 text-red-600" />
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Badge variant={hasNotificationPermission ? 'default' : 'secondary'}>
-                            {hasNotificationPermission ? 'Granted' : 'Denied'}
-                          </Badge>
-                          {!hasNotificationPermission && (
-                            <Button size="sm" onClick={handleRequestNotificationPermission}>
-                              Request
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span>Bluetooth</span>
-                          {hasBluetoothPermission ? (
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <XCircle className="w-4 h-4 text-red-600" />
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Badge variant={hasBluetoothPermission ? 'default' : 'secondary'}>
-                            {hasBluetoothPermission ? 'Granted' : 'Denied'}
-                          </Badge>
-                          {!hasBluetoothPermission && (
-                            <Button size="sm" onClick={handleRequestBluetoothPermission}>
-                              Request
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span>Network & Local Network</span>
-                          {hasNetworkPermission ? (
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <XCircle className="w-4 h-4 text-red-600" />
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Badge variant={hasNetworkPermission ? 'default' : 'secondary'}>
-                            {hasNetworkPermission ? 'Granted' : 'Denied'}
-                          </Badge>
-                          {!hasNetworkPermission && (
-                            <Button size="sm" onClick={handleRequestNetworkPermission}>
-                              Request
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                    <div>
+                      <Label htmlFor="name">Name (Optional)</Label>
+                      <Input
+                        id="name"
+                        placeholder="Thermal Printer"
+                        value={manualName}
+                        onChange={(e) => setManualName(e.target.value)}
+                        disabled={isAddingManualPrinter}
+                      />
                     </div>
+                  </div>
+                  <Button 
+                    onClick={handleAddManualPrinter} 
+                    className="w-full"
+                    disabled={isAddingManualPrinter}
+                  >
+                    {isAddingManualPrinter ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Adding Printer...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Printer
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
 
-                    <Separator />
-
-                    <Button 
-                      onClick={handleRequestAllPermissions}
-                      className="w-full"
-                      variant="outline"
-                    >
-                      <Shield className="w-4 h-4 mr-2" />
-                      Request All Permissions
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-blue-700 flex items-center gap-2">
-                      <AlertCircle className="w-5 h-5" />
-                      Printing Status & Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        <span className="text-green-700">✅ Real printer discovery working</span>
+              {/* Network Printers List */}
+              <div>
+                <h3 className="text-lg font-medium mb-3">Network Printers</h3>
+                {printers.filter(p => p.type === 'network').length === 0 ? (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center text-muted-foreground">
+                        <Printer className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>No network printers configured</p>
+                        <p className="text-sm">Add a printer using the form above</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        <span className="text-green-700">✅ Connection testing functional</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        <span className="text-green-700">✅ Print commands generated correctly</span>
-                      </div>
-                      {isAndroid ? (
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                          <span className="text-green-700">✅ Native Android printing available</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 text-amber-600" />
-                          <span className="text-amber-700">⚠️ Limited web browser printing</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <Separator />
-                      <div className="text-xs text-blue-600 space-y-1">
-                      <p><strong>Current Status:</strong></p>
-                      <p>• ✅ NO mock/fake printers - all discoveries are real</p>
-                      <p>• ✅ Single unified printer service</p>
-                      <p>• ✅ Real network scanning with job list extraction</p>
-                      <p>• ✅ Proper Android platform detection</p>
-                      {isAndroid && <p>• ✅ Native printing capabilities active</p>}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-green-700 flex items-center gap-2">
-                      <Bug className="w-5 h-5" />
-                      Application Logs
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-muted-foreground">
-                        Monitor printer operations and debug issues
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={handleExportLogs}>
-                          <Download className="w-4 h-4 mr-2" />
-                          Export
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={handleClearLogs}>
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Clear
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => setShowLogsModal(true)}>
-                          <Eye className="w-4 h-4 mr-2" />
-                          View All
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div className="p-3 border rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">{logs.length}</div>
-                        <div className="text-xs text-muted-foreground">Total Logs</div>
-                      </div>
-                      <div className="p-3 border rounded-lg">
-                        <div className="text-2xl font-bold text-red-600">{errorLogs.length}</div>
-                        <div className="text-xs text-muted-foreground">Errors</div>
-                      </div>
-                      <div className="p-3 border rounded-lg">
-                        <div className="text-2xl font-bold text-yellow-600">{warningLogs.length}</div>
-                        <div className="text-xs text-muted-foreground">Warnings</div>
-                      </div>
-                    </div>
-
-                    {recentLogs.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Recent Logs (Last 10)</h4>
-                        <div className="space-y-1 max-h-40 overflow-auto">
-                          {recentLogs.map((log) => (
-                            <div
-                              key={log.id}
-                              className={`text-xs p-2 rounded border-l-2 ${
-                                log.level === 'error' ? 'border-red-500 bg-red-50' :
-                                log.level === 'warn' ? 'border-yellow-500 bg-yellow-50' :
-                                log.level === 'info' ? 'border-blue-500 bg-blue-50' :
-                                'border-gray-500 bg-gray-50'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-gray-500">
-                                  {log.timestamp.toLocaleTimeString('fi-FI', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit', 
-                                    second: '2-digit'
-                                  })}
-                                </span>
-                                <Badge variant={
-                                  log.level === 'error' ? 'destructive' :
-                                  log.level === 'warn' ? 'secondary' :
-                                  'default'
-                                } className="text-xs">
-                                  {log.level.toUpperCase()}
-                                </Badge>
-                              </div>
-                              <div className="font-mono mt-1 break-words">
-                                {log.message.length > 100 ? 
-                                  `${log.message.substring(0, 100)}...` : 
-                                  log.message
-                                }
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {printers.filter(p => p.type === 'network').map((printer) => (
+                      <Card key={printer.id} className={`${activePrinter?.id === printer.id ? 'ring-2 ring-primary' : ''}`}>
+                        <CardContent className="pt-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {getStatusIcon(printer)}
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium">{printer.name}</h4>
+                                  {activePrinter?.id === printer.id && (
+                                    <Badge variant="outline" className="text-xs">Active</Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {printer.address}:{printer.port}
+                                </p>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(printer)}
+                              <div className="flex gap-1">
+                                {printer.isConnected ? (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleTestPrint(printer)}
+                                    >
+                                      <TestTube className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleDisconnectPrinter(printer)}
+                                    >
+                                      <Power className="w-4 h-4" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleConnectPrinter(printer)}
+                                    disabled={isConnecting && selectedPrinterId === printer.id}
+                                  >
+                                    {isConnecting && selectedPrinterId === printer.id ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Power className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleRemovePrinter(printer)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          </TabsContent>        </Tabs>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
-
-    {/* Logs Modal */}
-    {showLogsModal && (
-      <Dialog open={showLogsModal} onOpenChange={setShowLogsModal}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Application Logs</DialogTitle>
-            <DialogDescription>
-              Complete log history for debugging printer issues
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-auto">
-            <div className="space-y-2">
-              {logs.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Bug className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No logs available</p>
-                </div>
-              ) : (
-                logs.map((log) => (
-                  <div
-                    key={log.id}
-                    className={`border rounded-lg p-3 ${
-                      log.level === 'error' ? 'border-red-200 bg-red-50' :
-                      log.level === 'warn' ? 'border-yellow-200 bg-yellow-50' :
-                      log.level === 'info' ? 'border-blue-200 bg-blue-50' :
-                      'border-gray-200 bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant={
-                        log.level === 'error' ? 'destructive' :
-                        log.level === 'warn' ? 'secondary' :
-                        'default'
-                      }>
-                        {log.level.toUpperCase()}
-                      </Badge>
-                      <span className="text-sm font-mono text-muted-foreground">
-                        {log.timestamp.toLocaleString('fi-FI')}
-                      </span>
-                      {log.source && (
-                        <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-1 rounded">
-                          {log.source}
-                        </span>
-                      )}
-                    </div>
-                    <div className="font-mono text-sm break-words">
-                      {log.message}
-                    </div>
-                    {log.data && (
-                      <div className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono overflow-auto">
-                        <pre>{JSON.stringify(log.data, null, 2)}</pre>
-                      </div>
-                    )}
-                  </div>
-                ))              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )}
-    </>
   );
 }

@@ -66,7 +66,13 @@ export const orders = pgTable("orders", {
   deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).default("0"),
   smallOrderFee: decimal("small_order_fee", { precision: 10, scale: 2 }).default("0"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  paymentMethod: text("payment_method").default("cash"), // 'cash', 'card'
+  paymentMethod: text("payment_method").default("cash"), // 'cash', 'card', 'stripe'
+  paymentStatus: text("payment_status").default("pending"), // 'pending', 'paid', 'failed', 'refunded'
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  paymentMethodDetails: jsonb("payment_method_details"),
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }),
+  refundReason: text("refund_reason"),
+  refundedAt: timestamp("refunded_at"),
   specialInstructions: text("special_instructions"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

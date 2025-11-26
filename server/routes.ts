@@ -8,7 +8,7 @@ import { authService, type AuthUser } from "./auth";
 import { updateMenuItemImages, addImageToMenuItem, getMenuItemsWithoutImages } from "./image-updater";
 import { upload, uploadImageToSupabase, deleteImageFromSupabase, ensureStorageBucket } from "./file-upload";
 import { uploadImageToHostinger, testHostingerConnection } from "./hostinger-upload";
-import stripeRouter from "./routes/stripe";
+import stripeRouter from "./routes/stripe-new";
 import { z } from "zod";
 import nodemailer from "nodemailer";
 
