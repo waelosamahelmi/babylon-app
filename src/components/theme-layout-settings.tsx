@@ -377,7 +377,8 @@ export function ThemeLayoutSettings({ onClose }: ThemeLayoutSettingsProps) {
       await updateConfig.mutateAsync({
         id: restaurantConfig.id,
         pageLayoutVariants: selectedVariants,
-        theme: updatedTheme
+        theme: updatedTheme,
+        isActive: true // Ensure config stays active after update
       });
 
       toast({
@@ -508,18 +509,16 @@ export function ThemeLayoutSettings({ onClose }: ThemeLayoutSettingsProps) {
                       </div>
 
                       {/* Preview Button */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full mt-3"
+                      <div
+                        className="w-full mt-3 flex items-center justify-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           setPreviewPage(page);
                         }}
                       >
-                        <Eye className="w-3 h-3 mr-1" />
+                        <Eye className="w-3 h-3" />
                         Preview
-                      </Button>
+                      </div>
                     </button>
                   ))}
                 </div>
