@@ -1,0 +1,58 @@
+name: Build Android APK (Debug)
+
+on:
+  push:
+    branches:
+      - develop
+      - feature/*
+    paths:
+      - 'babylon-app/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: babylon-app/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
+        working-directory: ./babylon-app
+        run: npm ci
+
+      - name: Build web app
+        working-directory: ./babylon-app
+        run: npm run build:mobile
+
+      - name: Sync Capacitor
+        working-directory: ./babylon-app
+        run: npx cap sync android
+
+      - name: Grant execute permission for gradlew
+        working-directory: ./babylon-app/android
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        working-directory: ./babylon-app/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: debug-apk
+          path: babylon-app/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
