@@ -640,10 +640,10 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
   }, [activePrinter, toast]);
   // Printing functions
   const printOrder = useCallback(async (order: any): Promise<boolean> => {
-    // PRIORITY 1: Try DirectPrint on Android (auto-print with LocalPrintService)
-    if (isAndroid) {
+    // PRIORITY 1: Try DirectPrint on Android ONLY if Direct Printer is the active printer
+    if (isAndroid && activePrinter?.id === 'direct-print-system') {
       try {
-        console.log('🖨️ [Android] Attempting DirectPrint for order...');
+        console.log('🖨️ [Android] Direct Printer is active, using DirectPrint...');
         const { directPrint } = await import('./direct-print');
         
         const isAvailable = await directPrint.isAvailable();
@@ -659,15 +659,26 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
             return true;
           }
         } else {
-          console.log('⚠️ DirectPrint not available, falling back to network printer');
+          console.log('⚠️ DirectPrint not available');
+          toast({
+            title: "Direct Printer Not Available",
+            description: "Please select a different printer",
+            variant: "destructive",
+          });
+          return false;
         }
       } catch (error) {
         console.error('❌ DirectPrint failed:', error);
-        // Continue to fallback
+        toast({
+          title: "Direct Print Failed",
+          description: error instanceof Error ? error.message : "Unknown error",
+          variant: "destructive",
+        });
+        return false;
       }
     }
 
-    // FALLBACK: Use configured printer
+    // Use the configured active printer
     if (!activePrinter || !activePrinter.isConnected) {
       toast({
         title: "No Active Printer",
@@ -769,10 +780,10 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
       // Find the printer
       const printer = printers.find(p => p.id === printerId);
       
-      // PRIORITY 1: On Android, ALWAYS try Direct Print first (for Z92 LocalPrintService)
-      if (isAndroid) {
+      // PRIORITY 1: On Android, try Direct Print ONLY if this is the Direct Printer
+      if (isAndroid && printerId === 'direct-print-system') {
         try {
-          console.log('🖨️ [Android Device] Attempting Direct Print using system print service...');
+          console.log('🖨️ [Android Device] Testing Direct Printer using system print service...');
           const { directPrint } = await import('./direct-print');
           
           console.log('📋 Checking print service availability...');
@@ -791,16 +802,26 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
             });
             return;
           } else {
-            console.log('⚠️ No system print service found, trying other methods...');
+            console.log('⚠️ No system print service found');
+            toast({
+              title: "Direct Printer Not Available",
+              description: "System print service not found on this device",
+              variant: "destructive",
+            });
+            return;
           }
         } catch (directPrintError: any) {
           console.error('❌ Direct Print failed:', directPrintError);
-          console.log('⚠️ Falling back to alternative printing methods...');
-          // Continue to fallback options
+          toast({
+            title: "Direct Print Failed",
+            description: directPrintError.message || "Unknown error",
+            variant: "destructive",
+          });
+          return;
         }
       }
       
-      // FALLBACK: Check if this is a Bluetooth printer
+      // Check if this is a Bluetooth printer
       if (printer && printer.type === 'bluetooth') {
         console.log('🔵 Using simple Bluetooth printer for test print');
         
