@@ -1,4 +1,5 @@
 import { useLanguage } from "@/lib/language-context";
+import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -138,13 +139,13 @@ export function OrderSuccessModal({ isOpen, onClose, orderType, orderNumber }: O
             <CardContent className="p-4">
               <div className="text-center space-y-1">
                 <p className="font-semibold text-red-800 dark:text-red-200">
-                  Ravintola Babylon
+                  {config.name}
                 </p>
                 <p className="text-sm text-red-700 dark:text-red-300">
-                  Vapaudenkatu 28, 15140 Lahti
+                  {config.address.street}, {config.address.postalCode} {config.address.city}
                 </p>
                 <p className="text-sm text-red-700 dark:text-red-300">
-                  +358-3781-2222
+                  {config.phone}
                 </p>
               </div>
             </CardContent>

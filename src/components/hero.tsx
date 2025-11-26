@@ -1,10 +1,12 @@
 import { useLanguage } from "@/lib/language-context";
+import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, MapPin, Phone } from "lucide-react";
 
 export function Hero() {
   const { t } = useLanguage();
+  const { config } = useRestaurantConfig();
 
   const scrollToMenu = () => {
     document.getElementById("menu")?.scrollIntoView({ behavior: "smooth" });
@@ -36,7 +38,7 @@ export function Hero() {
       <div className="relative z-10 text-center text-white max-w-5xl mx-auto px-4">
         <div className="animate-fade-in">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            {t("Ravintola Babylon", "Ravintola Babylon")}
+            {config.name}
           </h1>
           <p className="text-2xl md:text-3xl mb-4 font-light">
             {t("Tervetuloa!", "Welcome!")}

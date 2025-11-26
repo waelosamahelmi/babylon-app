@@ -5,6 +5,7 @@
  */
 
 import { ReceiptData, ReceiptSection } from './printer/types';
+import type { RestaurantConfig } from '../config/restaurant-config';
 
 export interface OrderItem {
   name: string;
@@ -22,7 +23,7 @@ export class UniversalOrderParser {
   /**
    * Parse any order format into standardized ReceiptData
    */
-  static parseOrder(order: any): ReceiptData {
+  static parseOrder(order: any, config?: RestaurantConfig): ReceiptData {
     console.log('🔍 PARSER: Processing order:', JSON.stringify(order, null, 2));
     
     // Debug the order structure first
@@ -31,10 +32,10 @@ export class UniversalOrderParser {
     try {
       // Try different parsing strategies
       const strategies = [
-        () => this.parseSupabaseOrder(order),
-        () => this.parseLegacyOrder(order),
-        () => this.parseMinimalOrder(order),
-        () => this.parseAlternativeFormats(order)
+        () => this.parseSupabaseOrder(order, config),
+        () => this.parseLegacyOrder(order, config),
+        () => this.parseMinimalOrder(order, config),
+        () => this.parseAlternativeFormats(order, config)
       ];
 
       for (let i = 0; i < strategies.length; i++) {
@@ -56,18 +57,18 @@ export class UniversalOrderParser {
       // If all strategies fail, create fallback but with detailed logging
       console.log('🚨 PARSER: All strategies failed, creating fallback');
       console.log('🔍 PARSER: Order keys available:', Object.keys(order));
-      return this.createFallbackReceipt(order);
+      return this.createFallbackReceipt(order, config);
       
     } catch (error) {
       console.error('❌ PARSER: Critical error:', error);
-      return this.createEmergencyFallback(order);
+      return this.createEmergencyFallback(order, config);
     }
   }
 
   /**
    * Parse Supabase format with nested menu_items
    */
-  private static parseSupabaseOrder(order: any): ReceiptData {
+  private static parseSupabaseOrder(order: any, config?: RestaurantConfig): ReceiptData {
     console.log('📋 PARSER: Trying Supabase format');
     
     const orderItems = order.order_items || [];
@@ -268,7 +269,7 @@ export class UniversalOrderParser {
   /**
    * Parse legacy format with direct items array
    */
-  private static parseLegacyOrder(order: any): ReceiptData {
+  private static parseLegacyOrder(order: any, config?: RestaurantConfig): ReceiptData {
     console.log('📋 PARSER: Trying legacy format');
     
     const orderItems = order.items || [];
@@ -690,16 +691,22 @@ export class UniversalOrderParser {
   /**
    * Emergency fallback when everything else fails
    */
-  private static createEmergencyFallback(order: any): ReceiptData {
+  private static createEmergencyFallback(order: any, config?: RestaurantConfig): ReceiptData {
     console.log('🚨 PARSER: Creating emergency fallback');
     
     const orderNumber = this.extractOrderNumber(order);
     const customerName = this.extractCustomerName(order);
     const total = this.extractTotal(order) || 0;
+    
+    const name = config?.name || 'Ravintola Babylon';
+    const street = config?.address?.street || 'Vapaudenkatu 28';
+    const postalCode = config?.address?.postalCode || '15140';
+    const city = config?.address?.city || 'Lahti';
+    const phone = config?.phone || '+358-3781-2222';
 
     return {
       header: {
-        text: 'Ravintola Babylon\n================\nVapaudenkatu 28, 15140 Lahti\n+358-3781-2222',
+        text: `${name}\n================\n${street}, ${postalCode} ${city}\n${phone}`,
         alignment: 'center',
         bold: true
       },
@@ -712,7 +719,7 @@ export class UniversalOrderParser {
         notes: 'Please check order details manually'
       }],
       footer: {
-        text: 'Kiitos tilauksestasi!\nThank you for your order!\n\nRavintola Babylon',
+        text: `Kiitos tilauksestasi!\nThank you for your order!\n\n${name}`,
         alignment: 'center'
       },
       total,
@@ -732,7 +739,7 @@ export class UniversalOrderParser {
   /**
    * Create standardized receipt data
    */
-  private static createReceiptData(order: any, items: OrderItem[]): ReceiptData {
+  private static createReceiptData(order: any, items: OrderItem[], config?: RestaurantConfig): ReceiptData {
     const total = this.extractTotal(order) || this.calculateTotalFromItems(items);
     const orderNumber = this.extractOrderNumber(order);
     const customerName = this.extractCustomerName(order);
@@ -752,16 +759,22 @@ export class UniversalOrderParser {
         notes: ''
       });
     }
+    
+    const name = config?.name || 'Ravintola Babylon';
+    const street = config?.address?.street || 'Vapaudenkatu 28';
+    const postalCode = config?.address?.postalCode || '15140';
+    const city = config?.address?.city || 'Lahti';
+    const phone = config?.phone || '+358-3781-2222';
 
     return {
       header: {
-        text: 'Ravintola Babylon\n================\nVapaudenkatu 28, 15140 Lahti\n+358-3781-2222',
+        text: `${name}\n================\n${street}, ${postalCode} ${city}\n${phone}`,
         alignment: 'center',
         bold: true
       },
       items,
       footer: {
-        text: 'Kiitos tilauksestasi!\nThank you for your order!\n\nRavintola Babylon\nAvoinna: Ma-Su 10:00-20:00',
+        text: `Kiitos tilauksestasi!\nThank you for your order!\n\n${name}\nAvoinna: Ma-Su 10:00-20:00`,
         alignment: 'center'
       },
       total,
