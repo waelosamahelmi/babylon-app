@@ -430,6 +430,25 @@ export class DirectPrintService {
    * Print order receipt
    */
   async printOrder(order: any, silentPrint: boolean = true): Promise<boolean> {
+    // Fetch payment methods from restaurant settings if not already in order
+    if (!order.restaurant_settings?.payment_methods && !order.restaurantSettings?.payment_methods && !order.paymentMethods) {
+      try {
+        const { supabase } = await import('./supabase-client');
+        const { data: settings } = await supabase
+          .from('restaurant_settings')
+          .select('payment_methods')
+          .limit(1)
+          .single();
+        
+        if (settings?.payment_methods) {
+          order.restaurant_settings = { payment_methods: settings.payment_methods };
+        }
+      } catch (error) {
+        console.warn('[DirectPrint] Could not fetch payment methods:', error);
+        // Continue with printing even if fetch fails
+      }
+    }
+    
     const receiptText = this.formatOrderReceipt(order);
     // Orders should auto-print with silentPrint=true to skip dialog
     return this.printText(receiptText, `Order #${order.id}`, silentPrint);
