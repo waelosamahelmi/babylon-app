@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'babylon-app/**'
-      - '.github/workflows/build-android.yml'
   workflow_dispatch:
 
 jobs:
@@ -22,7 +19,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: babylon-app/package-lock.json
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -31,31 +27,27 @@ jobs:
           java-version: '17'
 
       - name: Install dependencies
-        working-directory: ./babylon-app
         run: npm ci
 
       - name: Build web app
-        working-directory: ./babylon-app
         run: npm run build:mobile
 
       - name: Sync Capacitor
-        working-directory: ./babylon-app
         run: npx cap sync android
 
       - name: Grant execute permission for gradlew
-        working-directory: ./babylon-app/android
+        working-directory: ./android
         run: chmod +x gradlew
 
       - name: Build APK
-        working-directory: ./babylon-app/android
-        run: ./gradlew assembleRelease
+        run: cd android && ./gradlew assembleRelease
 
       - name: Sign APK
         if: github.ref == 'refs/heads/main'
         uses: r0adkll/sign-android-release@v1
         id: sign_app
         with:
-          releaseDirectory: babylon-app/android/app/build/outputs/apk/release
+          releaseDirectory: android/app/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -66,7 +58,7 @@ jobs:
       - name: Rename APK
         run: |
           VERSION=$(date +'%Y%m%d_%H%M%S')
-          mv ${{steps.sign_app.outputs.signedReleaseFile}} babylon-app/android/app/build/outputs/apk/release/plateos-${VERSION}.apk
+          mv ${{steps.sign_app.outputs.signedReleaseFile}} android/app/build/outputs/apk/release/plateos-${VERSION}.apk
           echo "APK_FILE=plateos-${VERSION}.apk" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
@@ -94,7 +86,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: babylon-app/android/app/build/outputs/apk/release/${{ env.APK_FILE }}
+          asset_path: android/app/build/outputs/apk/release/${{ env.APK_FILE }}
           asset_name: ${{ env.APK_FILE }}
           asset_content_type: application/vnd.android.package-archive
 
