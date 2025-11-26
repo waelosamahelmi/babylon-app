@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     
     steps:
       - name: Checkout code
@@ -28,6 +31,34 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_SERVICE_ROLE_KEY=${{ secrets.VITE_SUPABASE_SERVICE_ROLE_KEY }}
+          VITE_API_URL=${{ secrets.VITE_API_URL }}
+          VITE_WS_URL=${{ secrets.VITE_WS_URL }}
+          VITE_SERVER_URL=${{ secrets.VITE_SERVER_URL }}
+          VITE_APP_NAME=${{ secrets.VITE_APP_NAME }}
+          VITE_ANDROID_PACKAGE=${{ secrets.VITE_ANDROID_PACKAGE }}
+          VITE_ENABLE_ANDROID_FEATURES=${{ secrets.VITE_ENABLE_ANDROID_FEATURES }}
+          VITE_ENABLE_BLUETOOTH=${{ secrets.VITE_ENABLE_BLUETOOTH }}
+          VITE_ENABLE_LOCAL_NETWORK=${{ secrets.VITE_ENABLE_LOCAL_NETWORK }}
+          VITE_DEFAULT_PRINTER_IP=${{ secrets.VITE_DEFAULT_PRINTER_IP }}
+          IMAGE_UPLOAD_STRATEGY=${{ secrets.IMAGE_UPLOAD_STRATEGY }}
+          HOSTINGER_FTP_HOST=${{ secrets.HOSTINGER_FTP_HOST }}
+          HOSTINGER_FTP_USER=${{ secrets.HOSTINGER_FTP_USER }}
+          HOSTINGER_FTP_PASSWORD=${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          IMAGE_CDN_URL=${{ secrets.IMAGE_CDN_URL }}
+          VITE_STRIPE_PUBLISHABLE_KEY=${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
+          VITE_SMTP_HOST=${{ secrets.VITE_SMTP_HOST }}
+          VITE_SMTP_PORT=${{ secrets.VITE_SMTP_PORT }}
+          VITE_SMTP_USER=${{ secrets.VITE_SMTP_USER }}
+          VITE_SMTP_PASS=${{ secrets.VITE_SMTP_PASS }}
+          VITE_EMAIL_API_URL=${{ secrets.VITE_EMAIL_API_URL }}
+          EOF
 
       - name: Build web app
         run: npm run build:mobile
