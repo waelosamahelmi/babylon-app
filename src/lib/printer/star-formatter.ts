@@ -4,6 +4,7 @@
  */
 
 import { ReceiptData, ReceiptItem } from './types';
+import { imageUrlToBitmap } from './image-utils';
 
 /**
  * Translate payment method to Finnish
@@ -33,25 +34,43 @@ export class StarFormatter {
   /**
    * Format receipt data for Star printers
    */
-  formatReceipt(data: ReceiptData, originalOrder?: any): Uint8Array {
+  async formatReceipt(data: ReceiptData, originalOrder?: any): Promise<Uint8Array> {
     const commands: number[] = [];
 
     // Initialize printer
     commands.push(...this.initialize());
 
-    // Set UTF-8 encoding
+    // Set UTF-8 encoding for Finnish characters
     commands.push(...this.setEncoding('UTF-8'));
+    
+    // Set character spacing for better readability
+    commands.push(...this.setCharSpacing(2));
+
+    // ============================================
+    // LOGO
+    // ============================================
+    try {
+      const logoUrl = window.location.origin + '/logoblack.png';
+      const logoBitmap = await imageUrlToBitmap(logoUrl, 200); // 200 pixels width
+      commands.push(...this.center());
+      commands.push(...this.printBitmap(logoBitmap));
+      commands.push(...this.lineFeed(2));
+    } catch (error) {
+      console.error('Failed to load logo for Star printer:', error);
+      // Fallback to text header
+      commands.push(...this.center());
+      commands.push(...this.bold(true));
+      commands.push(...this.textSize(1, 2)); // Medium height
+      commands.push(...this.text('Ravintola Babylon'));
+      commands.push(...this.lineFeed(2));
+      commands.push(...this.bold(false));
+    }
 
     // ============================================
     // HEADER - RESTAURANT INFO
     // ============================================
     commands.push(...this.center());
-    commands.push(...this.bold(true));
-    commands.push(...this.textSize(2, 2)); // Large
-    commands.push(...this.text('Ravintola Babylon'));
-    commands.push(...this.lineFeed(2));
-    commands.push(...this.textSize(1, 1)); // Normal
-    commands.push(...this.bold(false));
+    commands.push(...this.textSize(2, 2)); // Larger text for all content
     commands.push(...this.text('Vapaudenkatu 28, 15140 Lahti'));
     commands.push(...this.lineFeed());
     commands.push(...this.text('+358-3781-2222'));
@@ -65,8 +84,10 @@ export class StarFormatter {
     // ============================================
     commands.push(...this.center());
     commands.push(...this.bold(true));
+    commands.push(...this.textSize(2, 3)); // Extra large for order number
     commands.push(...this.text(`TILAUS #${data.orderNumber}`));
     commands.push(...this.lineFeed());
+    commands.push(...this.textSize(2, 2)); // Back to normal large
     commands.push(...this.bold(false));
     commands.push(...this.lineFeed());
     
@@ -360,10 +381,10 @@ export class StarFormatter {
     commands.push(...this.lineFeed());
     commands.push(...this.center());
     commands.push(...this.bold(true));
-    commands.push(...this.textSize(2, 2));
+    commands.push(...this.textSize(3, 3)); // Extra large for total
     commands.push(...this.text(`YHTEENSÄ: ${data.total.toFixed(2)}e`));
     commands.push(...this.lineFeed());
-    commands.push(...this.textSize(1, 1));
+    commands.push(...this.textSize(2, 2)); // Back to normal large
     commands.push(...this.bold(false));
     commands.push(...this.text('================================'));
     commands.push(...this.lineFeed(3));
@@ -406,6 +427,51 @@ export class StarFormatter {
       return [0x1B, 0x1D, 0x74, 0x20]; // Select UTF-8
     }
     return [];
+  }
+
+  /**
+   * Set character spacing (in dots)
+   */
+  private setCharSpacing(dots: number): number[] {
+    return [0x1B, 0x20, dots]; // ESC SP n - Set right-side character spacing
+  }
+
+  /**
+   * Print bitmap image for Star printers
+   */
+  private printBitmap(bitmap: { width: number; height: number; data: Uint8Array }): number[] {
+    const commands: number[] = [];
+    const { width, height, data } = bitmap;
+    
+    // Star raster graphics mode
+    // ESC GS ( L - Graphics data
+    const bytesPerLine = Math.ceil(width / 8);
+    
+    // Process image line by line
+    for (let y = 0; y < height; y++) {
+      // Line mode raster graphics
+      commands.push(0x1B, 0x58); // ESC X - Set line mode
+      commands.push(bytesPerLine & 0xFF, (bytesPerLine >> 8) & 0xFF); // Width in bytes
+      
+      // Convert pixels to bytes for this line
+      for (let x = 0; x < width; x += 8) {
+        let byte = 0;
+        for (let bit = 0; bit < 8; bit++) {
+          const px = x + bit;
+          if (px < width) {
+            const pixel = data[y * width + px];
+            // Black pixel (0) should be 1 in the bitmap
+            if (pixel < 128) {
+              byte |= (1 << (7 - bit));
+            }
+          }
+        }
+        commands.push(byte);
+      }
+      commands.push(0x0A); // LF to advance to next line
+    }
+    
+    return commands;
   }
 
   /**

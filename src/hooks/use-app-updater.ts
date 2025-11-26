@@ -99,17 +99,21 @@ export function useAppUpdater() {
     });
 
     if (value) {
-      downloadUpdate(info.downloadUrl);
+      downloadUpdate();
     }
   };
 
-  const downloadUpdate = async (url?: string) => {
+  const downloadUpdate = async () => {
     try {
-      const downloadUrl = url || updateInfo?.downloadUrl;
-      if (!downloadUrl) return;
+      if (!updateInfo?.downloadUrl) {
+        console.error('No download URL available');
+        return;
+      }
+      
+      console.log('Opening download URL:', updateInfo.downloadUrl);
       
       // Open download URL in browser
-      await Browser.open({ url: downloadUrl });
+      await Browser.open({ url: updateInfo.downloadUrl });
       
       // Show instructions
       await Dialog.alert({
@@ -118,6 +122,10 @@ export function useAppUpdater() {
       });
     } catch (error) {
       console.error('Error downloading update:', error);
+      await Dialog.alert({
+        title: 'Download Error',
+        message: 'Failed to start download. Please try again later.'
+      });
     }
   };
 

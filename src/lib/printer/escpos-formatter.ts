@@ -218,7 +218,7 @@ export class ESCPOSFormatter {
   /**
    * Format two-column text (item and price)
    */
-  columns(left: string, right: string, width: number = 48): ESCPOSFormatter {
+  columns(left: string, right: string, width: number = 32): ESCPOSFormatter {
     const rightLen = right.length;
     const leftLen = Math.max(0, width - rightLen);
     const leftText = left.length > leftLen ? left.substring(0, leftLen - 3) + '...' : left;
@@ -269,18 +269,16 @@ export class ESCPOSFormatter {
         // Fallback to text header if logo fails
         formatter
           .align('center')
-          .size('double')
           .bold(true)
           .line('Ravintola Babylon')
           .bold(false)
-          .size('normal')
           .lines(1);
       }
 
       // Simple separator
       formatter
         .align('center')
-        .text('================================')
+        .text('================================'.substring(0, 32))
         .newLine()
         .lines(1);
 
@@ -305,7 +303,7 @@ export class ESCPOSFormatter {
 
       formatter
         .align('center')
-        .text('--------------------------------')
+        .text('--------------------------------'.substring(0, 32))
         .newLine()
         .lines(1);
 
@@ -420,7 +418,7 @@ export class ESCPOSFormatter {
 
         formatter
           .align('left')
-          .text('--------------------------------')
+          .text('--------------------------------'.substring(0, 32))
           .newLine()
           .lines(1);
       }
@@ -431,7 +429,7 @@ export class ESCPOSFormatter {
       
       formatter
         .align('center')
-        .text('================================')
+        .text('================================'.substring(0, 32))
         .newLine()
         .bold(true)
         .underline(true)
@@ -439,7 +437,7 @@ export class ESCPOSFormatter {
         .newLine()
         .underline(false)
         .bold(false)
-        .text('================================')
+        .text('================================'.substring(0, 32))
         .newLine()
         .lines(1);
 
@@ -494,7 +492,7 @@ export class ESCPOSFormatter {
         
         formatter
           .bold(true)
-          .columns(itemName, itemPrice)
+          .columns(itemName, itemPrice, 32)
           .bold(false)
           .lines(1);
 
@@ -556,7 +554,7 @@ export class ESCPOSFormatter {
             }
             
             if (toppingPrice) {
-              formatter.columns(toppingLine, toppingPrice);
+              formatter.columns(toppingLine, toppingPrice, 32);
             } else {
               formatter.text(toppingLine).newLine();
             }
@@ -585,7 +583,7 @@ export class ESCPOSFormatter {
         }
         
         formatter
-          .text('- - - - - - - - - - - - - - - -')
+          .text('- - - - - - - - - - - - - - - -'.substring(0, 32))
           .newLine()
           .lines(1);
       }
