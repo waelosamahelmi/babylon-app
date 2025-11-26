@@ -10,6 +10,7 @@ import { AndroidProvider } from "@/lib/android-context";
 import { CartProvider } from "@/lib/cart-context";
 import { PrinterProvider } from "@/lib/printer-context";
 import { AppWrapper } from "@/components/app-wrapper";
+import { UpdateChecker } from "@/components/update-checker";
 import Admin from "@/pages/admin";
 import Login from "@/pages/login";
 import LocationsAdmin from "@/pages/locations-admin";
@@ -43,6 +44,7 @@ function App() {
                   <AppWrapper>
                     <TooltipProvider>
                       <Toaster />
+                      <UpdateChecker />
                       <Router />
                     </TooltipProvider>
                   </AppWrapper>
