@@ -1,11 +1,9 @@
 import { useLanguage } from "@/lib/language-context";
-import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
 import { UtensilsCrossed, Phone, Mail, MapPin } from "lucide-react";
 import { Link } from "wouter";
 
 export function Footer() {
   const { t } = useLanguage();
-  const { config } = useRestaurantConfig();
 
   return (
     <footer className="bg-gray-900 text-white py-12">
@@ -17,8 +15,8 @@ export function Footer() {
                 <UtensilsCrossed className="text-white text-lg" />
               </div>
               <div>
-                <h3 className="text-xl font-bold">{config.name}</h3>
-                <p className="text-gray-400 text-sm">{config.address.city}, {config.address.country}</p>
+                <h3 className="text-xl font-bold">Ravintola Babylon</h3>
+                <p className="text-gray-400 text-sm">{t("Lahti, Suomi", "Lahti, Finland")}</p>
               </div>
             </div>
             <p className="text-gray-400 mb-4">
@@ -82,15 +80,15 @@ export function Footer() {
             <ul className="space-y-2 text-gray-400 text-sm">
               <li className="flex items-center space-x-2">
                 <Phone className="w-4 h-4" />
-                <span>{config.phone}</span>
+                <span>+358-3781-2222</span>
               </li>
               <li className="flex items-center space-x-2">
                 <Mail className="w-4 h-4" />
-                <span>{config.email}</span>
+                <span>info@ravintolababylon.fi</span>
               </li>
               <li className="flex items-center space-x-2">
                 <MapPin className="w-4 h-4" />
-                <span>{config.address.street}, {config.address.postalCode} {config.address.city}</span>
+                <span>Vapaudenkatu 28, 15140 Lahti</span>
               </li>
             </ul>
           </div>
@@ -98,7 +96,7 @@ export function Footer() {
 
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
           <p>
-            &copy; {new Date().getFullYear()} {config.name}.{" "}
+            &copy; 2024 Ravintola Babylon.{" "}
             {t("Kaikki oikeudet pidätetään.", "All rights reserved.")}
           </p>
         </div>

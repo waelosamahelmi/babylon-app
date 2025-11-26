@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/language-context";
-import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
 import { useCart } from "@/lib/cart-context";
 import { useSupabaseAuth } from "@/lib/supabase-auth-context";
 import { useTheme } from "@/lib/theme-context";
@@ -17,7 +16,6 @@ interface HeaderProps {
 
 export function Header({ onCartClick }: HeaderProps) {
   const { language, setLanguage, t } = useLanguage();
-  const { config } = useRestaurantConfig();
   const { totalItems } = useCart();
   const { user, signOut } = useSupabaseAuth();
   const { theme, toggleTheme } = useTheme();
@@ -63,8 +61,8 @@ export function Header({ onCartClick }: HeaderProps) {
               </div>
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-                  <span className="hidden sm:inline">{config.name}</span>
-                  <span className="sm:hidden">{config.name.split(' ')[1] || config.name}</span>
+                  <span className="hidden sm:inline">Ravintola Babylon</span>
+                  <span className="sm:hidden">babylon</span>
                 </h1>
               </div>
             </div>

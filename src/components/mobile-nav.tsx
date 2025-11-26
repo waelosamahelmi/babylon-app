@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
 import { useLanguage } from "@/lib/language-context";
 import { useSupabaseAuth } from "@/lib/supabase-auth-context";
 import { useCart } from "@/lib/cart-context";
@@ -30,7 +29,6 @@ import { useTheme } from "@/lib/theme-context";
 
 export function MobileNav() {
   const { t, language, setLanguage } = useLanguage();
-  const { config } = useRestaurantConfig();
   const { user, signOut } = useSupabaseAuth();
   const { totalItems } = useCart();
   const { theme, toggleTheme } = useTheme();
@@ -173,7 +171,7 @@ export function MobileNav() {
                 <SheetContent side="right" className="w-80">
                   <SheetHeader>
                     <SheetTitle className="text-left">
-                      {config.name}
+                      Ravintola Babylon
                     </SheetTitle>
                   </SheetHeader>
                   

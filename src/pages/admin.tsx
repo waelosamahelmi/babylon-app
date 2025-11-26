@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSupabaseOrders, useSupabaseUpdateOrderStatus } from "@/hooks/use-supabase-orders";
 import { useSupabaseMenuItems, useSupabaseUpdateMenuItem, useSupabaseCreateMenuItem, useSupabaseCategories, useSupabaseToppings } from "@/hooks/use-supabase-menu";
 import { useSupabaseRealtime } from "@/hooks/use-supabase-realtime";
-import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
 import { useLanguage } from "@/lib/language-context";
 import { useSupabaseAuth } from "@/lib/supabase-auth-context";
 import { supabase } from "@/lib/supabase";
@@ -96,7 +95,6 @@ export default function Admin() {
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  const { data: restaurantConfig } = useRestaurantConfig();
   const { data: orders, isLoading: ordersLoading, refetch: refetchOrders } = useSupabaseOrders();
   const { data: menuItems, isLoading: menuLoading } = useSupabaseMenuItems();
   const { data: categories } = useSupabaseCategories();
@@ -367,9 +365,9 @@ export default function Admin() {
             totalAmount: parseFloat(order.total_amount || order.totalAmount || '0'),
             orderType: (order.order_type || order.orderType || 'pickup') as 'delivery' | 'pickup',
             deliveryAddress: order.delivery_address || order.deliveryAddress,
-            branchName: restaurantConfig?.name || 'Ravintola Babylon',
-            branchPhone: restaurantConfig?.phone || '+358-3781-2222',
-            branchAddress: restaurantConfig ? `${restaurantConfig.address.street}, ${restaurantConfig.address.postalCode} ${restaurantConfig.address.city}` : 'Vapaudenkatu 28, 15140 Lahti',
+            branchName: 'Ravintola Babylon',
+            branchPhone: '+358-3781-2222',
+            branchAddress: 'Vapaudenkatu 28, 15140 Lahti',
             specialInstructions: order.special_instructions || order.specialInstructions,
             paymentMethod: order.payment_method || order.paymentMethod || 'Cash',
             prepTime: prepTime
@@ -423,9 +421,9 @@ export default function Admin() {
             totalAmount: totalAmount,
             orderType: (order.order_type || order.orderType || 'pickup') as 'delivery' | 'pickup',
             deliveryAddress: order.delivery_address || order.deliveryAddress,
-            branchName: restaurantConfig?.name || 'Ravintola Babylon',
-            branchPhone: restaurantConfig?.phone || '+358-3781-2222',
-            branchAddress: restaurantConfig ? `${restaurantConfig.address.street}, ${restaurantConfig.address.postalCode} ${restaurantConfig.address.city}` : 'Vapaudenkatu 28, 15140 Lahti',
+            branchName: 'Ravintola Babylon',
+            branchPhone: '+358-3781-2222',
+            branchAddress: 'Vapaudenkatu 28, 15140 Lahti',
             specialInstructions: order.special_instructions || order.specialInstructions,
             paymentMethod: paymentMethod,
             refundAmount: refundAmount
@@ -461,9 +459,9 @@ export default function Admin() {
             totalAmount: parseFloat(order.total_amount || order.totalAmount || '0'),
             orderType: (order.order_type || order.orderType || 'pickup') as 'delivery' | 'pickup',
             deliveryAddress: order.delivery_address || order.deliveryAddress,
-            branchName: restaurantConfig?.name || 'Ravintola Babylon',
-            branchPhone: restaurantConfig?.phone || '+358-3781-2222',
-            branchAddress: restaurantConfig ? `${restaurantConfig.address.street}, ${restaurantConfig.address.postalCode} ${restaurantConfig.address.city}` : 'Vapaudenkatu 28, 15140 Lahti',
+            branchName: 'Ravintola Babylon',
+            branchPhone: '+358-3781-2222',
+            branchAddress: 'Vapaudenkatu 28, 15140 Lahti',
             specialInstructions: order.special_instructions || order.specialInstructions,
             paymentMethod: order.payment_method || order.paymentMethod || 'Cash',
             reviewLink: 'https://share.google/lgfzGpNmPplzeeIBI'
@@ -1027,8 +1025,8 @@ export default function Admin() {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-                  <span className="hidden sm:inline">{restaurantConfig?.name || 'Restaurant'}</span>
-                  <span className="sm:hidden">{restaurantConfig?.name?.split(' ')[1] || restaurantConfig?.name || 'Restaurant'}</span>
+                  <span className="hidden sm:inline">Ravintola Babylon</span>
+                  <span className="sm:hidden">babylon</span>
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
                   {adminT("Hallintapaneeli", "Admin Panel", "لوحة الإدارة")}

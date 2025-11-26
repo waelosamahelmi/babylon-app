@@ -1,9 +1,6 @@
 import { useLanguage } from "@/lib/language-context";
-import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
 
 export function Logo({ className = "h-8" }: { className?: string }) {
-  const { config } = useRestaurantConfig();
-  
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
       {/* Logo matching footer design */}
@@ -28,7 +25,7 @@ export function Logo({ className = "h-8" }: { className?: string }) {
       {/* Restaurant Name */}
       <div className="flex flex-col">
         <span className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
-          {config.name}
+          Ravintola Babylon
         </span>
       </div>
     </div>
