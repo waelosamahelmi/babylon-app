@@ -16,6 +16,7 @@ export interface PrinterDevice {
   lastError?: string;
   connectionAttempts?: number;
   lastConnected?: Date;
+  printerType?: 'star' | 'escpos'; // Explicitly set printer command type
 }
 
 export interface PrinterCapabilities {

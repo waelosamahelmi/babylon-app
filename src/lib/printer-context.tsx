@@ -21,7 +21,7 @@ interface PrinterContextType {
   stopDiscovery: () => void;
   connectToPrinter: (printer: PrinterDevice) => Promise<void>;
   disconnectFromPrinter: (printerId: string) => Promise<void>;
-  addManualPrinter: (ip: string, port: number, name?: string) => Promise<void>;
+  addManualPrinter: (ip: string, port: number, name?: string, printerType?: 'star' | 'escpos') => Promise<void>;
   removePrinter: (printerId: string) => Promise<void>;
   setActivePrinter: (printer: PrinterDevice | null) => void;
     // Printing
@@ -577,11 +577,17 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
     }
   }, [printerService, toast]);
 
-  const addManualPrinter = useCallback(async (ip: string, port: number, name?: string) => {
+  const addManualPrinter = useCallback(async (ip: string, port: number, name?: string, printerType?: 'star' | 'escpos') => {
     try {
-      console.log(`➕ Adding manual printer: ${ip}:${port}`);
+      console.log(`➕ Adding manual printer: ${ip}:${port} (Type: ${printerType || 'auto'})`);
       const device = await printerService.addPrinter(ip, port);
       if (device) {
+        // Set printer type if specified
+        if (printerType) {
+          device.printerType = printerType;
+          console.log(`✅ Printer type set to: ${printerType}`);
+        }
+        
         // Save to localStorage
         LocalPrinterManager.addPrinter(device);
         
@@ -597,7 +603,7 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
         
         toast({
           title: "Printer Added",
-          description: `Successfully added ${device.name}`,
+          description: `Successfully added ${device.name} as ${printerType || 'auto-detected'} printer`,
         });
       }
     } catch (error) {

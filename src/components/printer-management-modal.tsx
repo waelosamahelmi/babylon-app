@@ -47,6 +47,7 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
   const [manualIp, setManualIp] = useState('192.168.1.233');
   const [manualPort, setManualPort] = useState('9100');
   const [manualName, setManualName] = useState('');
+  const [manualPrinterType, setManualPrinterType] = useState<'star' | 'escpos'>('star');
   const [selectedPrinterId, setSelectedPrinterId] = useState<string | null>(null);
   const [isAddingManualPrinter, setIsAddingManualPrinter] = useState(false);
 
@@ -68,7 +69,8 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
       await addManualPrinter(
         manualIp.trim(),
         parseInt(manualPort) || 9100,
-        manualName.trim() || undefined
+        manualName.trim() || undefined,
+        manualPrinterType
       );
       
       // Reset form
@@ -293,6 +295,22 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
                       />
                     </div>
                   </div>
+                  <div>
+                    <Label htmlFor="printerType">Printer Type</Label>
+                    <select
+                      id="printerType"
+                      value={manualPrinterType}
+                      onChange={(e) => setManualPrinterType(e.target.value as 'star' | 'escpos')}
+                      disabled={isAddingManualPrinter}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="star">Star mC-Print3 (StarPRNT)</option>
+                      <option value="escpos">Generic ESC/POS</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Select "Star mC-Print3" for Star printers (mC-Print3, TSP series)
+                    </p>
+                  </div>
                   <Button 
                     onClick={handleAddManualPrinter} 
                     className="w-full"
@@ -339,6 +357,11 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
                                   <h4 className="font-medium">{printer.name}</h4>
                                   {activePrinter?.id === printer.id && (
                                     <Badge variant="outline" className="text-xs">Active</Badge>
+                                  )}
+                                  {printer.printerType && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {printer.printerType === 'star' ? 'Star' : 'ESC/POS'}
+                                    </Badge>
                                   )}
                                 </div>
                                 <p className="text-sm text-muted-foreground">

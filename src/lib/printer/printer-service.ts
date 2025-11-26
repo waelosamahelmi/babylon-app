@@ -17,6 +17,7 @@ import {
   ReceiptData
 } from './types';
 import { ESCPOSFormatter } from './escpos-formatter';
+import { StarFormatter } from './star-formatter';
 
 export class PrinterService {
   private static instance: PrinterService;
@@ -497,7 +498,17 @@ export class PrinterService {
       throw new PrinterError('Device not connected', ERROR_CODES.DEVICE_NOT_FOUND);
     }
 
-    const testData = ESCPOSFormatter.formatTestReceipt(device.name, device.address, device.port!);
+    // Detect if this is a Star printer
+    const isStarPrinter = this.isStarPrinter(device);
+    console.log(`🖨️ Printer type detected: ${isStarPrinter ? 'Star mC-Print' : 'ESC/POS'}`);
+    
+    let testData: Uint8Array;
+    if (isStarPrinter) {
+      const starFormatter = new StarFormatter();
+      testData = starFormatter.generateTestReceipt();
+    } else {
+      testData = ESCPOSFormatter.formatTestReceipt(device.name, device.address, device.port!);
+    }
     
     return this.print(deviceId, {
       type: 'test',
@@ -903,8 +914,17 @@ export class PrinterService {
       // Convert content to print data
       let printData: Uint8Array;
       
+      // Detect if this is a Star printer
+      const isStarPrinter = this.isStarPrinter(device);
+      console.log(`🖨️ Formatting for printer type: ${isStarPrinter ? 'Star mC-Print' : 'ESC/POS'}`);
+      
       if (job.content.type === 'receipt' && typeof job.content.data === 'object') {
-        printData = await ESCPOSFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
+        if (isStarPrinter) {
+          const starFormatter = new StarFormatter();
+          printData = starFormatter.formatReceipt(job.content.data as any);
+        } else {
+          printData = await ESCPOSFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
+        }
       } else if (job.content.type === 'text' && typeof job.content.data === 'string') {
         printData = ESCPOSFormatter.formatText(job.content.data);
       } else if (job.content.data instanceof Uint8Array) {
@@ -1462,6 +1482,32 @@ export class PrinterService {
     });
     
     return cleanSections.length > 0 ? cleanSections.join(', ') : null;
+  }
+
+  /**
+   * Detect if printer is a Star printer (mC-Print3 or similar)
+   */
+  private isStarPrinter(device: PrinterDevice): boolean {
+    // First check if printer type is explicitly set
+    if (device.printerType === 'star') {
+      return true;
+    }
+    if (device.printerType === 'escpos') {
+      return false;
+    }
+    
+    // Auto-detect based on name/model
+    const name = (device.name || '').toLowerCase();
+    const model = (device.metadata?.model || '').toLowerCase();
+    
+    // Check for Star printer keywords
+    return name.includes('star') || 
+           name.includes('mc-print') || 
+           name.includes('mcp') ||
+           name.includes('mc print') ||
+           name.includes('tsp') || // TSP series
+           model.includes('star') ||
+           model.includes('mc-print');
   }
 
   /**
