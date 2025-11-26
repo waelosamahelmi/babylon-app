@@ -66,8 +66,8 @@ jobs:
       - name: Rename APK
         run: |
           VERSION=$(date +'%Y%m%d_%H%M%S')
-          mv ${{steps.sign_app.outputs.signedReleaseFile}} babylon-app/android/app/build/outputs/apk/release/restaurant-order-master-${VERSION}.apk
-          echo "APK_FILE=restaurant-order-master-${VERSION}.apk" >> $GITHUB_ENV
+          mv ${{steps.sign_app.outputs.signedReleaseFile}} babylon-app/android/app/build/outputs/apk/release/plateos-${VERSION}.apk
+          echo "APK_FILE=plateos-${VERSION}.apk" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Create Release
@@ -77,7 +77,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ env.VERSION }}
-          release_name: Restaurant Order Master v${{ env.VERSION }}
+          release_name: PlateOS v${{ env.VERSION }}
           body: |
             Automated build from commit ${{ github.sha }}
             
