@@ -12,6 +12,28 @@ import {
   createDecorativeLine 
 } from './image-utils';
 
+/**
+ * Translate payment method to Finnish
+ */
+function translatePaymentMethod(method: string): string {
+  const methodLower = method.toLowerCase();
+  
+  const translations: Record<string, string> = {
+    'card': 'Kortti',
+    'credit card': 'Kortti',
+    'debit card': 'Kortti',
+    'cash': 'Kateinen',
+    'käteinen': 'Kateinen',
+    'kortti': 'Kortti',
+    'stripe': 'Kortti',
+    'online': 'Verkkomaksu',
+    'cash_or_card': 'Kateinen tai kortti',
+    'cash or card': 'Kateinen tai kortti'
+  };
+  
+  return translations[methodLower] || method;
+}
+
 export class ESCPOSFormatter {
   private commands: number[] = [];
   
@@ -255,13 +277,11 @@ export class ESCPOSFormatter {
           .lines(1);
       }
 
-      // Decorative separator
+      // Simple separator
       formatter
         .align('center')
-        .bold(true)
-        .text(createDecorativeLine('═', 48))
+        .text('================================')
         .newLine()
-        .bold(false)
         .lines(1);
 
       // ============================================
@@ -270,29 +290,23 @@ export class ESCPOSFormatter {
       
       formatter
         .align('center')
-        .size('large')
         .bold(true)
-        .text(`${ICONS.RECEIPT}  TILAUS #${receiptData.orderNumber}  ${ICONS.RECEIPT}`)
-        .newLine()
-        .bold(false)
-        .size('normal')
-        .lines(1);
-
-      // Date and time with icon
-      formatter
-        .align('center')
-        .bold(true)
-        .text(`${ICONS.CLOCK} ${receiptData.timestamp.toLocaleDateString('fi-FI')} - ${receiptData.timestamp.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`)
+        .text(`TILAUS #${receiptData.orderNumber}`)
         .newLine()
         .bold(false)
         .lines(1);
 
+      // Date and time
       formatter
         .align('center')
-        .bold(true)
-        .text(createDecorativeLine('─', 48))
+        .text(`${receiptData.timestamp.toLocaleDateString('fi-FI')} ${receiptData.timestamp.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`)
         .newLine()
-        .bold(false)
+        .lines(1);
+
+      formatter
+        .align('center')
+        .text('--------------------------------')
+        .newLine()
         .lines(1);
 
       // ============================================
@@ -300,40 +314,30 @@ export class ESCPOSFormatter {
       // ============================================
       
       const orderTypeText = receiptData.orderType === 'delivery' ? 'KOTIINKULJETUS' : 'NOUTO';
-      const orderIcon = receiptData.orderType === 'delivery' ? ICONS.DELIVERY : ICONS.PICKUP;
       
       formatter
         .align('center')
-        .size('large')
         .bold(true)
-        .text(`${orderIcon}  ${orderTypeText}  ${orderIcon}`)
+        .text(orderTypeText)
         .newLine()
         .bold(false)
-        .size('normal')
         .lines(1);
 
-      // Payment method with icon
+      // Payment method - translated to Finnish
       if (receiptData.paymentMethod) {
-        const paymentIcon = receiptData.paymentMethod.toLowerCase().includes('card') || 
-                           receiptData.paymentMethod.toLowerCase().includes('stripe') ? 
-                           ICONS.CARD : ICONS.CASH;
+        const translatedPayment = translatePaymentMethod(receiptData.paymentMethod);
         
         formatter
           .align('center')
-          .bold(true)
-          .size('normal')
-          .text(`${paymentIcon} ${receiptData.paymentMethod.toUpperCase()}`)
+          .text(`Maksutapa: ${translatedPayment}`)
           .newLine()
-          .bold(false)
           .lines(1);
       }
 
       formatter
         .align('center')
-        .bold(true)
-        .text(createDecorativeLine('═', 48))
+        .text('================================')
         .newLine()
-        .bold(false)
         .lines(1);
 
       // ============================================
@@ -345,27 +349,22 @@ export class ESCPOSFormatter {
           .align('center')
           .bold(true)
           .underline(true)
-          .size('large')
           .line('ASIAKASTIEDOT')
           .underline(false)
           .bold(false)
-          .size('normal')
           .lines(1);
 
         formatter
           .align('left')
-          .bold(true)
-          .text(createDecorativeLine('─', 48))
+          .text('--------------------------------')
           .newLine()
-          .bold(false)
           .lines(1);
 
         if (receiptData.customerName) {
           formatter
             .align('left')
             .bold(true)
-            .size('normal')
-            .text(`${ICONS.STAR} Nimi: `)
+            .text('Nimi: ')
             .bold(false)
             .text(receiptData.customerName)
             .newLine()
@@ -376,7 +375,7 @@ export class ESCPOSFormatter {
           formatter
             .align('left')
             .bold(true)
-            .text(`${ICONS.PHONE} Puh: `)
+            .text('Puh: ')
             .bold(false)
             .text(receiptData.customerPhone)
             .newLine()
@@ -387,7 +386,7 @@ export class ESCPOSFormatter {
           formatter
             .align('left')
             .bold(true)
-            .text(`${ICONS.EMAIL} Email: `)
+            .text('Email: ')
             .bold(false);
           
           const emailLine = receiptData.customerEmail;
@@ -404,8 +403,7 @@ export class ESCPOSFormatter {
           formatter
             .align('left')
             .bold(true)
-            .size('normal')
-            .text(`${ICONS.LOCATION} Osoite:`)
+            .text('Osoite:')
             .newLine()
             .bold(false)
             .lines(1);
@@ -414,21 +412,16 @@ export class ESCPOSFormatter {
           addressLines.forEach(line => {
             formatter
               .text('  ')
-              .bold(true)
-              .size('normal')
               .text(line.trim())
-              .newLine()
-              .bold(false);
+              .newLine();
           });
           formatter.lines(1);
         }
 
         formatter
           .align('left')
-          .bold(true)
-          .text(createDecorativeLine('─', 48))
+          .text('--------------------------------')
           .newLine()
-          .bold(false)
           .lines(1);
       }
 
@@ -438,17 +431,15 @@ export class ESCPOSFormatter {
       
       formatter
         .align('center')
-        .bold(true)
-        .text(createDecorativeLine('═', 48))
+        .text('================================')
         .newLine()
-        .size('double')
+        .bold(true)
         .underline(true)
-        .text(`${ICONS.FOOD}  TUOTTEET  ${ICONS.FOOD}`)
+        .text('TUOTTEET')
         .newLine()
         .underline(false)
         .bold(false)
-        .size('normal')
-        .text(createDecorativeLine('═', 48))
+        .text('================================')
         .newLine()
         .lines(1);
 
@@ -497,24 +488,14 @@ export class ESCPOSFormatter {
           }
         }
 
-        // Item box separator
-        formatter
-          .bold(true)
-          .text(createDecorativeLine('┄', 48))
-          .newLine()
-          .bold(false)
-          .lines(1);
-        
         // Main item line with quantity and price
-        const itemName = `${ICONS.BOX} ${item.quantity}x ${displayName}`;
-        const itemPrice = `€${item.totalPrice.toFixed(2)}`;
+        const itemName = `${item.quantity}x ${displayName}`;
+        const itemPrice = `${item.totalPrice.toFixed(2)}e`;
         
         formatter
           .bold(true)
-          .size('large')
           .columns(itemName, itemPrice)
           .bold(false)
-          .size('normal')
           .lines(1);
 
         // Toppings with enhanced formatting and conditional pricing support
@@ -544,10 +525,8 @@ export class ESCPOSFormatter {
           let freeCount = 0;
           
           formatter
-            .bold(true)
-            .text(`  ${ICONS.ARROW_RIGHT} Lisätäytteet:`)
+            .text('  Lisatäytteet:')
             .newLine()
-            .bold(false)
             .lines(1);
           
           for (let i = 0; i < item.toppings.length; i++) {
@@ -567,17 +546,17 @@ export class ESCPOSFormatter {
               }
             }
             
-            const toppingLine = `    ${ICONS.BULLET} ${topping.name}`;
+            const toppingLine = `    + ${topping.name}`;
             let toppingPrice = '';
             
             if (freeToppingCount > 0 && topping.price > 0 && freeCount <= freeToppingCount && adjustedPrice === 0) {
-              toppingPrice = `${ICONS.CHECK} ILMAINEN`;
+              toppingPrice = 'ILMAINEN';
             } else if (adjustedPrice > 0) {
-              toppingPrice = `+€${adjustedPrice.toFixed(2)}`;
+              toppingPrice = `+${adjustedPrice.toFixed(2)}e`;
             }
             
             if (toppingPrice) {
-              formatter.bold(true).columns(toppingLine, toppingPrice).bold(false);
+              formatter.columns(toppingLine, toppingPrice);
             } else {
               formatter.text(toppingLine).newLine();
             }
@@ -598,14 +577,17 @@ export class ESCPOSFormatter {
             
           if (cleanedNotes) {
             formatter
-              .bold(true)
-              .text(`  ${ICONS.ARROW_RIGHT} Huom: `)
-              .bold(false)
+              .text('  Huom: ')
               .text(cleanedNotes)
               .newLine()
               .lines(1);
           }
         }
+        
+        formatter
+          .text('- - - - - - - - - - - - - - - -')
+          .newLine()
+          .lines(1);
       }
 
       // ============================================
@@ -668,17 +650,15 @@ export class ESCPOSFormatter {
       
       formatter
         .lines(1)
-        .bold(true)
-        .text(createDecorativeLine('═', 48))
+        .text('================================')
         .newLine()
         .align('center')
-        .size('double')
+        .bold(true)
         .underline(true)
         .line('YHTEENVETO')
         .underline(false)
         .bold(false)
-        .size('normal')
-        .text(createDecorativeLine('═', 48))
+        .text('================================')
         .newLine()
         .lines(1)
         .align('left');
@@ -686,50 +666,37 @@ export class ESCPOSFormatter {
       if (originalOrder) {
         if (originalOrder.subtotal) {
           formatter
-            .bold(true)
-            .size('normal')
-            .columns('Välisumma:', `€${parseFloat(originalOrder.subtotal).toFixed(2)}`)
-            .bold(false);
+            .columns('Välisumma:', `${parseFloat(originalOrder.subtotal).toFixed(2)}e`);
         }
 
         if (originalOrder.deliveryFee && parseFloat(originalOrder.deliveryFee) > 0) {
           formatter
-            .bold(true)
-            .size('normal')
-            .columns(`${ICONS.DELIVERY} Toimitusmaksu:`, `€${parseFloat(originalOrder.deliveryFee).toFixed(2)}`)
-            .bold(false);
+            .columns('Toimitusmaksu:', `${parseFloat(originalOrder.deliveryFee).toFixed(2)}e`);
         }
 
         if (originalOrder.smallOrderFee && parseFloat(originalOrder.smallOrderFee) > 0) {
           formatter
-            .bold(true)
-            .size('normal')
-            .columns('Pientilauslisä:', `€${parseFloat(originalOrder.smallOrderFee).toFixed(2)}`)
-            .bold(false);
+            .columns('Pientilauslisä:', `${parseFloat(originalOrder.smallOrderFee).toFixed(2)}e`);
         }
 
         if (originalOrder.discount && parseFloat(originalOrder.discount) > 0) {
           formatter
-            .bold(true)
-            .size('normal')
-            .columns('Alennus:', `-€${parseFloat(originalOrder.discount).toFixed(2)}`)
-            .bold(false);
+            .columns('Alennus:', `-${parseFloat(originalOrder.discount).toFixed(2)}e`);
         }
       }
 
       formatter
         .lines(1)
-        .bold(true)
-        .text(createDecorativeLine('═', 48))
+        .text('================================')
         .newLine()
         .align('center')
-        .size('double')
         .bold(true)
-        .text(`YHTEENSÄ: €${receiptData.total.toFixed(2)}`)
+        .size('large')
+        .text(`YHTEENSÄ: ${receiptData.total.toFixed(2)}e`)
         .newLine()
         .bold(false)
         .size('normal')
-        .text(createDecorativeLine('═', 48))
+        .text('================================')
         .newLine()
         .lines(2);
 

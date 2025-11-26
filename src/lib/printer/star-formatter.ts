@@ -3,7 +3,29 @@
  * Optimized for Star thermal printers using StarPRNT command set
  */
 
-import { ReceiptData, ReceiptSection } from './types';
+import { ReceiptData, ReceiptItem } from './types';
+
+/**
+ * Translate payment method to Finnish
+ */
+function translatePaymentMethod(method: string): string {
+  const methodLower = method.toLowerCase();
+  
+  const translations: Record<string, string> = {
+    'card': 'Kortti',
+    'credit card': 'Kortti',
+    'debit card': 'Kortti',
+    'cash': 'Käteinen',
+    'käteinen': 'Käteinen',
+    'kortti': 'Kortti',
+    'stripe': 'Kortti',
+    'online': 'Verkkomaksu',
+    'cash_or_card': 'Käteinen tai kortti',
+    'cash or card': 'Käteinen tai kortti'
+  };
+  
+  return translations[methodLower] || method;
+}
 
 export class StarFormatter {
   private encoder = new TextEncoder();
@@ -11,7 +33,7 @@ export class StarFormatter {
   /**
    * Format receipt data for Star printers
    */
-  formatReceipt(data: ReceiptData): Uint8Array {
+  formatReceipt(data: ReceiptData, originalOrder?: any): Uint8Array {
     const commands: number[] = [];
 
     // Initialize printer
@@ -20,115 +42,349 @@ export class StarFormatter {
     // Set UTF-8 encoding
     commands.push(...this.setEncoding('UTF-8'));
 
-    // Header
-    if (data.header) {
-      commands.push(...this.center());
-      commands.push(...this.bold(true));
-      commands.push(...this.textSize(2, 2)); // Double size
-      commands.push(...this.text(data.header.text));
-      commands.push(...this.lineFeed(2));
-      commands.push(...this.bold(false));
-      commands.push(...this.textSize(1, 1)); // Normal size
-    }
-
-    // Order info
-    commands.push(...this.left());
+    // ============================================
+    // HEADER - RESTAURANT INFO
+    // ============================================
+    commands.push(...this.center());
     commands.push(...this.bold(true));
-    commands.push(...this.text('TILAUS / ORDER'));
+    commands.push(...this.textSize(2, 2)); // Large
+    commands.push(...this.text('Ravintola Babylon'));
+    commands.push(...this.lineFeed(2));
+    commands.push(...this.textSize(1, 1)); // Normal
+    commands.push(...this.bold(false));
+    commands.push(...this.text('Vapaudenkatu 28, 15140 Lahti'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.text('+358-3781-2222'));
+    commands.push(...this.lineFeed(2));
+    
+    commands.push(...this.text('================================'));
+    commands.push(...this.lineFeed(2));
+
+    // ============================================
+    // ORDER HEADER
+    // ============================================
+    commands.push(...this.center());
+    commands.push(...this.bold(true));
+    commands.push(...this.text(`TILAUS #${data.orderNumber}`));
     commands.push(...this.lineFeed());
     commands.push(...this.bold(false));
-    commands.push(...this.text('------------------------------'));
+    commands.push(...this.lineFeed());
+    
+    // Date and time
+    commands.push(...this.text(`${data.timestamp.toLocaleDateString('fi-FI')} ${data.timestamp.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`));
+    commands.push(...this.lineFeed(2));
+    
+    commands.push(...this.text('--------------------------------'));
+    commands.push(...this.lineFeed(2));
+
+    // ============================================
+    // ORDER TYPE & PAYMENT
+    // ============================================
+    const orderTypeText = data.orderType === 'delivery' ? 'KOTIINKULJETUS' : 'NOUTO';
+    
+    commands.push(...this.center());
+    commands.push(...this.bold(true));
+    commands.push(...this.text(orderTypeText));
+    commands.push(...this.lineFeed());
+    commands.push(...this.bold(false));
     commands.push(...this.lineFeed());
 
-    if (data.orderNumber) {
-      commands.push(...this.text(`Tilausnro: ${data.orderNumber}`));
-      commands.push(...this.lineFeed());
+    // Payment method - translated to Finnish
+    if (data.paymentMethod) {
+      const translatedPayment = translatePaymentMethod(data.paymentMethod);
+      commands.push(...this.text(`Maksutapa: ${translatedPayment}`));
+      commands.push(...this.lineFeed(2));
     }
 
-    // Customer info
-    if (data.sections) {
-      data.sections.forEach((section: ReceiptSection) => {
-        if (section.title) {
-          commands.push(...this.bold(true));
-          commands.push(...this.text(section.title));
-          commands.push(...this.lineFeed());
-          commands.push(...this.bold(false));
-        }
+    commands.push(...this.text('================================'));
+    commands.push(...this.lineFeed(2));
 
-        section.items.forEach((item: string) => {
-          commands.push(...this.text(item));
-          commands.push(...this.lineFeed());
-        });
-
-        if (section.notes) {
-          commands.push(...this.text(section.notes));
-          commands.push(...this.lineFeed());
-        }
-
-        commands.push(...this.lineFeed());
-      });
-    }
-
-    // Items
-    if (data.items && data.items.length > 0) {
+    // ============================================
+    // CUSTOMER INFORMATION
+    // ============================================
+    if (data.customerName || data.customerPhone || data.customerEmail || data.deliveryAddress) {
+      commands.push(...this.center());
       commands.push(...this.bold(true));
-      commands.push(...this.text('TUOTTEET / ITEMS'));
+      commands.push(...this.underline(true));
+      commands.push(...this.text('ASIAKASTIEDOT'));
       commands.push(...this.lineFeed());
+      commands.push(...this.underline(false));
       commands.push(...this.bold(false));
-      commands.push(...this.text('------------------------------'));
       commands.push(...this.lineFeed());
 
-      data.items.forEach((item: any) => {
-        const qty = item.quantity || 1;
-        const name = item.name || 'Item';
-        
+      commands.push(...this.left());
+      commands.push(...this.text('--------------------------------'));
+      commands.push(...this.lineFeed(2));
+
+      if (data.customerName) {
         commands.push(...this.bold(true));
-        commands.push(...this.text(`${qty}x ${name}`));
+        commands.push(...this.text('Nimi: '));
+        commands.push(...this.bold(false));
+        commands.push(...this.text(data.customerName));
+        commands.push(...this.lineFeed(2));
+      }
+
+      if (data.customerPhone) {
+        commands.push(...this.bold(true));
+        commands.push(...this.text('Puh: '));
+        commands.push(...this.bold(false));
+        commands.push(...this.text(data.customerPhone));
+        commands.push(...this.lineFeed(2));
+      }
+
+      if (data.customerEmail) {
+        commands.push(...this.bold(true));
+        commands.push(...this.text('Email: '));
+        commands.push(...this.bold(false));
+        commands.push(...this.text(data.customerEmail));
+        commands.push(...this.lineFeed(2));
+      }
+
+      if (data.deliveryAddress) {
+        commands.push(...this.bold(true));
+        commands.push(...this.text('Osoite:'));
         commands.push(...this.lineFeed());
         commands.push(...this.bold(false));
-
-        if (item.size) {
-          commands.push(...this.text(`   Koko: ${item.size}`));
+        
+        const addressLines = data.deliveryAddress.split('\n');
+        addressLines.forEach(line => {
+          commands.push(...this.text('  ' + line.trim()));
           commands.push(...this.lineFeed());
-        }
-
-        if (item.toppings && item.toppings.length > 0) {
-          item.toppings.forEach((topping: string) => {
-            commands.push(...this.text(`   + ${topping}`));
-            commands.push(...this.lineFeed());
-          });
-        }
-
-        if (item.price) {
-          commands.push(...this.text(`   ${item.price.toFixed(2)} €`));
-          commands.push(...this.lineFeed());
-        }
-
+        });
         commands.push(...this.lineFeed());
+      }
+
+      commands.push(...this.text('--------------------------------'));
+      commands.push(...this.lineFeed(2));
+    }
+
+    // ============================================
+    // ITEMS SECTION
+    // ============================================
+    commands.push(...this.center());
+    commands.push(...this.text('================================'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.bold(true));
+    commands.push(...this.underline(true));
+    commands.push(...this.text('TUOTTEET'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.underline(false));
+    commands.push(...this.bold(false));
+    commands.push(...this.text('================================'));
+    commands.push(...this.lineFeed(2));
+
+    commands.push(...this.left());
+
+    if (data.items && data.items.length > 0) {
+      data.items.forEach((item: ReceiptItem) => {
+        // Extract size information for better display
+        let displayName = item.name;
+        let itemSize = 'normal';
+        
+        // Check if item name already contains size in parentheses
+        const sizeInNameMatch = item.name.match(/^(.+?)\s*\(([^)]+)\)$/);
+        if (sizeInNameMatch) {
+          displayName = sizeInNameMatch[1].trim();
+          itemSize = sizeInNameMatch[2].trim();
+        } else if (item.notes) {
+          // Extract size from notes
+          const sizeMatch = item.notes.match(/Size:\s*([^;]+)/i);
+          if (sizeMatch) {
+            itemSize = sizeMatch[1].trim();
+            if (itemSize && itemSize !== 'normal' && itemSize !== 'regular') {
+              displayName = `${displayName} (${itemSize})`;
+            }
+          }
+        }
+
+        // Main item line with quantity and price
+        const itemLine = `${item.quantity}x ${displayName}`;
+        const priceLine = `${item.totalPrice.toFixed(2)}e`;
+        
+        commands.push(...this.bold(true));
+        commands.push(...this.twoColumn(itemLine, priceLine, 48));
+        commands.push(...this.bold(false));
+        commands.push(...this.lineFeed());
+
+        // Toppings - parse from array properly
+        if (item.toppings && Array.isArray(item.toppings) && item.toppings.length > 0) {
+          commands.push(...this.text('  Lisätäytteet:'));
+          commands.push(...this.lineFeed());
+          
+          // Check for conditional pricing from originalOrder
+          const originalItems = originalOrder ? (originalOrder.orderItems || originalOrder.order_items || originalOrder.items || []) : [];
+          const matchingOriginalItem = originalItems.find((oi: any) => 
+            (oi.menuItems?.name || oi.menu_items?.name || oi.name) === item.name.replace(/\s*\([^)]+\)$/, '')
+          );
+          
+          const menuItemData = matchingOriginalItem ? 
+            (matchingOriginalItem.menuItems || matchingOriginalItem.menu_items || matchingOriginalItem.menuItem || {}) : {};
+          const hasConditionalPricing = menuItemData.hasConditionalPricing || menuItemData.has_conditional_pricing || false;
+          const includedToppingsCount = menuItemData.includedToppingsCount || menuItemData.included_toppings_count || 0;
+          
+          // Legacy support for "Your Choice Pizza"
+          const isYourChoicePizza = matchingOriginalItem && 
+                   (matchingOriginalItem.menuItemId === 93 || 
+                    matchingOriginalItem.menu_item_id === 93 ||
+                    matchingOriginalItem.menuItems?.id === 93 ||
+                    matchingOriginalItem.menu_items?.id === 93);
+          
+          const freeToppingCount = hasConditionalPricing ? includedToppingsCount : (isYourChoicePizza ? 4 : 0);
+          let freeCount = 0;
+          
+          item.toppings.forEach((topping: { name: string; price: number }) => {
+            let adjustedPrice = topping.price;
+            
+            // Apply conditional pricing
+            if (freeToppingCount > 0 && topping.price > 0 && freeCount < freeToppingCount) {
+              adjustedPrice = 0;
+              freeCount++;
+            } else {
+              // Apply size-based pricing adjustments
+              if (itemSize === "perhe" || itemSize === "family") {
+                adjustedPrice = topping.price * 2;
+              } else if ((itemSize === "large" || itemSize === "iso") && Math.abs(topping.price - 1.00) < 0.01) {
+                adjustedPrice = 2.00;
+              }
+            }
+            
+            const toppingLine = `    + ${topping.name}`;
+            let toppingPrice = '';
+            
+            if (freeToppingCount > 0 && topping.price > 0 && freeCount <= freeToppingCount && adjustedPrice === 0) {
+              toppingPrice = 'ILMAINEN';
+            } else if (adjustedPrice > 0) {
+              toppingPrice = `+${adjustedPrice.toFixed(2)}e`;
+            }
+            
+            if (toppingPrice) {
+              commands.push(...this.twoColumn(toppingLine, toppingPrice, 48));
+            } else {
+              commands.push(...this.text(toppingLine));
+              commands.push(...this.lineFeed());
+            }
+          });
+          
+          commands.push(...this.lineFeed());
+        }
+
+        // Special instructions
+        if (item.notes) {
+          const cleanedNotes = item.notes
+            .split(';')
+            .filter(part => !part.trim().toLowerCase().startsWith('size:'))
+            .filter(part => !part.trim().toLowerCase().startsWith('toppings:'))
+            .map(part => part.trim())
+            .filter(part => part.length > 0)
+            .join('; ');
+            
+          if (cleanedNotes) {
+            commands.push(...this.text('  Huom: '));
+            commands.push(...this.text(cleanedNotes));
+            commands.push(...this.lineFeed(2));
+          }
+        }
+
+        commands.push(...this.text('- - - - - - - - - - - - - - - -'));
+        commands.push(...this.lineFeed(2));
       });
     }
 
-    // Total
-    if (data.total !== undefined) {
-      commands.push(...this.text('------------------------------'));
+    // ============================================
+    // ORDER-LEVEL SPECIAL INSTRUCTIONS
+    // ============================================
+    if (originalOrder?.specialInstructions || originalOrder?.special_instructions) {
+      const instructions = originalOrder.specialInstructions || originalOrder.special_instructions;
+      
+      commands.push(...this.center());
+      commands.push(...this.text('================================'));
       commands.push(...this.lineFeed());
       commands.push(...this.bold(true));
-      commands.push(...this.textSize(2, 2));
-      commands.push(...this.text(`YHTEENSÄ: ${data.total.toFixed(2)} €`));
+      commands.push(...this.underline(true));
+      commands.push(...this.text('ERIKOISOHJEET'));
       commands.push(...this.lineFeed());
-      commands.push(...this.textSize(1, 1));
+      commands.push(...this.underline(false));
       commands.push(...this.bold(false));
+      commands.push(...this.text('--------------------------------'));
+      commands.push(...this.lineFeed(2));
+      
+      commands.push(...this.left());
+      commands.push(...this.bold(true));
+      commands.push(...this.text('  ' + instructions));
+      commands.push(...this.lineFeed());
+      commands.push(...this.bold(false));
+      commands.push(...this.lineFeed());
+      
+      commands.push(...this.text('--------------------------------'));
+      commands.push(...this.lineFeed(2));
     }
 
-    // Footer
-    if (data.footer) {
-      commands.push(...this.lineFeed(2));
-      commands.push(...this.center());
-      commands.push(...this.text(data.footer.text));
-      commands.push(...this.lineFeed(2));
+    // ============================================
+    // TOTALS SECTION
+    // ============================================
+    commands.push(...this.center());
+    commands.push(...this.text('================================'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.bold(true));
+    commands.push(...this.underline(true));
+    commands.push(...this.text('YHTEENVETO'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.underline(false));
+    commands.push(...this.bold(false));
+    commands.push(...this.text('================================'));
+    commands.push(...this.lineFeed(2));
+
+    commands.push(...this.left());
+
+    if (originalOrder) {
+      if (originalOrder.subtotal) {
+        commands.push(...this.twoColumn('Välisumma:', `${parseFloat(originalOrder.subtotal).toFixed(2)}e`, 48));
+      }
+
+      if (originalOrder.deliveryFee && parseFloat(originalOrder.deliveryFee) > 0) {
+        commands.push(...this.twoColumn('Toimitusmaksu:', `${parseFloat(originalOrder.deliveryFee).toFixed(2)}e`, 48));
+      }
+
+      if (originalOrder.smallOrderFee && parseFloat(originalOrder.smallOrderFee) > 0) {
+        commands.push(...this.twoColumn('Pientilauslisä:', `${parseFloat(originalOrder.smallOrderFee).toFixed(2)}e`, 48));
+      }
+
+      if (originalOrder.discount && parseFloat(originalOrder.discount) > 0) {
+        commands.push(...this.twoColumn('Alennus:', `-${parseFloat(originalOrder.discount).toFixed(2)}e`, 48));
+      }
+      
+      commands.push(...this.lineFeed());
     }
 
-    // Cut paper (this is crucial to stop printing!)
+    commands.push(...this.text('================================'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.center());
+    commands.push(...this.bold(true));
+    commands.push(...this.textSize(2, 2));
+    commands.push(...this.text(`YHTEENSÄ: ${data.total.toFixed(2)}e`));
+    commands.push(...this.lineFeed());
+    commands.push(...this.textSize(1, 1));
+    commands.push(...this.bold(false));
+    commands.push(...this.text('================================'));
+    commands.push(...this.lineFeed(3));
+
+    // ============================================
+    // FOOTER
+    // ============================================
+    commands.push(...this.center());
+    commands.push(...this.bold(true));
+    commands.push(...this.text('Kiitos tilauksestasi!'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.text('Tervetuloa uudelleen!'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.bold(false));
+    commands.push(...this.lineFeed());
+    commands.push(...this.text('Ravintola Babylon'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.text('Avoinna: Ma-Su 10:00-20:00'));
+    commands.push(...this.lineFeed(3));
+
+    // Cut paper (CRITICAL - stops the printer!)
     commands.push(...this.cutPaper());
 
     return new Uint8Array(commands);
@@ -174,6 +430,13 @@ export class StarFormatter {
   }
 
   /**
+   * Set underline
+   */
+  private underline(enabled: boolean): number[] {
+    return [0x1B, 0x2D, enabled ? 0x01 : 0x00]; // ESC - n
+  }
+
+  /**
    * Set text size (width and height magnification)
    */
   private textSize(width: number, height: number): number[] {
@@ -198,6 +461,21 @@ export class StarFormatter {
     for (let i = 0; i < lines; i++) {
       commands.push(0x0A); // LF
     }
+    return commands;
+  }
+
+  /**
+   * Two-column formatting for item and price
+   */
+  private twoColumn(left: string, right: string, width: number = 48): number[] {
+    const rightLen = right.length;
+    const leftLen = Math.max(0, width - rightLen);
+    const leftText = left.length > leftLen ? left.substring(0, leftLen - 3) + '...' : left;
+    const padding = ' '.repeat(Math.max(0, width - leftText.length - rightLen));
+    const line = leftText + padding + right;
+    
+    const commands = [...this.text(line)];
+    commands.push(0x0A); // LF
     return commands;
   }
 
