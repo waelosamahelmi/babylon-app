@@ -42,15 +42,15 @@ export class StarFormatter {
     // Set ISO-8859-1 encoding for Finnish characters (ä, ö, å)
     commands.push(...this.setEncoding('ISO-8859-1'));
     
-    // Set character spacing for better readability
-    commands.push(...this.setCharSpacing(2));
+    // Set character spacing (0 = normal)
+    commands.push(...this.setCharSpacing(0));
 
     // ============================================
     // RESTAURANT NAME AS TITLE
     // ============================================
     commands.push(...this.center());
     commands.push(...this.bold(true));
-    commands.push(...this.textSize(3, 3)); // Extra large for restaurant name
+    commands.push(...this.textSize(2, 2)); // Large for restaurant name
     commands.push(...this.text('RAVINTOLA'));
     commands.push(...this.lineFeed());
     commands.push(...this.text('BABYLON'));
@@ -61,7 +61,7 @@ export class StarFormatter {
     // HEADER - RESTAURANT INFO
     // ============================================
     commands.push(...this.center());
-    commands.push(...this.textSize(3, 3)); // Extra large text for all content
+    commands.push(...this.textSize(2, 2)); // Large text for all content
     commands.push(...this.text('Vapaudenkatu 28, 15140 Lahti'));
     commands.push(...this.lineFeed());
     commands.push(...this.text('+358-3781-2222'));
@@ -75,10 +75,10 @@ export class StarFormatter {
     // ============================================
     commands.push(...this.center());
     commands.push(...this.bold(true));
-    commands.push(...this.textSize(4, 4)); // Extra extra large for order number
+    commands.push(...this.textSize(2, 3)); // Large width, extra height for order number
     commands.push(...this.text(`TILAUS #${data.orderNumber}`));
     commands.push(...this.lineFeed());
-    commands.push(...this.textSize(3, 3)); // Back to normal large
+    commands.push(...this.textSize(2, 2)); // Back to normal large
     commands.push(...this.bold(false));
     commands.push(...this.lineFeed());
     
@@ -214,9 +214,9 @@ export class StarFormatter {
         const priceLine = `${item.totalPrice.toFixed(2)}e`;
         
         commands.push(...this.bold(true));
-        commands.push(...this.textSize(4, 4)); // Extra large for menu items
+        commands.push(...this.textSize(2, 2)); // Large for menu items
         commands.push(...this.twoColumn(itemLine, priceLine, 48));
-        commands.push(...this.textSize(3, 3)); // Back to normal
+        commands.push(...this.textSize(2, 2)); // Keep same size
         commands.push(...this.bold(false));
         commands.push(...this.lineFeed());
 
@@ -374,7 +374,7 @@ export class StarFormatter {
     commands.push(...this.lineFeed());
     commands.push(...this.center());
     commands.push(...this.bold(true));
-    commands.push(...this.textSize(4, 4)); // Extra extra large for total
+    commands.push(...this.textSize(3, 3)); // Extra large for total
     commands.push(...this.text(`YHTEENSA: ${data.total.toFixed(2)}e`));
     commands.push(...this.lineFeed());
     commands.push(...this.textSize(2, 2)); // Back to normal large

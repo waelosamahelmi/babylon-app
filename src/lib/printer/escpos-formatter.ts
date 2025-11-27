@@ -596,20 +596,14 @@ export class ESCPOSFormatter {
         const instructions = originalOrder.specialInstructions || originalOrder.special_instructions;
         
         formatter
-          .lines(1)
-          .bold(true)
-          .text(createDecorativeLine('=', 32))
           .newLine()
           .align('center')
+          .bold(true)
           .size('large')
-          .underline(true)
           .line('ERIKOISOHJEET')
-          .underline(false)
           .bold(false)
           .size('large')
-          .text(createDecorativeLine('-', 32))
           .newLine()
-          .lines(1)
           .align('left');
         
         // Split long instructions
@@ -633,13 +627,7 @@ export class ESCPOSFormatter {
           formatter.bold(true).text('  ' + currentLine).newLine().bold(false);
         }
         
-        formatter
-          .lines(1)
-          .bold(true)
-          .text(createDecorativeLine('─', 48))
-          .newLine()
-          .bold(false)
-          .lines(1);
+        formatter.newLine();
       }
 
       // ============================================
@@ -647,7 +635,7 @@ export class ESCPOSFormatter {
       // ============================================
       
       formatter
-        .lines(1)
+        .newLine()
         .text('================================')
         .newLine()
         .align('center')
@@ -664,17 +652,23 @@ export class ESCPOSFormatter {
       if (originalOrder) {
         if (originalOrder.subtotal) {
           formatter
-            .columns('Välisumma:', `${parseFloat(originalOrder.subtotal).toFixed(2)}e`);
+            .size('large')
+            .columns('Välisumma:', `${parseFloat(originalOrder.subtotal).toFixed(2)}e`)
+            .size('large');
         }
 
         if (originalOrder.deliveryFee && parseFloat(originalOrder.deliveryFee) > 0) {
           formatter
-            .columns('Toimitusmaksu:', `${parseFloat(originalOrder.deliveryFee).toFixed(2)}e`);
+            .size('large')
+            .columns('Toimitusmaksu:', `${parseFloat(originalOrder.deliveryFee).toFixed(2)}e`)
+            .size('large');
         }
 
         if (originalOrder.smallOrderFee && parseFloat(originalOrder.smallOrderFee) > 0) {
           formatter
-            .columns('Pientilauslisä:', `${parseFloat(originalOrder.smallOrderFee).toFixed(2)}e`);
+            .size('large')
+            .columns('Pientilauslisä:', `${parseFloat(originalOrder.smallOrderFee).toFixed(2)}e`)
+            .size('large');
         }
 
         if (originalOrder.discount && parseFloat(originalOrder.discount) > 0) {
@@ -684,7 +678,7 @@ export class ESCPOSFormatter {
       }
 
       formatter
-        .lines(1)
+        .newLine()
         .text('================================')
         .newLine()
         .align('center')
@@ -696,7 +690,7 @@ export class ESCPOSFormatter {
         .size('normal')
         .text('================================')
         .newLine()
-        .lines(2);
+        .newLine();
 
       // ============================================
       // QR CODE SECTION
