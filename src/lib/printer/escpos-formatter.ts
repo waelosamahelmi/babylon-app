@@ -270,7 +270,9 @@ export class ESCPOSFormatter {
         formatter
           .align('center')
           .bold(true)
+          .size('double')
           .line('Ravintola Babylon')
+          .size('normal')
           .bold(false)
           .lines(1);
       }
@@ -289,15 +291,19 @@ export class ESCPOSFormatter {
       formatter
         .align('center')
         .bold(true)
+        .size('double')
         .text(`TILAUS #${receiptData.orderNumber}`)
         .newLine()
+        .size('normal')
         .bold(false)
         .lines(1);
 
       // Date and time
       formatter
         .align('center')
+        .size('large')
         .text(`${receiptData.timestamp.toLocaleDateString('fi-FI')} ${receiptData.timestamp.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`)
+        .size('normal')
         .newLine()
         .lines(1);
 
@@ -327,8 +333,10 @@ export class ESCPOSFormatter {
         
         formatter
           .align('center')
+          .size('large')
           .text(`Maksutapa: ${translatedPayment}`)
           .newLine()
+          .size('normal')
           .lines(1);
       }
 
@@ -362,10 +370,12 @@ export class ESCPOSFormatter {
           formatter
             .align('left')
             .bold(true)
+            .size('large')
             .text('Nimi: ')
             .bold(false)
             .text(receiptData.customerName)
             .newLine()
+            .size('normal')
             .lines(1);
         }
 
@@ -373,10 +383,12 @@ export class ESCPOSFormatter {
           formatter
             .align('left')
             .bold(true)
+            .size('large')
             .text('Puh: ')
             .bold(false)
             .text(receiptData.customerPhone)
             .newLine()
+            .size('normal')
             .lines(1);
         }
 
@@ -401,6 +413,7 @@ export class ESCPOSFormatter {
           formatter
             .align('left')
             .bold(true)
+            .size('large')
             .text('Osoite:')
             .newLine()
             .bold(false)
@@ -413,7 +426,10 @@ export class ESCPOSFormatter {
               .text(line.trim())
               .newLine();
           });
-          formatter.lines(1);
+          formatter.size('normal').lines(1);
+              .newLine();
+          });
+          formatter.size('normal').lines(1);
         }
 
         formatter
@@ -492,7 +508,9 @@ export class ESCPOSFormatter {
         
         formatter
           .bold(true)
+          .size('large')
           .columns(itemName, itemPrice, 32)
+          .size('normal')
           .bold(false)
           .lines(1);
 
@@ -523,8 +541,10 @@ export class ESCPOSFormatter {
           let freeCount = 0;
           
           formatter
+            .size('large')
             .text('  Lisatäytteet:')
             .newLine()
+            .size('normal')
             .lines(1);
           
           for (let i = 0; i < item.toppings.length; i++) {
@@ -554,9 +574,9 @@ export class ESCPOSFormatter {
             }
             
             if (toppingPrice) {
-              formatter.columns(toppingLine, toppingPrice, 32);
+              formatter.size('large').columns(toppingLine, toppingPrice, 32).size('normal');
             } else {
-              formatter.text(toppingLine).newLine();
+              formatter.size('large').text(toppingLine).newLine().size('normal');
             }
           }
           

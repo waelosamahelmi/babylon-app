@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { PrinterDevice } from '@/lib/printer/types';
 import { useAndroid } from '@/lib/android-context';
+import { PrinterFontSettings } from '@/components/printer-font-settings';
 
 interface PrinterManagementModalProps {
   isOpen: boolean;
@@ -50,6 +51,7 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
   const [manualPrinterType, setManualPrinterType] = useState<'star' | 'escpos'>('star');
   const [selectedPrinterId, setSelectedPrinterId] = useState<string | null>(null);
   const [isAddingManualPrinter, setIsAddingManualPrinter] = useState(false);
+  const [expandedPrinterId, setExpandedPrinterId] = useState<string | null>(null);
 
   const handleAddManualPrinter = async () => {
     if (!manualIp.trim()) {
@@ -410,9 +412,32 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
+                                {printer.printerType === 'star' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setExpandedPrinterId(expandedPrinterId === printer.id ? null : printer.id)}
+                                  >
+                                    {expandedPrinterId === printer.id ? 'Hide' : 'Fonts'}
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </div>
+                          
+                          {/* Font Settings - shown when expanded and printer is Star */}
+                          {expandedPrinterId === printer.id && (
+                            <PrinterFontSettings 
+                              printer={printer}
+                              onUpdate={(updatedPrinter) => {
+                                // The printer context will auto-refresh from database
+                                toast({
+                                  title: "Settings Updated",
+                                  description: "Reconnect the printer to apply the new font settings",
+                                });
+                              }}
+                            />
+                          )}
                         </CardContent>
                       </Card>
                     ))}

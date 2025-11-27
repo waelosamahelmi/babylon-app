@@ -14,6 +14,14 @@ export class DatabasePrinterManager {
    */
   static async syncPrinter(printer: PrinterDevice): Promise<boolean> {
     try {
+      console.log('🔄 Syncing printer to database:', {
+        id: printer.id,
+        name: printer.name,
+        address: printer.address,
+        port: printer.port,
+        printerType: printer.printerType
+      });
+
       const response = await fetch(`${this.API_BASE}/printers`, {
         method: 'POST',
         headers: {
@@ -29,14 +37,20 @@ export class DatabasePrinterManager {
         }),
       });
 
+      console.log('📡 Database sync response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`Failed to sync printer: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ Database sync failed:', errorText);
+        throw new Error(`Failed to sync printer: ${response.statusText} - ${errorText}`);
       }
 
-      console.log(`✅ Synced printer to database: ${printer.name}`);
+      const result = await response.json();
+      console.log('✅ Synced printer to database:', result);
       return true;
     } catch (error) {
       console.error('❌ Failed to sync printer to database:', error);
+      console.error('Error details:', error instanceof Error ? error.message : String(error));
       return false;
     }
   }

@@ -196,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create or update printer
   app.post("/api/printers", async (req, res) => {
     try {
-      const { id, name, address, port, printerType, isActive } = req.body;
+      const { id, name, address, port, printerType, isActive, fontSettings } = req.body;
       
       if (!id || !name || !address || !port || !printerType) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -209,6 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         port,
         printerType,
         isActive: isActive ?? true,
+        fontSettings: fontSettings || undefined,
       });
 
       res.json(printer);
@@ -221,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update printer
   app.put("/api/printers/:id", async (req, res) => {
     try {
-      const { name, address, port, printerType, isActive } = req.body;
+      const { name, address, port, printerType, isActive, fontSettings } = req.body;
       
       const printer = await storage.upsertPrinter({
         id: req.params.id,
@@ -230,6 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         port,
         printerType,
         isActive,
+        fontSettings: fontSettings || undefined,
       });
 
       res.json(printer);

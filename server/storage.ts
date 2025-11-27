@@ -696,6 +696,7 @@ export class DatabaseStorage implements IStorage {
           port: printer.port,
           printerType: printer.printerType,
           isActive: printer.isActive,
+          fontSettings: printer.fontSettings,
           updatedAt: new Date(),
         })
         .where(eq(printers.id, printer.id))
