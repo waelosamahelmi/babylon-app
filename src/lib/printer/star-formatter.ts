@@ -43,15 +43,15 @@ export class StarFormatter {
   private fontSettings: FontSettings;
 
   constructor(fontSettings?: Partial<FontSettings>) {
-    // Default font settings - INCREASED FOR BETTER READABILITY
+    // Default font settings
     this.fontSettings = {
-      restaurantName: { width: 3, height: 3 },
+      restaurantName: { width: 2, height: 2 },
       header: { width: 2, height: 2 },
-      orderNumber: { width: 3, height: 3 },
+      orderNumber: { width: 2, height: 3 },
       menuItems: { width: 2, height: 2 },
-      toppings: { width: 2, height: 2 },
+      toppings: { width: 1, height: 1 },
       totals: { width: 2, height: 2 },
-      finalTotal: { width: 4, height: 4 },
+      finalTotal: { width: 3, height: 3 },
       characterSpacing: 0,
       ...fontSettings
     };

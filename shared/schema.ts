@@ -149,13 +149,13 @@ export const printers = pgTable("printers", {
   printerType: text("printer_type").notNull(), // 'star' or 'escpos'
   isActive: boolean("is_active").default(true),
   fontSettings: jsonb("font_settings").default({
-    restaurantName: { width: 2, height: 2 },
+    restaurantName: { width: 3, height: 3 },
     header: { width: 2, height: 2 },
-    orderNumber: { width: 2, height: 3 },
+    orderNumber: { width: 3, height: 3 },
     menuItems: { width: 2, height: 2 },
-    toppings: { width: 1, height: 1 },
+    toppings: { width: 2, height: 2 },
     totals: { width: 2, height: 2 },
-    finalTotal: { width: 3, height: 3 },
+    finalTotal: { width: 4, height: 4 },
     characterSpacing: 0
   }),
   createdAt: timestamp("created_at").defaultNow(),

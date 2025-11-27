@@ -925,8 +925,9 @@ export class PrinterService {
           const starFormatter = new StarFormatter(fontSettings);
           printData = starFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
         } else {
-          // ESC/POS formatter is now synchronous (text-only)
-          printData = ESCPOSFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
+          // Get font settings from device metadata or use defaults
+          const fontSettings = device.metadata?.fontSettings;
+          printData = ESCPOSFormatter.formatReceipt(job.content.data as any, job.content.originalOrder, fontSettings);
         }
       } else if (job.content.type === 'text' && typeof job.content.data === 'string') {
         printData = ESCPOSFormatter.formatText(job.content.data);

@@ -34,10 +34,34 @@ function translatePaymentMethod(method: string): string {
   return translations[methodLower] || method;
 }
 
+export interface FontSettings {
+  restaurantName: { width: number; height: number };
+  header: { width: number; height: number };
+  orderNumber: { width: number; height: number };
+  menuItems: { width: number; height: number };
+  toppings: { width: number; height: number };
+  totals: { width: number; height: number };
+  finalTotal: { width: number; height: number };
+  characterSpacing: number;
+}
+
 export class ESCPOSFormatter {
   private commands: number[] = [];
+  private fontSettings: FontSettings;
   
-  constructor() {
+  constructor(fontSettings?: Partial<FontSettings>) {
+    // Default font settings - INCREASED FOR BETTER READABILITY (matching Star formatter)
+    this.fontSettings = {
+      restaurantName: { width: 3, height: 3 },
+      header: { width: 2, height: 2 },
+      orderNumber: { width: 3, height: 3 },
+      menuItems: { width: 2, height: 2 },
+      toppings: { width: 2, height: 2 },
+      totals: { width: 2, height: 2 },
+      finalTotal: { width: 4, height: 4 },
+      characterSpacing: 0,
+      ...fontSettings
+    };
     this.init();
   }
 
@@ -88,6 +112,20 @@ export class ESCPOSFormatter {
         this.commands.push(...ESC_POS.SIZE_NORMAL);
         break;
     }
+    return this;
+  }
+
+  /**
+   * Set custom text size with width and height multipliers (1-8)
+   */
+  customSize(width: number, height: number): ESCPOSFormatter {
+    // ESC/POS GS ! n command for size
+    // n = ((width-1) << 4) | (height-1)
+    // width and height are 1-8 (0-7 in the command)
+    const w = Math.max(1, Math.min(8, width)) - 1;
+    const h = Math.max(1, Math.min(8, height)) - 1;
+    const sizeCommand = (w << 4) | h;
+    this.commands.push(0x1D, 0x21, sizeCommand);
     return this;
   }
 
@@ -242,8 +280,8 @@ export class ESCPOSFormatter {
   /**
    * Format a complete receipt - TEXT ONLY VERSION (no async logo/QR)
    */
-  static formatReceipt(receiptData: ReceiptData, originalOrder?: any): Uint8Array {
-    const formatter = new ESCPOSFormatter();
+  static formatReceipt(receiptData: ReceiptData, originalOrder?: any, fontSettings?: Partial<FontSettings>): Uint8Array {
+    const formatter = new ESCPOSFormatter(fontSettings);
 
     try {
       // ============================================
@@ -253,10 +291,10 @@ export class ESCPOSFormatter {
       formatter
         .align('center')
         .bold(true)
-        .size('large')
+        .customSize(formatter.fontSettings.restaurantName.width, formatter.fontSettings.restaurantName.height)
         .text('RAVINTOLA BABYLON')
         .newLine()
-        .size('normal')
+        .customSize(formatter.fontSettings.header.width, formatter.fontSettings.header.height)
         .text('Vapaudenkatu 28, 15140 Lahti')
         .newLine()
         .text('+358-3781-2222')
@@ -278,19 +316,19 @@ export class ESCPOSFormatter {
       formatter
         .align('center')
         .bold(true)
-        .size('double')
+        .customSize(formatter.fontSettings.orderNumber.width, formatter.fontSettings.orderNumber.height)
         .text(`TILAUS #${receiptData.orderNumber}`)
         .newLine()
-        .size('normal')
+        .customSize(1, 1)
         .bold(false)
         .lines(1);
 
       // Date and time
       formatter
         .align('center')
-        .size('large')
+        .customSize(formatter.fontSettings.header.width, formatter.fontSettings.header.height)
         .text(`${receiptData.timestamp.toLocaleDateString('fi-FI')} ${receiptData.timestamp.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`)
-        .size('normal')
+        .customSize(1, 1)
         .newLine()
         .lines(1);
 
@@ -320,10 +358,10 @@ export class ESCPOSFormatter {
         
         formatter
           .align('center')
-          .size('large')
+          .customSize(formatter.fontSettings.header.width, formatter.fontSettings.header.height)
           .text(`Maksutapa: ${translatedPayment}`)
           .newLine()
-          .size('normal')
+          .customSize(1, 1)
           .lines(1);
       }
 
@@ -357,12 +395,12 @@ export class ESCPOSFormatter {
           formatter
             .align('left')
             .bold(true)
-            .size('large')
+            .customSize(formatter.fontSettings.header.width, formatter.fontSettings.header.height)
             .text('Nimi: ')
             .bold(false)
             .text(receiptData.customerName)
             .newLine()
-            .size('normal')
+            .customSize(1, 1)
             .lines(1);
         }
 
@@ -370,12 +408,12 @@ export class ESCPOSFormatter {
           formatter
             .align('left')
             .bold(true)
-            .size('large')
+            .customSize(formatter.fontSettings.header.width, formatter.fontSettings.header.height)
             .text('Puh: ')
             .bold(false)
             .text(receiptData.customerPhone)
             .newLine()
-            .size('normal')
+            .customSize(1, 1)
             .lines(1);
         }
 
@@ -400,7 +438,7 @@ export class ESCPOSFormatter {
           formatter
             .align('left')
             .bold(true)
-            .size('large')
+            .customSize(formatter.fontSettings.header.width, formatter.fontSettings.header.height)
             .text('Osoite:')
             .newLine()
             .bold(false)
@@ -413,7 +451,7 @@ export class ESCPOSFormatter {
               .text(line.trim())
               .newLine();
           });
-          formatter.size('normal').lines(1);
+          formatter.customSize(1, 1).lines(1);
         }
 
         formatter
@@ -492,9 +530,9 @@ export class ESCPOSFormatter {
         
         formatter
           .bold(true)
-          .size('large')
+          .customSize(formatter.fontSettings.menuItems.width, formatter.fontSettings.menuItems.height)
           .columns(itemName, itemPrice, 32)
-          .size('normal')
+          .customSize(1, 1)
           .bold(false)
           .lines(1);
 
@@ -525,10 +563,10 @@ export class ESCPOSFormatter {
           let freeCount = 0;
           
           formatter
-            .size('large')
+            .customSize(formatter.fontSettings.toppings.width, formatter.fontSettings.toppings.height)
             .text('  Lisatäytteet:')
             .newLine()
-            .size('normal')
+            .customSize(1, 1)
             .lines(1);
           
           for (let i = 0; i < item.toppings.length; i++) {
@@ -558,9 +596,9 @@ export class ESCPOSFormatter {
             }
             
             if (toppingPrice) {
-              formatter.size('large').columns(toppingLine, toppingPrice, 32).size('normal');
+              formatter.customSize(formatter.fontSettings.toppings.width, formatter.fontSettings.toppings.height).columns(toppingLine, toppingPrice, 32).customSize(1, 1);
             } else {
-              formatter.size('large').text(toppingLine).newLine().size('normal');
+              formatter.customSize(formatter.fontSettings.toppings.width, formatter.fontSettings.toppings.height).text(toppingLine).newLine().customSize(1, 1);
             }
           }
           
@@ -656,28 +694,30 @@ export class ESCPOSFormatter {
       if (originalOrder) {
         if (originalOrder.subtotal) {
           formatter
-            .size('large')
+            .customSize(formatter.fontSettings.totals.width, formatter.fontSettings.totals.height)
             .columns('Välisumma:', `${parseFloat(originalOrder.subtotal).toFixed(2)}e`)
-            .size('large');
+            .customSize(1, 1);
         }
 
         if (originalOrder.deliveryFee && parseFloat(originalOrder.deliveryFee) > 0) {
           formatter
-            .size('large')
+            .customSize(formatter.fontSettings.totals.width, formatter.fontSettings.totals.height)
             .columns('Toimitusmaksu:', `${parseFloat(originalOrder.deliveryFee).toFixed(2)}e`)
-            .size('large');
+            .customSize(1, 1);
         }
 
         if (originalOrder.smallOrderFee && parseFloat(originalOrder.smallOrderFee) > 0) {
           formatter
-            .size('large')
+            .customSize(formatter.fontSettings.totals.width, formatter.fontSettings.totals.height)
             .columns('Pientilauslisä:', `${parseFloat(originalOrder.smallOrderFee).toFixed(2)}e`)
-            .size('large');
+            .customSize(1, 1);
         }
 
         if (originalOrder.discount && parseFloat(originalOrder.discount) > 0) {
           formatter
-            .columns('Alennus:', `-${parseFloat(originalOrder.discount).toFixed(2)}e`);
+            .customSize(formatter.fontSettings.totals.width, formatter.fontSettings.totals.height)
+            .columns('Alennus:', `-${parseFloat(originalOrder.discount).toFixed(2)}e`)
+            .customSize(1, 1);
         }
       }
 
@@ -687,11 +727,11 @@ export class ESCPOSFormatter {
         .newLine()
         .align('center')
         .bold(true)
-        .size('large')
+        .customSize(formatter.fontSettings.finalTotal.width, formatter.fontSettings.finalTotal.height)
         .text(`YHTEENSA: ${receiptData.total.toFixed(2)}e`)
         .newLine()
         .bold(false)
-        .size('normal')
+        .customSize(1, 1)
         .text('================================')
         .newLine()
         .newLine();
@@ -1069,38 +1109,38 @@ export class ESCPOSFormatter {
         .lines(1);
 
       if (originalOrder.subtotal) {
-        formatter.bold(true).size('large').columns('Välisumma:', `${parseFloat(originalOrder.subtotal).toFixed(2)}`).bold(false).size('normal');
+        formatter.bold(true).customSize(formatter.fontSettings.totals.width, formatter.fontSettings.totals.height).columns('Välisumma:', `${parseFloat(originalOrder.subtotal).toFixed(2)}`).bold(false).customSize(1, 1);
       }
 
       if (originalOrder.deliveryFee && parseFloat(originalOrder.deliveryFee) > 0) {
-        formatter.bold(true).size('large').columns('Toimitusmaksu:', `${parseFloat(originalOrder.deliveryFee).toFixed(2)}`).bold(false).size('normal');
+        formatter.bold(true).customSize(formatter.fontSettings.totals.width, formatter.fontSettings.totals.height).columns('Toimitusmaksu:', `${parseFloat(originalOrder.deliveryFee).toFixed(2)}`).bold(false).customSize(1, 1);
       }
 
       if (originalOrder.smallOrderFee && parseFloat(originalOrder.smallOrderFee) > 0) {
-        formatter.bold(true).size('large').columns('Pientilauslisa:', `${parseFloat(originalOrder.smallOrderFee).toFixed(2)}`).bold(false).size('normal');
+        formatter.bold(true).customSize(formatter.fontSettings.totals.width, formatter.fontSettings.totals.height).columns('Pientilauslisa:', `${parseFloat(originalOrder.smallOrderFee).toFixed(2)}`).bold(false).customSize(1, 1);
       }
 
       if (originalOrder.discount && parseFloat(originalOrder.discount) > 0) {
-        formatter.bold(true).size('large').columns('Alennus:', `-${parseFloat(originalOrder.discount).toFixed(2)}`).bold(false).size('normal');
+        formatter.bold(true).customSize(formatter.fontSettings.totals.width, formatter.fontSettings.totals.height).columns('Alennus:', `-${parseFloat(originalOrder.discount).toFixed(2)}`).bold(false).customSize(1, 1);
       }
 
       formatter.lines(1);
       formatter.separator('=', 48);
       formatter
         .bold(true)
-        .size('double')
+        .customSize(formatter.fontSettings.finalTotal.width, formatter.fontSettings.finalTotal.height)
         .columns('YHTEENSÄ:', `${receiptData.total.toFixed(2)}`)
         .bold(false)
-        .size('normal');
+        .customSize(1, 1);
       formatter.separator('=', 48);
     } else {
       formatter.separator('=', 48);
       formatter
         .bold(true)
-        .size('double')
+        .customSize(formatter.fontSettings.finalTotal.width, formatter.fontSettings.finalTotal.height)
         .columns('YHTEENSÄ:', `${receiptData.total.toFixed(2)}`)
         .bold(false)
-        .size('normal');
+        .customSize(1, 1);
       formatter.separator('=', 48);
     }
 
