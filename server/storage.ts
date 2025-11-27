@@ -685,9 +685,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertPrinter(printer: InsertPrinter): Promise<Printer> {
+    console.log('🔵 [DATABASE] Upserting printer:', {
+      id: printer.id,
+      name: printer.name,
+      address: printer.address,
+      port: printer.port,
+      printerType: printer.printerType,
+      hasFontSettings: !!printer.fontSettings
+    });
+    
     const existing = await this.getPrinter(printer.id);
     
     if (existing) {
+      console.log('🔄 [DATABASE] Updating existing printer:', printer.id);
       const [updated] = await db
         .update(printers)
         .set({
@@ -701,12 +711,15 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(printers.id, printer.id))
         .returning();
+      console.log('✅ [DATABASE] Printer updated successfully:', updated.id);
       return updated;
     } else {
+      console.log('➕ [DATABASE] Creating new printer:', printer.id);
       const [created] = await db
         .insert(printers)
         .values(printer)
         .returning();
+      console.log('✅ [DATABASE] Printer created successfully:', created.id);
       return created;
     }
   }

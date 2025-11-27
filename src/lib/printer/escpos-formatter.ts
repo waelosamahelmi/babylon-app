@@ -240,42 +240,29 @@ export class ESCPOSFormatter {
   }
 
   /**
-   * Format a complete receipt with modern design, logo, and QR code
+   * Format a complete receipt - TEXT ONLY VERSION (no async logo/QR)
    */
-  static async formatReceipt(receiptData: ReceiptData, originalOrder?: any): Promise<Uint8Array> {
+  static formatReceipt(receiptData: ReceiptData, originalOrder?: any): Uint8Array {
     const formatter = new ESCPOSFormatter();
 
     try {
       // ============================================
-      // HEADER SECTION WITH LOGO
+      // HEADER SECTION - TEXT ONLY
       // ============================================
       
-      // Download and print logo
-      try {
-        const logoUrl = 'https://ravintolababylon.fi/wp-content/uploads/2023/06/logo-header-01.webp';
-        const logoBitmap = await imageUrlToBitmap(logoUrl, 384); // 384 dots = 48mm for 8 dots/mm printer
-        
-        formatter
-          .align('center')
-          .lines(1);
-        
-        // Add logo image commands
-        const logoCommands = bitmapToESCPOS(logoBitmap);
-        formatter.commands.push(...logoCommands);
-        
-        formatter.lines(2);
-      } catch (error) {
-        console.error('Failed to load logo:', error);
-        // Fallback to text header if logo fails
-        formatter
-          .align('center')
-          .bold(true)
-          .size('double')
-          .line('Ravintola Babylon')
-          .size('normal')
-          .bold(false)
-          .lines(1);
-      }
+      formatter
+        .align('center')
+        .bold(true)
+        .size('large')
+        .text('RAVINTOLA BABYLON')
+        .newLine()
+        .size('normal')
+        .text('Vapaudenkatu 28, 15140 Lahti')
+        .newLine()
+        .text('+358-3781-2222')
+        .newLine()
+        .bold(false)
+        .lines(1);
 
       // Simple separator
       formatter
@@ -710,42 +697,20 @@ export class ESCPOSFormatter {
         .newLine();
 
       // ============================================
-      // QR CODE SECTION
+      // WEBSITE SECTION - TEXT ONLY
       // ============================================
       
-      try {
-        formatter
-          .align('center')
-          .bold(true)
-          .size('normal')
-          .text(`${ICONS.QR} SKANNAA VERKKOSIVULLE ${ICONS.QR}`)
-          .newLine()
-          .bold(false)
-          .lines(1);
-
-        // Generate QR code for website
-        const qrBitmap = await generateQRCodeBitmap('https://ravintolababylon.fi', 200);
-        const qrCommands = bitmapToESCPOS(qrBitmap);
-        formatter.commands.push(...qrCommands);
-        
-        formatter
-          .lines(1)
-          .bold(true)
-          .text('ravintolababylon.fi')
-          .newLine()
-          .bold(false)
-          .lines(2);
-      } catch (error) {
-        console.error('Failed to generate QR code:', error);
-        // Fallback to text URL
-        formatter
-          .align('center')
-          .bold(true)
-          .line('Vieraile verkkosivuillamme:')
-          .line('ravintolababylon.fi')
-          .bold(false)
-          .lines(2);
-      }
+      formatter
+        .align('center')
+        .bold(true)
+        .text('Vieraile verkkosivuillamme:')
+        .newLine()
+        .size('large')
+        .text('ravintolababylon.fi')
+        .newLine()
+        .size('normal')
+        .bold(false)
+        .lines(2);
 
       // ============================================
       // FOOTER
@@ -754,15 +719,16 @@ export class ESCPOSFormatter {
       formatter
         .align('center')
         .bold(true)
-        .text(createDecorativeLine('═', 48))
+        .text('================================')
         .newLine()
         .size('large')
-        .text(`${ICONS.HEART}  Kiitos tilauksestasi!  ${ICONS.HEART}`)
+        .text('Kiitos tilauksestasi!')
         .newLine()
         .size('normal')
-        .line('Tervetuloa uudelleen!')
+        .text('Tervetuloa uudelleen!')
+        .newLine()
         .bold(false)
-        .text(createDecorativeLine('═', 48))
+        .text('================================')
         .newLine()
         .lines(3);
 

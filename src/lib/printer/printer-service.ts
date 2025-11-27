@@ -925,7 +925,8 @@ export class PrinterService {
           const starFormatter = new StarFormatter(fontSettings);
           printData = starFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
         } else {
-          printData = await ESCPOSFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
+          // ESC/POS formatter is now synchronous (text-only)
+          printData = ESCPOSFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
         }
       } else if (job.content.type === 'text' && typeof job.content.data === 'string') {
         printData = ESCPOSFormatter.formatText(job.content.data);

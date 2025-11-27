@@ -171,11 +171,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all printers
   app.get("/api/printers", async (req, res) => {
     try {
+      console.log('📥 [API] GET /api/printers - Fetching all printers');
       const printers = await storage.getAllPrinters();
+      console.log(`✅ [API] Found ${printers.length} printers`);
       res.json(printers);
     } catch (error) {
-      console.error('❌ Failed to get printers:', error);
-      res.status(500).json({ error: "Failed to get printers" });
+      console.error('❌ [API] Failed to get printers:', error);
+      console.error('❌ [API] Error details:', error instanceof Error ? error.message : String(error));
+      console.error('❌ [API] Error stack:', error instanceof Error ? error.stack : '');
+      res.status(500).json({ error: "Failed to get printers", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -198,7 +202,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id, name, address, port, printerType, isActive, fontSettings } = req.body;
       
+      console.log('📥 [API] POST /api/printers - Request body:', { id, name, address, port, printerType, isActive, hasFontSettings: !!fontSettings });
+      
       if (!id || !name || !address || !port || !printerType) {
+        console.error('❌ [API] Missing required fields');
         return res.status(400).json({ error: "Missing required fields" });
       }
 
@@ -212,10 +219,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fontSettings: fontSettings || undefined,
       });
 
+      console.log('✅ [API] Printer saved successfully:', printer.id);
       res.json(printer);
     } catch (error) {
-      console.error('❌ Failed to save printer:', error);
-      res.status(500).json({ error: "Failed to save printer" });
+      console.error('❌ [API] Failed to save printer:', error);
+      console.error('❌ [API] Error details:', error instanceof Error ? error.message : String(error));
+      console.error('❌ [API] Error stack:', error instanceof Error ? error.stack : '');
+      res.status(500).json({ error: "Failed to save printer", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -223,6 +233,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/printers/:id", async (req, res) => {
     try {
       const { name, address, port, printerType, isActive, fontSettings } = req.body;
+      
+      console.log('📥 [API] PUT /api/printers/:id - Request:', { id: req.params.id, name, address, port, printerType, isActive, hasFontSettings: !!fontSettings });
       
       const printer = await storage.upsertPrinter({
         id: req.params.id,
@@ -234,10 +246,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fontSettings: fontSettings || undefined,
       });
 
+      console.log('✅ [API] Printer updated successfully:', printer.id);
       res.json(printer);
     } catch (error) {
-      console.error('❌ Failed to update printer:', error);
-      res.status(500).json({ error: "Failed to update printer" });
+      console.error('❌ [API] Failed to update printer:', error);
+      console.error('❌ [API] Error details:', error instanceof Error ? error.message : String(error));
+      console.error('❌ [API] Error stack:', error instanceof Error ? error.stack : '');
+      res.status(500).json({ error: "Failed to update printer", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
