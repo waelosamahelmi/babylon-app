@@ -166,6 +166,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== PRINTER MANAGEMENT ROUTES =====
+  
+  // Get all printers
+  app.get("/api/printers", async (req, res) => {
+    try {
+      const printers = await storage.getAllPrinters();
+      res.json(printers);
+    } catch (error) {
+      console.error('❌ Failed to get printers:', error);
+      res.status(500).json({ error: "Failed to get printers" });
+    }
+  });
+
+  // Get printer by ID
+  app.get("/api/printers/:id", async (req, res) => {
+    try {
+      const printer = await storage.getPrinter(req.params.id);
+      if (!printer) {
+        return res.status(404).json({ error: "Printer not found" });
+      }
+      res.json(printer);
+    } catch (error) {
+      console.error('❌ Failed to get printer:', error);
+      res.status(500).json({ error: "Failed to get printer" });
+    }
+  });
+
+  // Create or update printer
+  app.post("/api/printers", async (req, res) => {
+    try {
+      const { id, name, address, port, printerType, isActive } = req.body;
+      
+      if (!id || !name || !address || !port || !printerType) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const printer = await storage.upsertPrinter({
+        id,
+        name,
+        address,
+        port,
+        printerType,
+        isActive: isActive ?? true,
+      });
+
+      res.json(printer);
+    } catch (error) {
+      console.error('❌ Failed to save printer:', error);
+      res.status(500).json({ error: "Failed to save printer" });
+    }
+  });
+
+  // Update printer
+  app.put("/api/printers/:id", async (req, res) => {
+    try {
+      const { name, address, port, printerType, isActive } = req.body;
+      
+      const printer = await storage.upsertPrinter({
+        id: req.params.id,
+        name,
+        address,
+        port,
+        printerType,
+        isActive,
+      });
+
+      res.json(printer);
+    } catch (error) {
+      console.error('❌ Failed to update printer:', error);
+      res.status(500).json({ error: "Failed to update printer" });
+    }
+  });
+
+  // Delete printer
+  app.delete("/api/printers/:id", async (req, res) => {
+    try {
+      await storage.deletePrinter(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('❌ Failed to delete printer:', error);
+      res.status(500).json({ error: "Failed to delete printer" });
+    }
+  });
+
   // Get all categories
   app.get("/api/categories", async (req, res) => {
     try {

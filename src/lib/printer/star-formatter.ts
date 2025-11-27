@@ -4,7 +4,6 @@
  */
 
 import { ReceiptData, ReceiptItem } from './types';
-import { imageUrlToBitmap } from './image-utils';
 
 /**
  * Translate payment method to Finnish
@@ -29,48 +28,40 @@ function translatePaymentMethod(method: string): string {
 }
 
 export class StarFormatter {
-  private encoder = new TextEncoder();
+  private encoder = new TextEncoder(); // Will use ISO-8859-1 encoding
 
   /**
    * Format receipt data for Star printers
    */
-  async formatReceipt(data: ReceiptData, originalOrder?: any): Promise<Uint8Array> {
+  formatReceipt(data: ReceiptData, originalOrder?: any): Uint8Array {
     const commands: number[] = [];
 
     // Initialize printer
     commands.push(...this.initialize());
 
-    // Set UTF-8 encoding for Finnish characters
-    commands.push(...this.setEncoding('UTF-8'));
+    // Set ISO-8859-1 encoding for Finnish characters (ä, ö, å)
+    commands.push(...this.setEncoding('ISO-8859-1'));
     
     // Set character spacing for better readability
     commands.push(...this.setCharSpacing(2));
 
     // ============================================
-    // LOGO
+    // RESTAURANT NAME AS TITLE
     // ============================================
-    try {
-      const logoUrl = window.location.origin + '/logoblack.png';
-      const logoBitmap = await imageUrlToBitmap(logoUrl, 200); // 200 pixels width
-      commands.push(...this.center());
-      commands.push(...this.printBitmap(logoBitmap));
-      commands.push(...this.lineFeed(2));
-    } catch (error) {
-      console.error('Failed to load logo for Star printer:', error);
-      // Fallback to text header
-      commands.push(...this.center());
-      commands.push(...this.bold(true));
-      commands.push(...this.textSize(1, 2)); // Medium height
-      commands.push(...this.text('Ravintola Babylon'));
-      commands.push(...this.lineFeed(2));
-      commands.push(...this.bold(false));
-    }
+    commands.push(...this.center());
+    commands.push(...this.bold(true));
+    commands.push(...this.textSize(3, 3)); // Extra large for restaurant name
+    commands.push(...this.text('RAVINTOLA'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.text('BABYLON'));
+    commands.push(...this.lineFeed(2));
+    commands.push(...this.bold(false));
 
     // ============================================
     // HEADER - RESTAURANT INFO
     // ============================================
     commands.push(...this.center());
-    commands.push(...this.textSize(2, 2)); // Larger text for all content
+    commands.push(...this.textSize(3, 3)); // Extra large text for all content
     commands.push(...this.text('Vapaudenkatu 28, 15140 Lahti'));
     commands.push(...this.lineFeed());
     commands.push(...this.text('+358-3781-2222'));
@@ -84,10 +75,10 @@ export class StarFormatter {
     // ============================================
     commands.push(...this.center());
     commands.push(...this.bold(true));
-    commands.push(...this.textSize(2, 3)); // Extra large for order number
+    commands.push(...this.textSize(4, 4)); // Extra extra large for order number
     commands.push(...this.text(`TILAUS #${data.orderNumber}`));
     commands.push(...this.lineFeed());
-    commands.push(...this.textSize(2, 2)); // Back to normal large
+    commands.push(...this.textSize(3, 3)); // Back to normal large
     commands.push(...this.bold(false));
     commands.push(...this.lineFeed());
     
@@ -218,12 +209,14 @@ export class StarFormatter {
           }
         }
 
-        // Main item line with quantity and price
+        // Main item line with quantity and price on same line
         const itemLine = `${item.quantity}x ${displayName}`;
         const priceLine = `${item.totalPrice.toFixed(2)}e`;
         
         commands.push(...this.bold(true));
+        commands.push(...this.textSize(4, 4)); // Extra large for menu items
         commands.push(...this.twoColumn(itemLine, priceLine, 48));
+        commands.push(...this.textSize(3, 3)); // Back to normal
         commands.push(...this.bold(false));
         commands.push(...this.lineFeed());
 
@@ -381,8 +374,8 @@ export class StarFormatter {
     commands.push(...this.lineFeed());
     commands.push(...this.center());
     commands.push(...this.bold(true));
-    commands.push(...this.textSize(3, 3)); // Extra large for total
-    commands.push(...this.text(`YHTEENSÄ: ${data.total.toFixed(2)}e`));
+    commands.push(...this.textSize(4, 4)); // Extra extra large for total
+    commands.push(...this.text(`YHTEENSA: ${data.total.toFixed(2)}e`));
     commands.push(...this.lineFeed());
     commands.push(...this.textSize(2, 2)); // Back to normal large
     commands.push(...this.bold(false));
@@ -422,7 +415,11 @@ export class StarFormatter {
    * Set encoding to UTF-8 (Star supports UTF-8)
    */
   private setEncoding(encoding: string): number[] {
-    if (encoding === 'UTF-8') {
+    if (encoding === 'ISO-8859-1' || encoding === 'Latin-1') {
+      // Set code page to Western European (includes Finnish ä, ö, å)
+      // Star printers: ESC GS t + code page number
+      return [0x1B, 0x1D, 0x74, 0x00]; // Code page 0 = CP437 (includes Nordic chars)
+    } else if (encoding === 'UTF-8') {
       // Set code page to UTF-8 (Star printers)
       return [0x1B, 0x1D, 0x74, 0x20]; // Select UTF-8
     }
@@ -514,9 +511,33 @@ export class StarFormatter {
    * Convert text to bytes with UTF-8 encoding
    */
   private text(str: string): number[] {
-    // Encode using UTF-8
-    const encoded = this.encoder.encode(str);
-    return Array.from(encoded);
+    // Manual encoding for CP437 (includes Finnish characters)
+    const bytes: number[] = [];
+    
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      const code = char.charCodeAt(0);
+      
+      // Map Finnish special characters to CP437 codes
+      if (char === 'ä') bytes.push(0x84);      // ä = 132
+      else if (char === 'Ä') bytes.push(0x8E); // Ä = 142
+      else if (char === 'ö') bytes.push(0x94); // ö = 148
+      else if (char === 'Ö') bytes.push(0x99); // Ö = 153
+      else if (char === 'å') bytes.push(0x86); // å = 134
+      else if (char === 'Å') bytes.push(0x8F); // Å = 143
+      else if (char === 'é') bytes.push(0x82); // é = 130
+      else if (char === 'É') bytes.push(0x90); // É = 144
+      else if (code < 128) {
+        // Standard ASCII
+        bytes.push(code);
+      } else {
+        // For other characters, try to use UTF-8 encoding
+        const encoded = this.encoder.encode(char);
+        bytes.push(...Array.from(encoded));
+      }
+    }
+    
+    return bytes;
   }
 
   /**
@@ -563,7 +584,7 @@ export class StarFormatter {
     const commands: number[] = [];
 
     commands.push(...this.initialize());
-    commands.push(...this.setEncoding('UTF-8'));
+    commands.push(...this.setEncoding('ISO-8859-1'));
     commands.push(...this.center());
     commands.push(...this.bold(true));
     commands.push(...this.textSize(2, 2));

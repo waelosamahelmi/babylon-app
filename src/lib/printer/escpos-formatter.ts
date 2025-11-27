@@ -23,7 +23,7 @@ function translatePaymentMethod(method: string): string {
     'credit card': 'Kortti',
     'debit card': 'Kortti',
     'cash': 'Kateinen',
-    'käteinen': 'Kateinen',
+    'käteinen': 'Käteinen',
     'kortti': 'Kortti',
     'stripe': 'Kortti',
     'online': 'Verkkomaksu',
@@ -598,7 +598,7 @@ export class ESCPOSFormatter {
         formatter
           .lines(1)
           .bold(true)
-          .text(createDecorativeLine('═', 48))
+          .text(createDecorativeLine('=', 32))
           .newLine()
           .align('center')
           .size('large')
@@ -606,8 +606,8 @@ export class ESCPOSFormatter {
           .line('ERIKOISOHJEET')
           .underline(false)
           .bold(false)
-          .size('normal')
-          .text(createDecorativeLine('─', 48))
+          .size('large')
+          .text(createDecorativeLine('-', 32))
           .newLine()
           .lines(1)
           .align('left');
@@ -690,7 +690,7 @@ export class ESCPOSFormatter {
         .align('center')
         .bold(true)
         .size('large')
-        .text(`YHTEENSÄ: ${receiptData.total.toFixed(2)}e`)
+        .text(`YHTEENSA: ${receiptData.total.toFixed(2)}e`)
         .newLine()
         .bold(false)
         .size('normal')

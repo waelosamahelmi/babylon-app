@@ -2,9 +2,11 @@
  * Local Storage Printer Manager
  * Primary storage system for printer configurations using browser localStorage
  * Provides reliable, offline-first printer management
+ * Now syncs with database for persistence across app updates
  */
 
 import { PrinterDevice } from './printer/types';
+import { DatabasePrinterManager } from './database-printer-manager';
 
 export interface LocalPrinterStorage {
   printers: PrinterDevice[];
@@ -20,11 +22,14 @@ export class LocalPrinterManager {
 
   /**
    * Load all printer data from localStorage
+   * Also syncs with database if available
    */
   static load(): LocalPrinterStorage {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (!stored) {
+        // Try to load from database
+        this.syncFromDatabase();
         return this.getDefaultStorage();
       }
 
@@ -37,10 +42,46 @@ export class LocalPrinterManager {
       }
 
       console.log(`📄 Loaded ${data.printers.length} printers from localStorage`);
+      
+      // Sync with database in background
+      this.syncFromDatabase();
+      
       return data;
     } catch (error) {
       console.error('❌ Failed to load printers from localStorage:', error);
       return this.getDefaultStorage();
+    }
+  }
+
+  /**
+   * Sync printers from database to localStorage
+   */
+  static async syncFromDatabase(): Promise<void> {
+    try {
+      const dbPrinters = await DatabasePrinterManager.loadPrinters();
+      
+      if (dbPrinters.length === 0) {
+        return; // No printers in database
+      }
+
+      const data = this.load();
+      let hasChanges = false;
+
+      // Add any printers from database that aren't in localStorage
+      for (const dbPrinter of dbPrinters) {
+        const exists = data.printers.some(p => p.id === dbPrinter.id);
+        if (!exists) {
+          data.printers.push(dbPrinter);
+          hasChanges = true;
+          console.log(`📥 Synced printer from database: ${dbPrinter.name}`);
+        }
+      }
+
+      if (hasChanges) {
+        this.save(data);
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to sync printers from database:', error);
     }
   }
 
@@ -83,6 +124,11 @@ export class LocalPrinterManager {
     }
 
     this.save(data);
+    
+    // Sync to database in background (don't wait for it)
+    DatabasePrinterManager.syncPrinter(printer).catch(err => {
+      console.warn('⚠️ Failed to sync printer to database:', err);
+    });
   }
 
   /**
@@ -106,6 +152,11 @@ export class LocalPrinterManager {
       
       console.log(`🗑️ Removed printer: ${printer.name}`);
       this.save(data);
+      
+      // Delete from database in background
+      DatabasePrinterManager.deletePrinter(printerId).catch(err => {
+        console.warn('⚠️ Failed to delete printer from database:', err);
+      });
     }
   }
 

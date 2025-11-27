@@ -141,6 +141,17 @@ export const categoryToppingGroups = pgTable("category_topping_groups", {
   toppingGroupId: integer("topping_group_id").references(() => toppingGroups.id).notNull(),
 });
 
+export const printers = pgTable("printers", {
+  id: text("id").primaryKey(), // UUID from device
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  port: integer("port").notNull(),
+  printerType: text("printer_type").notNull(), // 'star' or 'escpos'
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const restaurantSettings = pgTable("restaurant_settings", {
   id: serial("id").primaryKey(),
   isOpen: boolean("is_open").default(true),
@@ -236,6 +247,11 @@ export const insertCategoryToppingGroupSchema = createInsertSchema(categoryToppi
   id: true,
 });
 
+export const insertPrinterSchema = createInsertSchema(printers).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertRestaurantSettingsSchema = createInsertSchema(restaurantSettings).omit({
   id: true,
   updatedAt: true,
@@ -258,6 +274,7 @@ export type ToppingGroup = typeof toppingGroups.$inferSelect;
 export type ToppingGroupItem = typeof toppingGroupItems.$inferSelect;
 export type MenuItemToppingGroup = typeof menuItemToppingGroups.$inferSelect;
 export type CategoryToppingGroup = typeof categoryToppingGroups.$inferSelect;
+export type Printer = typeof printers.$inferSelect;
 export type RestaurantSettings = typeof restaurantSettings.$inferSelect;
 export type RestaurantConfig = typeof restaurantConfig.$inferSelect;
 
@@ -272,5 +289,6 @@ export type InsertToppingGroup = z.infer<typeof insertToppingGroupSchema>;
 export type InsertToppingGroupItem = z.infer<typeof insertToppingGroupItemSchema>;
 export type InsertMenuItemToppingGroup = z.infer<typeof insertMenuItemToppingGroupSchema>;
 export type InsertCategoryToppingGroup = z.infer<typeof insertCategoryToppingGroupSchema>;
+export type InsertPrinter = z.infer<typeof insertPrinterSchema>;
 export type InsertRestaurantSettings = z.infer<typeof insertRestaurantSettingsSchema>;
 export type InsertRestaurantConfig = z.infer<typeof insertRestaurantConfigSchema>;

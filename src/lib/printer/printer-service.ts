@@ -921,7 +921,7 @@ export class PrinterService {
       if (job.content.type === 'receipt' && typeof job.content.data === 'object') {
         if (isStarPrinter) {
           const starFormatter = new StarFormatter();
-          printData = await starFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
+          printData = starFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
         } else {
           printData = await ESCPOSFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
         }

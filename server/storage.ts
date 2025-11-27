@@ -1,7 +1,7 @@
 import { 
-  Category, MenuItem, Order, OrderItem, Topping, ToppingGroup, ToppingGroupItem, MenuItemToppingGroup, CategoryToppingGroup, RestaurantSettings,
-  InsertCategory, InsertMenuItem, InsertOrder, InsertOrderItem, InsertTopping, InsertToppingGroup, InsertToppingGroupItem, InsertMenuItemToppingGroup, InsertCategoryToppingGroup, InsertRestaurantSettings,
-  categories, menuItems, orders, orderItems, toppings, toppingGroups, toppingGroupItems, menuItemToppingGroups, categoryToppingGroups, restaurantSettings
+  Category, MenuItem, Order, OrderItem, Topping, ToppingGroup, ToppingGroupItem, MenuItemToppingGroup, CategoryToppingGroup, RestaurantSettings, Printer,
+  InsertCategory, InsertMenuItem, InsertOrder, InsertOrderItem, InsertTopping, InsertToppingGroup, InsertToppingGroupItem, InsertMenuItemToppingGroup, InsertCategoryToppingGroup, InsertRestaurantSettings, InsertPrinter,
+  categories, menuItems, orders, orderItems, toppings, toppingGroups, toppingGroupItems, menuItemToppingGroups, categoryToppingGroups, restaurantSettings, printers
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -60,6 +60,12 @@ export interface IStorage {
   // Restaurant Settings
   getRestaurantSettings(): Promise<RestaurantSettings | undefined>;
   updateRestaurantSettings(settings: Partial<InsertRestaurantSettings>): Promise<RestaurantSettings>;
+  
+  // Printers
+  getAllPrinters(): Promise<Printer[]>;
+  getPrinter(id: string): Promise<Printer | undefined>;
+  upsertPrinter(printer: InsertPrinter): Promise<Printer>;
+  deletePrinter(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -280,6 +286,104 @@ export class MemStorage implements IStorage {
     const newItem: OrderItem = { id: this.currentOrderItemId++, ...item };
     this.orderItems.set(newItem.id, newItem);
     return newItem;
+  }
+
+  // Printer Methods (Not implemented for MemStorage)
+  async getAllPrinters(): Promise<Printer[]> {
+    return [];
+  }
+
+  async getPrinter(id: string): Promise<Printer | undefined> {
+    return undefined;
+  }
+
+  async upsertPrinter(printer: InsertPrinter): Promise<Printer> {
+    throw new Error("Printer management not supported in MemStorage");
+  }
+
+  async deletePrinter(id: string): Promise<boolean> {
+    return false;
+  }
+
+  // Stub methods for other required interface methods
+  async getToppings(): Promise<Topping[]> {
+    return [];
+  }
+
+  async createTopping(topping: InsertTopping): Promise<Topping> {
+    throw new Error("Not implemented");
+  }
+
+  async updateTopping(id: number, topping: Partial<InsertTopping>): Promise<Topping | undefined> {
+    return undefined;
+  }
+
+  async deleteTopping(id: number): Promise<boolean> {
+    return false;
+  }
+
+  async getToppingsByCategory(category: string): Promise<Topping[]> {
+    return [];
+  }
+
+  async getToppingGroups(): Promise<ToppingGroup[]> {
+    return [];
+  }
+
+  async createToppingGroup(group: InsertToppingGroup): Promise<ToppingGroup> {
+    throw new Error("Not implemented");
+  }
+
+  async updateToppingGroup(id: number, group: Partial<InsertToppingGroup>): Promise<ToppingGroup | undefined> {
+    return undefined;
+  }
+
+  async deleteToppingGroup(id: number): Promise<boolean> {
+    return false;
+  }
+
+  async getToppingGroupItems(groupId: number): Promise<ToppingGroupItem[]> {
+    return [];
+  }
+
+  async addToppingToGroup(groupId: number, toppingId: number): Promise<ToppingGroupItem> {
+    throw new Error("Not implemented");
+  }
+
+  async removeToppingFromGroup(groupId: number, toppingId: number): Promise<boolean> {
+    return false;
+  }
+
+  async getMenuItemToppingGroups(menuItemId: number): Promise<ToppingGroup[]> {
+    return [];
+  }
+
+  async assignToppingGroupToMenuItem(menuItemId: number, groupId: number): Promise<MenuItemToppingGroup> {
+    throw new Error("Not implemented");
+  }
+
+  async removeToppingGroupFromMenuItem(menuItemId: number, groupId: number): Promise<boolean> {
+    return false;
+  }
+
+  async getCategoryToppingGroups(categoryId: number): Promise<ToppingGroup[]> {
+    return [];
+  }
+
+  async assignToppingGroupToCategory(categoryId: number, groupId: number): Promise<CategoryToppingGroup> {
+    throw new Error("Not implemented");
+  }
+
+  async removeToppingGroupFromCategory(categoryId: number, groupId: number): Promise<boolean> {
+    return false;
+  }
+
+  async getRestaurantSettings(): Promise<RestaurantSettings | undefined> {
+    return undefined;
+  }
+
+  async updateRestaurantSettings(settings: Partial<InsertRestaurantSettings>): Promise<RestaurantSettings> {
+    throw new Error("Not implemented");
   }
 }
 
@@ -568,6 +672,49 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  // Printer Methods
+  async getAllPrinters(): Promise<Printer[]> {
+    return await db.select().from(printers).where(eq(printers.isActive, true));
+  }
+
+  async getPrinter(id: string): Promise<Printer | undefined> {
+    const [printer] = await db.select().from(printers).where(eq(printers.id, id)).limit(1);
+    return printer || undefined;
+  }
+
+  async upsertPrinter(printer: InsertPrinter): Promise<Printer> {
+    const existing = await this.getPrinter(printer.id);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(printers)
+        .set({
+          name: printer.name,
+          address: printer.address,
+          port: printer.port,
+          printerType: printer.printerType,
+          isActive: printer.isActive,
+          updatedAt: new Date(),
+        })
+        .where(eq(printers.id, printer.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(printers)
+        .values(printer)
+        .returning();
+      return created;
+    }
+  }
+
+  async deletePrinter(id: string): Promise<boolean> {
+    const result = await db.update(printers)
+      .set({ isActive: false })
+      .where(eq(printers.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 
