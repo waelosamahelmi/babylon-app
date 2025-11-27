@@ -427,9 +427,6 @@ export class ESCPOSFormatter {
               .newLine();
           });
           formatter.size('normal').lines(1);
-              .newLine();
-          });
-          formatter.size('normal').lines(1);
         }
 
         formatter
