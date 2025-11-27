@@ -920,7 +920,9 @@ export class PrinterService {
       
       if (job.content.type === 'receipt' && typeof job.content.data === 'object') {
         if (isStarPrinter) {
-          const starFormatter = new StarFormatter();
+          // Get font settings from device metadata or use defaults
+          const fontSettings = device.metadata?.fontSettings;
+          const starFormatter = new StarFormatter(fontSettings);
           printData = starFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
         } else {
           printData = await ESCPOSFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);

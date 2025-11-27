@@ -27,8 +27,35 @@ function translatePaymentMethod(method: string): string {
   return translations[methodLower] || method;
 }
 
+export interface FontSettings {
+  restaurantName: { width: number; height: number };
+  header: { width: number; height: number };
+  orderNumber: { width: number; height: number };
+  menuItems: { width: number; height: number };
+  toppings: { width: number; height: number };
+  totals: { width: number; height: number };
+  finalTotal: { width: number; height: number };
+  characterSpacing: number;
+}
+
 export class StarFormatter {
   private encoder = new TextEncoder(); // Will use ISO-8859-1 encoding
+  private fontSettings: FontSettings;
+
+  constructor(fontSettings?: Partial<FontSettings>) {
+    // Default font settings
+    this.fontSettings = {
+      restaurantName: { width: 2, height: 2 },
+      header: { width: 2, height: 2 },
+      orderNumber: { width: 2, height: 3 },
+      menuItems: { width: 2, height: 2 },
+      toppings: { width: 1, height: 1 },
+      totals: { width: 2, height: 2 },
+      finalTotal: { width: 3, height: 3 },
+      characterSpacing: 0,
+      ...fontSettings
+    };
+  }
 
   /**
    * Format receipt data for Star printers
@@ -39,18 +66,18 @@ export class StarFormatter {
     // Initialize printer
     commands.push(...this.initialize());
 
-    // Set ISO-8859-1 encoding for Finnish characters (ä, ö, å)
-    commands.push(...this.setEncoding('ISO-8859-1'));
+    // Set CP850 encoding for Finnish characters (ä, ö, å)
+    commands.push(...this.setEncoding('CP850'));
     
-    // Set character spacing (0 = normal)
-    commands.push(...this.setCharSpacing(0));
+    // Set character spacing from settings
+    commands.push(...this.setCharSpacing(this.fontSettings.characterSpacing));
 
     // ============================================
     // RESTAURANT NAME AS TITLE
     // ============================================
     commands.push(...this.center());
     commands.push(...this.bold(true));
-    commands.push(...this.textSize(2, 2)); // Large for restaurant name
+    commands.push(...this.textSize(this.fontSettings.restaurantName.width, this.fontSettings.restaurantName.height));
     commands.push(...this.text('RAVINTOLA'));
     commands.push(...this.lineFeed());
     commands.push(...this.text('BABYLON'));
@@ -61,7 +88,7 @@ export class StarFormatter {
     // HEADER - RESTAURANT INFO
     // ============================================
     commands.push(...this.center());
-    commands.push(...this.textSize(2, 2)); // Large text for all content
+    commands.push(...this.textSize(this.fontSettings.header.width, this.fontSettings.header.height));
     commands.push(...this.text('Vapaudenkatu 28, 15140 Lahti'));
     commands.push(...this.lineFeed());
     commands.push(...this.text('+358-3781-2222'));
@@ -75,10 +102,10 @@ export class StarFormatter {
     // ============================================
     commands.push(...this.center());
     commands.push(...this.bold(true));
-    commands.push(...this.textSize(2, 3)); // Large width, extra height for order number
+    commands.push(...this.textSize(this.fontSettings.orderNumber.width, this.fontSettings.orderNumber.height));
     commands.push(...this.text(`TILAUS #${data.orderNumber}`));
     commands.push(...this.lineFeed());
-    commands.push(...this.textSize(2, 2)); // Back to normal large
+    commands.push(...this.textSize(this.fontSettings.header.width, this.fontSettings.header.height));
     commands.push(...this.bold(false));
     commands.push(...this.lineFeed());
     
@@ -214,9 +241,9 @@ export class StarFormatter {
         const priceLine = `${item.totalPrice.toFixed(2)}e`;
         
         commands.push(...this.bold(true));
-        commands.push(...this.textSize(2, 2)); // Large for menu items
+        commands.push(...this.textSize(this.fontSettings.menuItems.width, this.fontSettings.menuItems.height));
         commands.push(...this.twoColumn(itemLine, priceLine, 48));
-        commands.push(...this.textSize(2, 2)); // Keep same size
+        commands.push(...this.textSize(this.fontSettings.header.width, this.fontSettings.header.height));
         commands.push(...this.bold(false));
         commands.push(...this.lineFeed());
 
@@ -374,7 +401,7 @@ export class StarFormatter {
     commands.push(...this.lineFeed());
     commands.push(...this.center());
     commands.push(...this.bold(true));
-    commands.push(...this.textSize(3, 3)); // Extra large for total
+    commands.push(...this.textSize(this.fontSettings.finalTotal.width, this.fontSettings.finalTotal.height));
     commands.push(...this.text(`YHTEENSA: ${data.total.toFixed(2)}e`));
     commands.push(...this.lineFeed());
     commands.push(...this.textSize(2, 2)); // Back to normal large
@@ -412,16 +439,18 @@ export class StarFormatter {
   }
 
   /**
-   * Set encoding to UTF-8 (Star supports UTF-8)
+   * Set encoding to CP850 (Multilingual Latin I - supports Finnish)
    */
   private setEncoding(encoding: string): number[] {
-    if (encoding === 'ISO-8859-1' || encoding === 'Latin-1') {
-      // Set code page to Western European (includes Finnish ä, ö, å)
-      // Star printers: ESC GS t + code page number
-      return [0x1B, 0x1D, 0x74, 0x00]; // Code page 0 = CP437 (includes Nordic chars)
+    if (encoding === 'CP850' || encoding === 'ISO-8859-1') {
+      // ESC t 16 = Code Page 850 (Multilingual Latin I - best for Finnish)
+      return [0x1B, 0x74, 0x10];
+    } else if (encoding === 'CP437') {
+      // ESC t 0 = Code Page 437 (Nordic)
+      return [0x1B, 0x74, 0x00];
     } else if (encoding === 'UTF-8') {
-      // Set code page to UTF-8 (Star printers)
-      return [0x1B, 0x1D, 0x74, 0x20]; // Select UTF-8
+      // ESC GS t 32 = UTF-8 (may not work on all Star printers)
+      return [0x1B, 0x1D, 0x74, 0x20];
     }
     return [];
   }
@@ -511,33 +540,10 @@ export class StarFormatter {
    * Convert text to bytes with UTF-8 encoding
    */
   private text(str: string): number[] {
-    // Manual encoding for CP437 (includes Finnish characters)
-    const bytes: number[] = [];
-    
-    for (let i = 0; i < str.length; i++) {
-      const char = str[i];
-      const code = char.charCodeAt(0);
-      
-      // Map Finnish special characters to CP437 codes
-      if (char === 'ä') bytes.push(0x84);      // ä = 132
-      else if (char === 'Ä') bytes.push(0x8E); // Ä = 142
-      else if (char === 'ö') bytes.push(0x94); // ö = 148
-      else if (char === 'Ö') bytes.push(0x99); // Ö = 153
-      else if (char === 'å') bytes.push(0x86); // å = 134
-      else if (char === 'Å') bytes.push(0x8F); // Å = 143
-      else if (char === 'é') bytes.push(0x82); // é = 130
-      else if (char === 'É') bytes.push(0x90); // É = 144
-      else if (code < 128) {
-        // Standard ASCII
-        bytes.push(code);
-      } else {
-        // For other characters, try to use UTF-8 encoding
-        const encoded = this.encoder.encode(char);
-        bytes.push(...Array.from(encoded));
-      }
-    }
-    
-    return bytes;
+    // For CP850/CP437, use standard TextEncoder
+    // The printer will handle Finnish characters correctly
+    const encoded = this.encoder.encode(str);
+    return Array.from(encoded);
   }
 
   /**
@@ -584,7 +590,7 @@ export class StarFormatter {
     const commands: number[] = [];
 
     commands.push(...this.initialize());
-    commands.push(...this.setEncoding('ISO-8859-1'));
+    commands.push(...this.setEncoding('CP850'));
     commands.push(...this.center());
     commands.push(...this.bold(true));
     commands.push(...this.textSize(2, 2));

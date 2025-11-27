@@ -41,6 +41,16 @@ export interface PrinterMetadata {
   confidence: 'high' | 'medium' | 'low';
   workingEndpoints?: string[];
   testResults?: ConnectionTestResult;
+  fontSettings?: {
+    restaurantName?: { width: number; height: number };
+    header?: { width: number; height: number };
+    orderNumber?: { width: number; height: number };
+    menuItems?: { width: number; height: number };
+    toppings?: { width: number; height: number };
+    totals?: { width: number; height: number };
+    finalTotal?: { width: number; height: number };
+    characterSpacing?: number;
+  };
 }
 
 export interface ConnectionTestResult {

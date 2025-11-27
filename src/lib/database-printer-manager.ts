@@ -63,6 +63,12 @@ export class DatabasePrinterManager {
         printerType: p.printerType,
         isConnected: false,
         status: 'offline' as const,
+        metadata: {
+          protocol: 'tcp',
+          discoveryMethod: 'database',
+          confidence: 'high' as const,
+          fontSettings: p.fontSettings
+        }
       }));
     } catch (error) {
       console.error('❌ Failed to load printers from database:', error);
