@@ -92,7 +92,6 @@ export class DatabasePrinterManager {
       }
 
       const printers = await response.json();
-      console.log(`📥 Loaded ${printers.length} printers from database`);
       return printers.map((p: any) => ({
         id: p.id,
         name: p.name,

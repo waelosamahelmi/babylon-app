@@ -8,6 +8,7 @@
 
 import { Router, Request, Response } from 'express';
 import { StarFormatter } from '../src/lib/printer/star-formatter';
+import { StarModernReceipt } from '../src/lib/printer/star-modern-receipt';
 import { ESCPOSFormatter } from '../src/lib/printer/escpos-formatter';
 import { ReceiptData } from '../src/lib/printer/types';
 import crypto from 'crypto';
@@ -46,15 +47,28 @@ export class CloudPRNTServer {
   private jobsByPrinter = new Map<string, string[]>(); // printerMac -> jobIds[]
   
   /**
+   * Normalize MAC address to consistent format (uppercase, with colons)
+   */
+  private normalizeMac(mac: string): string {
+    // Remove all non-hex characters
+    const cleaned = mac.replace(/[^0-9A-Fa-f]/g, '');
+    
+    // Add colons every 2 characters
+    const formatted = cleaned.match(/.{1,2}/g)?.join(':') || cleaned;
+    
+    return formatted.toUpperCase();
+  }
+  
+  /**
    * Get Express router for CloudPRNT endpoints
    */
   getRouter(): Router {
     const router = Router();
 
-    // CloudPRNT endpoints
+    // CloudPRNT endpoints - printer uses query parameters, not path params for job
     router.post('/cloudprnt/:mac?', this.handlePoll.bind(this));
-    router.get('/cloudprnt/:mac?/:jobId?', this.handleJobRequest.bind(this));
-    router.delete('/cloudprnt/:mac?/:jobId?', this.handleJobConfirmation.bind(this));
+    router.get('/cloudprnt/:mac?', this.handleJobRequest.bind(this));
+    router.delete('/cloudprnt/:mac?', this.handleJobConfirmation.bind(this));
     
     // Management endpoints
     router.post('/cloudprnt-api/submit-job', this.handleSubmitJob.bind(this));
@@ -77,32 +91,34 @@ export class CloudPRNTServer {
         return;
       }
 
-      console.log(`📡 CloudPRNT Poll from printer ${mac}`);
+      const normalizedMac = this.normalizeMac(mac);
+      console.log(`📡 CloudPRNT Poll from printer ${mac} (normalized: ${normalizedMac})`);
       console.log(`📊 Printer status:`, JSON.stringify(req.body, null, 2));
 
       // Register/update printer
-      this.registerPrinter(mac, req.body);
+      this.registerPrinter(normalizedMac, req.body);
 
       // Check for pending jobs for this printer
-      const pendingJobs = this.getPendingJobsForPrinter(mac);
+      const pendingJobs = this.getPendingJobsForPrinter(normalizedMac);
 
       if (pendingJobs.length > 0) {
         const job = pendingJobs[0];
-        console.log(`✅ Job ready for printer ${mac}: ${job.jobId}`);
+        console.log(`✅ Job ready for printer ${normalizedMac}: ${job.jobId}`);
 
         // Determine media types based on printer type
         const mediaTypes = job.printerType === 'star'
           ? ['application/vnd.star.starprnt', 'application/vnd.star.line']
           : ['application/vnd.star.line']; // ESC/POS as Star Line Mode
 
+        // Response format per CloudPRNT spec
+        // Do NOT include deleteMethod when using default DELETE
         res.json({
           jobReady: true,
           mediaTypes: mediaTypes,
-          jobToken: job.jobId,
-          deleteMethod: 'DELETE'
+          jobToken: job.jobId
         });
       } else {
-        console.log(`ℹ️ No jobs for printer ${mac}`);
+        console.log(`ℹ️ No jobs for printer ${normalizedMac}`);
         res.json({
           jobReady: false
         });
@@ -115,19 +131,20 @@ export class CloudPRNTServer {
 
   /**
    * Handle GET request for print job data
-   * Printer retrieves the actual print data
+   * Printer retrieves the actual print data using query parameters
    */
   private async handleJobRequest(req: Request, res: Response): Promise<void> {
     try {
       const mac = req.params.mac;
-      const jobId = req.params.jobId || req.query.jobToken as string;
+      const jobId = req.query.token as string; // CloudPRNT uses ?token= query param
       const acceptHeader = req.get('Accept') || '';
 
       console.log(`📥 Job request from ${mac} for job ${jobId}`);
       console.log(`📄 Accept header: ${acceptHeader}`);
+      console.log(`📋 Query params:`, req.query);
 
       if (!jobId) {
-        res.status(400).json({ error: 'Job ID required' });
+        res.status(400).json({ error: 'Job token required' });
         return;
       }
 
@@ -144,10 +161,10 @@ export class CloudPRNTServer {
       // Generate print data if not already generated
       if (!job.rawData) {
         if (job.printerType === 'star') {
-          const starFormatter = new StarFormatter();
-          job.rawData = starFormatter.formatReceipt(job.receiptData, job.originalOrder);
+          // Use modern Star receipt formatter optimized for mC-Print3
+          job.rawData = StarModernReceipt.generate(job.receiptData, job.originalOrder);
         } else {
-          // ESC/POS
+          // ESC/POS fallback
           job.rawData = ESCPOSFormatter.formatReceipt(job.receiptData, job.originalOrder);
         }
       }
@@ -172,18 +189,18 @@ export class CloudPRNTServer {
 
   /**
    * Handle DELETE confirmation of job completion
-   * Printer confirms it has printed the job
+   * Printer confirms it has printed the job using query parameters
    */
   private async handleJobConfirmation(req: Request, res: Response): Promise<void> {
     try {
       const mac = req.params.mac;
-      const jobId = req.params.jobId || req.query.jobToken as string;
+      const jobId = req.query.token as string; // CloudPRNT uses ?token= query param
       const code = req.query.code as string;
 
       console.log(`✅ Job confirmation from ${mac} for job ${jobId} (code: ${code})`);
 
       if (!jobId) {
-        res.status(400).json({ error: 'Job ID required' });
+        res.status(400).json({ error: 'Job token required' });
         return;
       }
 
@@ -280,10 +297,11 @@ export class CloudPRNTServer {
     printerType: 'star' | 'escpos' = 'star'
   ): string {
     const jobId = this.generateJobId();
+    const normalizedMac = this.normalizeMac(printerMac);
 
     const job: CloudPRNTPrintJob = {
       jobId,
-      printerMac: printerMac.toUpperCase(),
+      printerMac: normalizedMac,
       receiptData,
       originalOrder,
       createdAt: new Date(),
@@ -297,11 +315,12 @@ export class CloudPRNTServer {
     this.printJobs.set(jobId, job);
 
     // Add to printer's job queue
-    const printerJobs = this.jobsByPrinter.get(job.printerMac) || [];
+    const printerJobs = this.jobsByPrinter.get(normalizedMac) || [];
     printerJobs.push(jobId);
-    this.jobsByPrinter.set(job.printerMac, printerJobs);
+    this.jobsByPrinter.set(normalizedMac, printerJobs);
 
-    console.log(`✅ Created job ${jobId} for printer ${printerMac}`);
+    console.log(`✅ Created job ${jobId} for printer ${normalizedMac}`);
+    console.log(`📋 Printer ${normalizedMac} now has ${printerJobs.length} pending job(s)`);
 
     return jobId;
   }
@@ -310,28 +329,32 @@ export class CloudPRNTServer {
    * Register or update printer info
    */
   private registerPrinter(mac: string, statusData: any): void {
-    const macUpper = mac.toUpperCase();
+    const normalizedMac = this.normalizeMac(mac);
     
     const printer: RegisteredPrinter = {
-      mac: macUpper,
+      mac: normalizedMac,
       model: statusData.printerModel || statusData.model,
       lastPoll: new Date(),
       capabilities: statusData.mediaTypes || []
     };
 
-    this.printers.set(macUpper, printer);
+    this.printers.set(normalizedMac, printer);
+    console.log(`📝 Registered/Updated printer: ${normalizedMac}`);
   }
 
   /**
    * Get pending jobs for a specific printer
    */
   private getPendingJobsForPrinter(mac: string): CloudPRNTPrintJob[] {
-    const macUpper = mac.toUpperCase();
-    const jobIds = this.jobsByPrinter.get(macUpper) || [];
+    const normalizedMac = this.normalizeMac(mac);
+    const jobIds = this.jobsByPrinter.get(normalizedMac) || [];
     
-    return jobIds
+    const jobs = jobIds
       .map(id => this.printJobs.get(id))
       .filter(job => job && job.status === 'pending') as CloudPRNTPrintJob[];
+    
+    console.log(`🔍 Looking for jobs for ${normalizedMac}: found ${jobs.length} pending job(s)`);
+    return jobs;
   }
 
   /**

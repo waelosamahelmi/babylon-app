@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,7 @@ import { PrinterDevice } from '@/lib/printer/types';
 import { useAndroid } from '@/lib/android-context';
 import { PrinterFontSettings } from '@/components/printer-font-settings';
 import { CloudPRNTManagement } from '@/components/cloudprnt-management';
+import { usePrinterSettings, useUpdatePrinterSettings, PrinterMode } from '@/hooks/use-printer-settings';
 
 interface PrinterManagementModalProps {
   isOpen: boolean;
@@ -54,7 +55,29 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
   const [selectedPrinterId, setSelectedPrinterId] = useState<string | null>(null);
   const [isAddingManualPrinter, setIsAddingManualPrinter] = useState(false);
   const [expandedPrinterId, setExpandedPrinterId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('direct');
+  
+  // Get printer settings from Supabase
+  const { data: printerSettings } = usePrinterSettings();
+  const updateSettings = useUpdatePrinterSettings();
+  
+  // Local state for immediate UI updates
+  const [localActiveTab, setLocalActiveTab] = useState<string>('direct');
+  
+  // Sync local state with Supabase data
+  useEffect(() => {
+    if (printerSettings?.printer_mode) {
+      setLocalActiveTab(printerSettings.printer_mode);
+    }
+  }, [printerSettings]);
+  
+  const handleTabChange = (value: string) => {
+    if (value === 'direct' || value === 'network' || value === 'cloudprnt') {
+      // Update UI immediately
+      setLocalActiveTab(value);
+      // Save to database in background
+      updateSettings.mutate({ printer_mode: value });
+    }
+  };
 
   const handleAddManualPrinter = async () => {
     if (!manualIp.trim()) {
@@ -172,13 +195,18 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
           <DialogTitle className="flex items-center gap-2">
             <Printer className="w-5 h-5" />
             Printer Management
+            <Badge variant="outline" className="ml-auto text-xs">
+              {localActiveTab === 'direct' && <><Smartphone className="w-3 h-3 mr-1" />Direct</>}
+              {localActiveTab === 'network' && <><Wifi className="w-3 h-3 mr-1" />Network</>}
+              {localActiveTab === 'cloudprnt' && <><Cloud className="w-3 h-3 mr-1" />CloudPRNT</>}
+            </Badge>
           </DialogTitle>
           <DialogDescription>
             Configure your direct printer, network printers, or CloudPRNT remote printing.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+        <Tabs value={localActiveTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
             <TabsTrigger value="direct" className="flex items-center gap-2">
               <Smartphone className="w-4 h-4" />

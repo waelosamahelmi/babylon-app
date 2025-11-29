@@ -37,16 +37,12 @@ export class LocalPrinterManager {
       
       // Migrate if needed
       if (!data.version || data.version !== this.CURRENT_VERSION) {
-        console.log('📦 Migrating printer storage to version', this.CURRENT_VERSION);
-        return this.migrate(data);
-      }
+      console.log('📦 Migrating printer storage to version', this.CURRENT_VERSION);
+      return this.migrate(data);
+    }
 
-      console.log(`📄 Loaded ${data.printers.length} printers from localStorage`);
-      
-      // Sync with database in background
-      this.syncFromDatabase();
-      
-      return data;
+    // Sync with database in background
+    this.syncFromDatabase();      return data;
     } catch (error) {
       console.error('❌ Failed to load printers from localStorage:', error);
       return this.getDefaultStorage();

@@ -5,6 +5,8 @@ import { useAndroid } from "./android-context";
 import { useToast } from "@/hooks/use-toast";
 import { LocalPrinterManager } from "./local-printer-manager";
 import { UniversalOrderParser } from "./universal-order-parser";
+import { supabase } from "./supabase-client";
+import { useSupabaseAuth } from "./supabase-auth-context";
 
 interface PrinterContextType {
   // Printer Management
@@ -22,6 +24,7 @@ interface PrinterContextType {
   connectToPrinter: (printer: PrinterDevice) => Promise<void>;
   disconnectFromPrinter: (printerId: string) => Promise<void>;
   addManualPrinter: (ip: string, port: number, name?: string, printerType?: 'star' | 'escpos') => Promise<void>;
+  addCloudPRNTPrinter: (macAddress: string, name?: string, printerType?: 'star' | 'escpos') => Promise<void>;
   removePrinter: (printerId: string) => Promise<void>;
   setActivePrinter: (printer: PrinterDevice | null) => void;
     // Printing
@@ -65,14 +68,15 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
   const [scanProgress, setScanProgress] = useState(0);
   const [printQueue, setPrintQueue] = useState<PrintJob[]>([]);
   
+  const { isAndroid } = useAndroid();
+  const { toast } = useToast();
+  const { user, userBranch } = useSupabaseAuth();
+  
   // Modal states
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showTroubleshootingModal, setShowTroubleshootingModal] = useState(false);
-  
-  const { isAndroid } = useAndroid();
-  const { toast } = useToast();
 
   // Single printer service instance
   const [printerService] = useState(() => {
@@ -468,6 +472,32 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
     try {
       console.log(`🔗 Connecting to printer: ${printer.name} (${printer.type})`);
       
+      // CloudPRNT printers don't need connection - they poll the server
+      if (printer.type === 'cloudprnt') {
+        console.log(`☁️ CloudPRNT printer registered: ${printer.macAddress}`);
+        
+        // Mark as connected immediately since CloudPRNT is polling-based
+        setPrinters(prev => prev.map(p => 
+          p.id === printer.id 
+            ? { ...p, isConnected: true, status: 'idle' } 
+            : { ...p, isConnected: false }
+        ));
+        
+        setActivePrinter({ ...printer, isConnected: true, status: 'idle' });
+        setConnectionStatus('Connected');
+        
+        // Record successful "connection"
+        LocalPrinterManager.recordConnection(printer.id);
+        
+        toast({
+          title: "CloudPRNT Printer Ready",
+          description: `${printer.name} will poll the server for print jobs.`,
+        });
+        
+        console.log('✅ CloudPRNT printer activated!');
+        return;
+      }
+      
       if (printer.type === 'bluetooth') {
         // For Bluetooth printers, use simple bluetooth printer service
         console.log(`🔵 Connecting to Bluetooth printer: ${printer.address}`);
@@ -616,6 +646,48 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
     }
   }, [printerService, toast]);
 
+  const addCloudPRNTPrinter = useCallback(async (macAddress: string, name?: string, printerType?: 'star' | 'escpos') => {
+    try {
+      console.log(`☁️ Adding CloudPRNT printer: ${macAddress} (Type: ${printerType || 'star'})`);
+      
+      const device: PrinterDevice = {
+        id: `cloudprnt-${macAddress}`,
+        name: name || `CloudPRNT Printer (${macAddress})`,
+        type: 'cloudprnt',
+        address: macAddress,
+        macAddress: macAddress,
+        isConnected: true, // Always "connected" for CloudPRNT
+        status: 'idle',
+        printerType: printerType || 'star',
+      };
+      
+      // Save to localStorage
+      LocalPrinterManager.addPrinter(device);
+      
+      // Update local state
+      setPrinters(current => {
+        const existing = current.find(p => p.id === device.id);
+        if (existing) {
+          return current.map(p => p.id === device.id ? device : p);
+        } else {
+          return [...current, device];
+        }
+      });
+      
+      toast({
+        title: "CloudPRNT Printer Added",
+        description: `Successfully added ${device.name}`,
+      });
+    } catch (error) {
+      console.error(`❌ Failed to add CloudPRNT printer: ${error}`);
+      toast({
+        title: "Failed to Add CloudPRNT Printer",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
   const removePrinter = useCallback(async (printerId: string) => {
     try {
       console.log(`🗑️ Removing printer: ${printerId}`);
@@ -646,7 +718,51 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
   }, [activePrinter, toast]);
   // Printing functions
   const printOrder = useCallback(async (order: any): Promise<boolean> => {
-    // PRIORITY 1: Try DirectPrint on Android ONLY if Direct Printer is the active printer
+    // PRIORITY 1: Try CloudPRNT if CloudPRNT printer is active
+    if (activePrinter?.type === 'cloudprnt') {
+      try {
+        console.log('☁️ CloudPRNT printer is active, submitting job to server...');
+        const { createCloudPRNTClient } = await import('./printer/cloudprnt-client');
+        
+        const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_SERVER_URL || 'https://babylon-admin.fly.dev';
+        const client = createCloudPRNTClient(apiUrl);
+        
+        // Parse order using universal parser
+        const receiptData = UniversalOrderParser.parseOrder(order);
+        
+        const result = await client.submitJob(
+          activePrinter.macAddress || activePrinter.address,
+          receiptData,
+          order,
+          activePrinter.printerType || 'star'
+        );
+        
+        if (result.success) {
+          toast({
+            title: "Order Sent to CloudPRNT",
+            description: `Order #${order.id} queued for printing (Job: ${result.jobId})`,
+          });
+          return true;
+        } else {
+          toast({
+            title: "CloudPRNT Failed",
+            description: result.error || "Failed to submit print job",
+            variant: "destructive",
+          });
+          return false;
+        }
+      } catch (error) {
+        console.error('❌ CloudPRNT submission failed:', error);
+        toast({
+          title: "CloudPRNT Error",
+          description: error instanceof Error ? error.message : "Unknown error",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    
+    // PRIORITY 2: Try DirectPrint on Android ONLY if Direct Printer is the active printer
     if (isAndroid && activePrinter?.id === 'direct-print-system') {
       try {
         console.log('🖨️ [Android] Direct Printer is active, using DirectPrint...');
@@ -948,12 +1064,49 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
     if (printer) {
       localStorage.setItem('activePrinterId', printer.id);
       LocalPrinterManager.setDefaultPrinter(printer.id);
-      console.log(`💾 Saved active printer: ${printer.name}`);
+      console.log(`💾 Saved active printer to localStorage: ${printer.name}`);
+      
+      // Save to Supabase
+      if (user) {
+        try {
+          const { data: existing } = await supabase
+            .from('printer_settings')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('branch_id', userBranch || null)
+            .maybeSingle();
+
+          const printerData = {
+            active_printer_id: printer.id,
+            active_printer_mac: printer.macAddress || printer.address,
+            active_printer_type: printer.printerType,
+          };
+
+          if (existing) {
+            await supabase
+              .from('printer_settings')
+              .update(printerData)
+              .eq('id', existing.id);
+          } else {
+            await supabase
+              .from('printer_settings')
+              .insert({
+                user_id: user.id,
+                branch_id: userBranch || null,
+                printer_mode: printer.type === 'cloudprnt' ? 'cloudprnt' : 'network',
+                ...printerData,
+              });
+          }
+          console.log(`☁️ Saved active printer to Supabase: ${printer.name}`);
+        } catch (error) {
+          console.error('❌ Failed to save printer to Supabase:', error);
+        }
+      }
     } else {
       localStorage.removeItem('activePrinterId');
-      console.log('🗑️ Cleared active printer');
+      console.log('🗑️ Cleared active printer from localStorage');
     }
-  }, []);
+  }, [user, userBranch]);
 
   // Auto-reconnect on startup is already handled in the initial useEffect
   // No additional auto-reconnect logic needed here
@@ -971,6 +1124,7 @@ export function PrinterProvider({ children }: PrinterProviderProps) {
     connectToPrinter,
     disconnectFromPrinter,
     addManualPrinter,
+    addCloudPRNTPrinter,
     removePrinter,
     setActivePrinter: handleSetActivePrinter,
     printReceipt,

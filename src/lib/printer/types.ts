@@ -6,7 +6,7 @@
 export interface PrinterDevice {
   id: string;
   name: string;
-  type: 'bluetooth' | 'network';
+  type: 'bluetooth' | 'network' | 'cloudprnt';
   address: string;
   port?: number;
   isConnected: boolean;
@@ -17,6 +17,7 @@ export interface PrinterDevice {
   connectionAttempts?: number;
   lastConnected?: Date;
   printerType?: 'star' | 'escpos'; // Explicitly set printer command type
+  macAddress?: string; // For CloudPRNT printers
 }
 
 export interface PrinterCapabilities {

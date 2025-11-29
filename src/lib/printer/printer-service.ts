@@ -18,6 +18,7 @@ import {
 } from './types';
 import { ESCPOSFormatter } from './escpos-formatter';
 import { StarFormatter } from './star-formatter';
+import { StarModernReceipt } from './star-modern-receipt';
 
 export class PrinterService {
   private static instance: PrinterService;
@@ -500,12 +501,36 @@ export class PrinterService {
 
     // Detect if this is a Star printer
     const isStarPrinter = this.isStarPrinter(device);
-    console.log(`🖨️ Printer type detected: ${isStarPrinter ? 'Star mC-Print' : 'ESC/POS'}`);
+    console.log(`🖨️ Printer type detected: ${isStarPrinter ? 'Star mC-Print (Modern)' : 'ESC/POS'}`);
     
     let testData: Uint8Array;
     if (isStarPrinter) {
-      const starFormatter = new StarFormatter();
-      testData = starFormatter.generateTestReceipt();
+      // Use modern Star receipt formatter for test print
+      const testReceiptData: ReceiptData = {
+        orderNumber: 'TEST-' + Date.now().toString().slice(-4),
+        timestamp: new Date(),
+        items: [
+          {
+            name: 'Pizza Margherita',
+            quantity: 1,
+            price: 12.50,
+            totalPrice: 12.50,
+            toppings: [{ name: 'Extra Cheese', price: 2.00 }]
+          },
+          {
+            name: 'Coca-Cola',
+            quantity: 2,
+            price: 3.00,
+            totalPrice: 6.00
+          }
+        ],
+        total: 20.50,
+        orderType: 'pickup',
+        paymentMethod: 'card',
+        customerName: 'Test Customer',
+        customerPhone: '+358 123 456 789'
+      };
+      testData = StarModernReceipt.generate(testReceiptData);
     } else {
       testData = ESCPOSFormatter.formatTestReceipt(device.name, device.address, device.port!);
     }
@@ -920,10 +945,9 @@ export class PrinterService {
       
       if (job.content.type === 'receipt' && typeof job.content.data === 'object') {
         if (isStarPrinter) {
-          // Get font settings from device metadata or use defaults
-          const fontSettings = device.metadata?.fontSettings;
-          const starFormatter = new StarFormatter(fontSettings);
-          printData = starFormatter.formatReceipt(job.content.data as any, job.content.originalOrder);
+          // Use modern Star receipt formatter (optimized for mC-Print3)
+          console.log('🖨️ Using StarModernReceipt formatter');
+          printData = StarModernReceipt.generate(job.content.data as any, job.content.originalOrder);
         } else {
           // Get font settings from device metadata or use defaults
           const fontSettings = device.metadata?.fontSettings;

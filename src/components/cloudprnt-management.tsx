@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { usePrinter } from '@/lib/printer-context';
 import { 
   Cloud,
   Printer,
@@ -13,7 +16,9 @@ import {
   Server,
   Clock,
   Loader2,
-  Info
+  Info,
+  Plus,
+  Send
 } from 'lucide-react';
 import { createCloudPRNTClient } from '@/lib/printer/cloudprnt-client';
 
@@ -35,16 +40,23 @@ interface CloudPRNTStatus {
 
 export function CloudPRNTManagement() {
   const { toast } = useToast();
+  const { addCloudPRNTPrinter } = usePrinter();
   const [status, setStatus] = useState<CloudPRNTStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [serverUrl, setServerUrl] = useState('');
+  const [printerMac, setPrinterMac] = useState('00:11:62:31:AF:CC');
+  const [printerName, setPrinterName] = useState('');
+  const [printerType, setPrinterType] = useState<'star' | 'escpos'>('star');
+  const [isAdding, setIsAdding] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+
+  const client = createCloudPRNTClient(serverUrl);
 
   useEffect(() => {
-    // Detect server URL
-    const detectedUrl = window.location.origin.includes('localhost') 
-      ? 'http://localhost:5000'
-      : window.location.origin.replace(/:\d+/, ':5000');
-    setServerUrl(detectedUrl);
+    // Get server URL from environment variables
+    const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_SERVER_URL || 'https://babylon-admin.fly.dev';
+    setServerUrl(apiUrl);
+    console.log('🌐 CloudPRNT Server URL:', apiUrl);
     
     loadStatus();
   }, []);
@@ -52,11 +64,13 @@ export function CloudPRNTManagement() {
   const loadStatus = async () => {
     setIsLoading(true);
     try {
-      const client = createCloudPRNTClient(serverUrl || 'http://localhost:5000');
+      const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_SERVER_URL || 'https://babylon-admin.fly.dev';
+      const client = createCloudPRNTClient(apiUrl);
       const statusData = await client.getStatus();
+      console.log('📊 CloudPRNT Status:', statusData);
       setStatus(statusData || {});
     } catch (error) {
-      console.error('Failed to load CloudPRNT status:', error);
+      console.error('❌ Failed to load CloudPRNT status:', error);
       setStatus({});
     } finally {
       setIsLoading(false);
@@ -78,6 +92,72 @@ export function CloudPRNTManagement() {
       return "Replace 'localhost' with your server's local IP address (e.g., 192.168.1.100)";
     }
     return `Use: ${hostname}`;
+  };
+
+  const handleAddPrinter = async () => {
+    if (!printerMac.trim()) {
+      toast({
+        title: "Invalid MAC Address",
+        description: "Please enter a valid MAC address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      await addCloudPRNTPrinter(printerMac.trim(), printerName.trim() || undefined, printerType);
+      setPrinterMac('00:11:62:31:AF:CC');
+      setPrinterName('');
+    } catch (error) {
+      console.error('Failed to add CloudPRNT printer:', error);
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleTestPrint = async () => {
+    if (!printerMac.trim()) {
+      toast({
+        title: "MAC Address Required",
+        description: "Please enter a printer MAC address to test",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsTesting(true);
+    try {
+      const testReceipt = {
+        items: [
+          { name: 'Test Item 1', quantity: 1, price: 10.00 },
+          { name: 'Test Item 2', quantity: 2, price: 15.50 }
+        ],
+        total: 41.00,
+        orderNumber: 'TEST-001',
+        timestamp: new Date().toLocaleString('fi-FI'),
+        paymentMethod: 'Test'
+      };
+
+      const result = await client.submitJob(printerMac.trim(), testReceipt, printerType);
+      
+      toast({
+        title: "Test Print Sent",
+        description: `Job ID: ${result.jobId}. Printer will pick it up when it polls the server.`,
+      });
+
+      // Reload status to show the new job
+      setTimeout(() => loadStatus(), 500);
+    } catch (error) {
+      console.error('Test print failed:', error);
+      toast({
+        title: "Test Print Failed",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: "destructive"
+      });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
@@ -149,6 +229,112 @@ export function CloudPRNTManagement() {
               </div>
             </div>
           )}
+
+          {/* Warning if jobs are pending but no printers registered */}
+          {(status?.pendingJobs || 0) > 0 && (!status?.registeredPrinters || status.registeredPrinters === 0) && (
+            <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5" />
+                <div className="flex-1 text-xs">
+                  <p className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">
+                    Printer Not Configured
+                  </p>
+                  <p className="text-yellow-800 dark:text-yellow-200">
+                    You have {status.pendingJobs} pending job(s), but no printer has polled the server yet. 
+                    Make sure to configure your printer's CloudPRNT settings with the server URL below.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add CloudPRNT Printer to App */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            Add CloudPRNT Printer to App
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            After configuring your printer with CloudPRNT, add it to the app so you can select it for printing orders.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="printerMac">Printer MAC Address</Label>
+              <Input
+                id="printerMac"
+                placeholder="00:11:62:31:AF:CC"
+                value={printerMac}
+                onChange={(e) => setPrinterMac(e.target.value)}
+                disabled={isAdding}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Find this in your printer's network settings
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="printerName">Printer Name (Optional)</Label>
+              <Input
+                id="printerName"
+                placeholder="Kitchen Printer"
+                value={printerName}
+                onChange={(e) => setPrinterName(e.target.value)}
+                disabled={isAdding}
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="cloudPrinterType">Printer Type</Label>
+            <select
+              id="cloudPrinterType"
+              value={printerType}
+              onChange={(e) => setPrinterType(e.target.value as 'star' | 'escpos')}
+              disabled={isAdding}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="star">Star mC-Print3 (StarPRNT)</option>
+              <option value="escpos">Generic ESC/POS</option>
+            </select>
+          </div>
+          <Button 
+            onClick={handleAddPrinter} 
+            className="w-full"
+            disabled={isAdding}
+          >
+            {isAdding ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Adding Printer...
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                Add to Printer List
+              </>
+            )}
+          </Button>
+          <Button 
+            onClick={handleTestPrint} 
+            variant="outline"
+            className="w-full"
+            disabled={isTesting || !printerMac.trim()}
+          >
+            {isTesting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Sending Test...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Send Test Print
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
 
@@ -164,7 +350,7 @@ export function CloudPRNTManagement() {
           <div className="space-y-2">
             <p className="text-sm font-medium">CloudPRNT Server URL:</p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 p-2 bg-muted rounded text-sm font-mono">
+              <code className="flex-1 p-2 bg-muted rounded text-sm font-mono break-all">
                 {serverUrl}/cloudprnt/PRINTER_MAC
               </code>
               <Button
@@ -176,7 +362,10 @@ export function CloudPRNTManagement() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Replace PRINTER_MAC with your printer's MAC address (e.g., 00:11:62:AA:BB:CC)
+              Replace PRINTER_MAC with your printer's MAC address
+            </p>
+            <p className="text-xs font-mono bg-blue-50 dark:bg-blue-950 p-2 rounded">
+              Example: {serverUrl}/cloudprnt/00:11:62:31:AF:CC
             </p>
           </div>
 
