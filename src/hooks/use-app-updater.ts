@@ -40,10 +40,22 @@ export function useAppUpdater() {
     try {
       setChecking(true);
       
-      // Fetch latest release from GitHub
+      // Check if we're online before attempting to fetch
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        console.log('📴 Offline - skipping update check');
+        return;
+      }
+      
+      // Fetch latest release from GitHub with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(
-        `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`
+        `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
+        { signal: controller.signal }
       );
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         console.error('Failed to check for updates');
@@ -79,7 +91,18 @@ export function useAppUpdater() {
         setUpdateAvailable(true);
       }
     } catch (error) {
-      console.error('Error checking for updates:', error);
+      // Gracefully handle network errors
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.log('⏱️ Update check timed out - will retry later');
+        } else if (error.message.includes('fetch') || error.message.includes('network')) {
+          console.log('🌐 Network error checking for updates - will retry later');
+        } else {
+          console.error('Error checking for updates:', error);
+        }
+      } else {
+        console.error('Error checking for updates:', error);
+      }
     } finally {
       setChecking(false);
     }

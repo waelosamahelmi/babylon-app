@@ -410,19 +410,38 @@ export class StarFormatter {
     commands.push(...this.lineFeed(3));
 
     // ============================================
-    // FOOTER
+    // QR CODE - Link to website
     // ============================================
     commands.push(...this.center());
-    commands.push(...this.bold(true));
-    commands.push(...this.text('Kiitos tilauksestasi!'));
+    commands.push(...this.text('================================'));
     commands.push(...this.lineFeed());
+    commands.push(...this.text('Skannaa QR-koodi:'));
+    commands.push(...this.lineFeed(2));
+    
+    // Generate QR code for website
+    commands.push(...this.generateQRCode('https://ravintolababylon.fi', 4));
+    
+    commands.push(...this.lineFeed(2));
+    commands.push(...this.bold(true));
+    commands.push(...this.text('ravintolababylon.fi'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.bold(false));
+    commands.push(...this.lineFeed(2));
+
+    // ============================================
+    // FOOTER
+    // ============================================
+    commands.push(...this.text('================================'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.bold(true));
+    commands.push(...this.textSize(2, 2));
+    commands.push(...this.text('Kiitos!'));
+    commands.push(...this.lineFeed());
+    commands.push(...this.textSize(1, 1));
     commands.push(...this.text('Tervetuloa uudelleen!'));
     commands.push(...this.lineFeed());
     commands.push(...this.bold(false));
-    commands.push(...this.lineFeed());
-    commands.push(...this.text('Ravintola Babylon'));
-    commands.push(...this.lineFeed());
-    commands.push(...this.text('Avoinna: Ma-Su 10:00-20:00'));
+    commands.push(...this.text('================================'));
     commands.push(...this.lineFeed(3));
 
     // Cut paper (CRITICAL - stops the printer!)
@@ -569,6 +588,28 @@ export class StarFormatter {
     
     const commands = [...this.text(line)];
     commands.push(0x0A); // LF
+    return commands;
+  }
+
+  /**
+   * Generate QR code for Star printers
+   */
+  private generateQRCode(url: string, cellSize: number = 4): number[] {
+    const commands: number[] = [];
+    const urlBytes = Array.from(this.encoder.encode(url));
+    const urlLength = urlBytes.length;
+    
+    // Star QR code command: ESC GS y S 0 model errorLevel cellSize dataLengthLow dataLengthHigh [data]
+    commands.push(
+      0x1B, 0x1D, 0x79, 0x53, 0x30, // QR code command header
+      2, // Model 2 (recommended)
+      1, // Error correction level M
+      cellSize, // Cell size (1-8)
+      (urlLength & 0xFF), // Data length low byte
+      ((urlLength >> 8) & 0xFF) // Data length high byte
+    );
+    commands.push(...urlBytes);
+    
     return commands;
   }
 

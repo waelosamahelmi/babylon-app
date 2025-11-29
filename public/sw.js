@@ -28,6 +28,14 @@ self.addEventListener('fetch', (event) => {
     return; // Let browser handle these requests normally
   }
 
+  // Skip caching for API requests, external resources, and Supabase
+  if (url.pathname.startsWith('/api/') || 
+      url.hostname.includes('github.com') ||
+      url.hostname.includes('supabase.co') ||
+      url.hostname.includes('fly.dev')) {
+    return; // Don't cache dynamic API calls or external resources
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -35,7 +43,15 @@ self.addEventListener('fetch', (event) => {
         if (response) {
           return response;
         }
-        return fetch(event.request);
+        // Try to fetch, but handle failures gracefully
+        return fetch(event.request).catch((error) => {
+          console.warn('📱 Service Worker: Fetch failed for', url.pathname, '- returning offline response');
+          // Return a basic response for navigation requests when offline
+          if (event.request.mode === 'navigate') {
+            return caches.match('/');
+          }
+          throw error;
+        });
       }
     )
   );

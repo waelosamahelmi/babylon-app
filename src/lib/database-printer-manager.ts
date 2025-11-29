@@ -14,6 +14,12 @@ export class DatabasePrinterManager {
    */
   static async syncPrinter(printer: PrinterDevice): Promise<boolean> {
     try {
+      // Check if we're online before attempting to sync
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        console.log('📴 Offline - skipping printer database sync');
+        return false;
+      }
+
       console.log('🔄 Syncing printer to database:', {
         id: printer.id,
         name: printer.name,
@@ -35,6 +41,7 @@ export class DatabasePrinterManager {
           printerType: printer.printerType || 'escpos',
           isActive: true,
         }),
+        signal: AbortSignal.timeout(5000), // 5 second timeout
       });
 
       console.log('📡 Database sync response status:', response.status);
@@ -49,8 +56,18 @@ export class DatabasePrinterManager {
       console.log('✅ Synced printer to database:', result);
       return true;
     } catch (error) {
-      console.error('❌ Failed to sync printer to database:', error);
-      console.error('Error details:', error instanceof Error ? error.message : String(error));
+      // Gracefully handle offline/timeout errors
+      if (error instanceof Error) {
+        if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+          console.log('⏱️ Printer database sync timed out - saved locally only');
+        } else if (error.message.includes('fetch')) {
+          console.log('🌐 Network error syncing printer - saved locally only');
+        } else {
+          console.error('❌ Failed to sync printer to database:', error.message);
+        }
+      } else {
+        console.error('❌ Failed to sync printer to database:', error);
+      }
       return false;
     }
   }
@@ -60,7 +77,15 @@ export class DatabasePrinterManager {
    */
   static async loadPrinters(): Promise<PrinterDevice[]> {
     try {
-      const response = await fetch(`${this.API_BASE}/printers`);
+      // Check if we're online before attempting to fetch
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        console.log('📴 Offline - skipping printer database fetch');
+        return [];
+      }
+
+      const response = await fetch(`${this.API_BASE}/printers`, {
+        signal: AbortSignal.timeout(5000), // 5 second timeout
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to load printers: ${response.statusText}`);
@@ -85,7 +110,18 @@ export class DatabasePrinterManager {
         }
       }));
     } catch (error) {
-      console.error('❌ Failed to load printers from database:', error);
+      // Gracefully handle offline/timeout errors
+      if (error instanceof Error) {
+        if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+          console.log('⏱️ Printer database fetch timed out - using local storage');
+        } else if (error.message.includes('fetch')) {
+          console.log('🌐 Network error loading printers - using local storage');
+        } else {
+          console.error('❌ Failed to load printers from database:', error.message);
+        }
+      } else {
+        console.error('❌ Failed to load printers from database:', error);
+      }
       return [];
     }
   }

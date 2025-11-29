@@ -209,9 +209,21 @@ export function ToppingGroupManagementModal({ isOpen, onClose }: ToppingGroupMan
         resetForm();
       }
     } catch (error) {
+      console.error('❌ Failed to delete topping:', error);
+      
+      // Show specific error message if topping is in use
+      const errorMessage = error instanceof Error ? error.message : '';
+      const isInUse = errorMessage.includes('used in existing orders') || 
+                      errorMessage.includes('referenced in existing data');
+      
       toast({
         title: t("Virhe", "Error"),
-        description: t("Poisto epäonnistui", "Delete failed"),
+        description: isInUse 
+          ? t(
+              "Täytettä ei voi poistaa, koska sitä on käytetty tilauksissa. Voit merkitä sen ei-aktiiviseksi sen sijaan.",
+              "Cannot delete topping because it's used in orders. You can mark it as inactive instead."
+            )
+          : t("Poisto epäonnistui", "Delete failed"),
         variant: "destructive",
       });
     }

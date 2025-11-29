@@ -275,6 +275,38 @@ export function useSupabaseDeleteTopping() {
     mutationFn: async (id: number) => {
       console.log('🍕 Deleting topping from Supabase:', id);
       
+      // First, check if this topping is used in any orders
+      const { data: orderItemToppings, error: checkError } = await supabase
+        .from('order_item_toppings')
+        .select('id')
+        .eq('topping_id', id)
+        .limit(1);
+
+      if (checkError) {
+        console.error('❌ Failed to check topping usage:', checkError);
+        handleSupabaseError(checkError);
+      }
+
+      // If topping is used in orders, cannot delete due to ON DELETE RESTRICT
+      if (orderItemToppings && orderItemToppings.length > 0) {
+        throw new Error(
+          'Cannot delete topping: it is used in existing orders. ' +
+          'Instead, you can mark it as inactive in the topping settings.'
+        );
+      }
+
+      // Delete from topping_group_toppings first (cascade should handle this, but be explicit)
+      const { error: groupError } = await supabase
+        .from('topping_group_toppings')
+        .delete()
+        .eq('topping_id', id);
+
+      if (groupError) {
+        console.error('❌ Failed to remove topping from groups:', groupError);
+        // Continue anyway, cascade should handle it
+      }
+
+      // Now delete the topping
       const { error } = await supabase
         .from('toppings')
         .delete()
@@ -282,6 +314,13 @@ export function useSupabaseDeleteTopping() {
 
       if (error) {
         console.error('❌ Failed to delete topping:', error);
+        // Provide user-friendly error message
+        if (error.code === '23503') { // Foreign key violation
+          throw new Error(
+            'Cannot delete topping: it is referenced in existing data. ' +
+            'Please mark it as inactive instead of deleting.'
+          );
+        }
         handleSupabaseError(error);
       }
 

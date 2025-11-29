@@ -97,7 +97,7 @@ router.get('/config', async (req, res) => {
 // Create payment intent
 router.post('/create-payment-intent', async (req, res) => {
   try {
-    const { amount, currency = 'eur', metadata = {} } = req.body;
+    const { amount, currency = 'eur', metadata = {}, forcePaymentMethods } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ 
@@ -114,22 +114,33 @@ router.post('/create-payment-intent', async (req, res) => {
       });
     }
 
-    // Create payment intent with automatic payment methods
+    // Create payment intent with automatic or manual payment methods
     // Stripe will show payment methods based on:
     // 1. What's enabled in Stripe Dashboard (Payment Methods settings)
-    // 2. Customer's location
+    // 2. Customer's location (can be overridden with forcePaymentMethods)
     // 3. Currency and amount
-    const paymentIntent = await stripe.paymentIntents.create({
+    
+    const paymentIntentOptions: any = {
       amount: Math.round(amount * 100), // Convert to smallest currency unit
       currency: currency.toLowerCase(),
       metadata: {
         ...metadata,
         integration: 'babylon_restaurant',
       },
-      automatic_payment_methods: {
+    };
+
+    // If forcePaymentMethods is provided (for testing), use specific methods
+    // Otherwise use automatic payment methods
+    if (forcePaymentMethods && Array.isArray(forcePaymentMethods)) {
+      console.log('🧪 Testing mode: Forcing payment methods:', forcePaymentMethods);
+      paymentIntentOptions.payment_method_types = forcePaymentMethods;
+    } else {
+      paymentIntentOptions.automatic_payment_methods = {
         enabled: true, // This enables all payment methods configured in Stripe Dashboard
-      },
-    });
+      };
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentOptions);
 
     console.log('✅ Payment intent created:', paymentIntent.id);
 

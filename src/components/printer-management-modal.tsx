@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePrinter } from '@/lib/printer-context';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -18,11 +19,13 @@ import {
   Plus,
   Power,
   Loader2,
-  Smartphone
+  Smartphone,
+  Cloud
 } from 'lucide-react';
 import { PrinterDevice } from '@/lib/printer/types';
 import { useAndroid } from '@/lib/android-context';
 import { PrinterFontSettings } from '@/components/printer-font-settings';
+import { CloudPRNTManagement } from '@/components/cloudprnt-management';
 
 interface PrinterManagementModalProps {
   isOpen: boolean;
@@ -44,7 +47,6 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
     testPrint,
   } = usePrinter();
   
-  const [printerMode, setPrinterMode] = useState<'direct' | 'network'>('direct');
   const [manualIp, setManualIp] = useState('192.168.1.233');
   const [manualPort, setManualPort] = useState('9100');
   const [manualName, setManualName] = useState('');
@@ -52,6 +54,7 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
   const [selectedPrinterId, setSelectedPrinterId] = useState<string | null>(null);
   const [isAddingManualPrinter, setIsAddingManualPrinter] = useState(false);
   const [expandedPrinterId, setExpandedPrinterId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('direct');
 
   const handleAddManualPrinter = async () => {
     if (!manualIp.trim()) {
@@ -171,37 +174,29 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
             Printer Management
           </DialogTitle>
           <DialogDescription>
-            Configure your direct printer or network printers for order processing.
+            Configure your direct printer, network printers, or CloudPRNT remote printing.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Mode Switcher */}
-        <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
-          <Label className="font-medium">Printer Mode:</Label>
-          <div className="flex gap-2">
-            <Button
-              variant={printerMode === 'direct' ? 'default' : 'outline'}
-              onClick={() => setPrinterMode('direct')}
-              className="flex items-center gap-2"
-            >
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
+            <TabsTrigger value="direct" className="flex items-center gap-2">
               <Smartphone className="w-4 h-4" />
-              Direct Printer
-            </Button>
-            <Button
-              variant={printerMode === 'network' ? 'default' : 'outline'}
-              onClick={() => setPrinterMode('network')}
-              className="flex items-center gap-2"
-            >
+              Direct
+            </TabsTrigger>
+            <TabsTrigger value="network" className="flex items-center gap-2">
               <Wifi className="w-4 h-4" />
-              Network Printer
-            </Button>
-          </div>
-        </div>
+              Network
+            </TabsTrigger>
+            <TabsTrigger value="cloudprnt" className="flex items-center gap-2">
+              <Cloud className="w-4 h-4" />
+              CloudPRNT
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="flex-1 overflow-auto mt-4">
-          {printerMode === 'direct' ? (
-            /* Direct Printer Mode */
-            <div className="space-y-4">
+          <div className="flex-1 overflow-auto mt-4">
+            {/* Direct Printer Tab */}
+            <TabsContent value="direct" className="mt-0">
               <Card className="border-2 border-primary">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -255,10 +250,11 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
                   )}
                 </CardContent>
               </Card>
-            </div>
-          ) : (
-            /* Network Printer Mode */
-            <div className="space-y-4">
+            </TabsContent>
+
+            {/* Network Printer Tab */}
+            <TabsContent value="network" className="mt-0">
+              <div className="space-y-4">
               {/* Manual Network Printer Addition */}
               <Card>
                 <CardHeader>
@@ -444,9 +440,15 @@ export function PrinterManagementModal({ isOpen, onClose }: PrinterManagementMod
                   </div>
                 )}
               </div>
-            </div>
-          )}
-        </div>
+              </div>
+            </TabsContent>
+
+            {/* CloudPRNT Tab */}
+            <TabsContent value="cloudprnt" className="mt-0">
+              <CloudPRNTManagement />
+            </TabsContent>
+          </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

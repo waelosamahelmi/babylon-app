@@ -12,6 +12,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { authService } from "./auth";
 import { initializeComprehensiveToppings } from "./initialize-toppings";
+import { cloudPRNTServer } from "./cloudprnt-server";
 
 const app = express();
 
@@ -202,7 +203,12 @@ app.get('/api/mobile/status', (req, res) => {
     // Initialize comprehensive toppings
     await initializeComprehensiveToppings();
     log('Toppings initialized');
-      const server = await registerRoutes(app);
+    
+    // Register CloudPRNT routes
+    app.use(cloudPRNTServer.getRouter());
+    log('CloudPRNT server initialized');
+    
+    const server = await registerRoutes(app);
     log('Routes registered');
 
     // Create HTTP server for WebSocket upgrade

@@ -86,12 +86,19 @@ function CheckoutForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement 
-        options={{
-          layout: "tabs",
-          paymentMethodOrder: getPaymentMethodOrder(stripePaymentMethodsConfig),
-        }}
-      />
+      <div className="max-h-[400px] overflow-y-auto pr-2">
+        <PaymentElement 
+          options={{
+            layout: {
+              type: 'accordion',
+              defaultCollapsed: false,
+              radios: false,
+              spacedAccordionItems: true
+            },
+            paymentMethodOrder: getPaymentMethodOrder(stripePaymentMethodsConfig),
+          }}
+        />
+      </div>
       
       <div className="flex gap-3">
         <Button
@@ -135,11 +142,13 @@ function getPaymentMethodOrder(config?: any): string[] {
   
   const order: string[] = [];
   
-  // Order payment methods based on what's enabled
+  // Order payment methods based on what's enabled (optimized for Finland)
   if (config.card !== false) order.push("card");
   if (config.link) order.push("link");
   if (config.applePay) order.push("apple_pay");
   if (config.googlePay) order.push("google_pay");
+  // MobilePay is popular in Finland
+  order.push("mobilepay");
   if (config.klarna) order.push("klarna");
   if (config.ideal) order.push("ideal");
   if (config.sepaDebit) order.push("sepa_debit");
@@ -172,17 +181,20 @@ export function StripeCheckoutElement({
     // Create PaymentIntent on the server
     const createPaymentIntent = async () => {
       try {
-        // TODO: Replace with your actual API endpoint
-        const response = await fetch("/api/create-payment-intent", {
+        // Optional: For testing specific payment methods, uncomment and modify:
+        // const forcePaymentMethods = ['card', 'ideal', 'sepa_debit', 'klarna', 'paypal'];
+        
+        const response = await fetch("/api/stripe/create-payment-intent", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            amount: Math.round(amount * 100), // Convert to cents
+            amount, // Send as decimal (EUR), server converts to cents
             currency: "eur",
             customerEmail,
             customerName,
+            // forcePaymentMethods, // Uncomment to test specific methods
           }),
         });
 
