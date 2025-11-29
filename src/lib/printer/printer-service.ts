@@ -1246,6 +1246,9 @@ export class PrinterService {
       description: 'Manual Printer'
     };
 
+    // Default to Star printer for port 9100 (standard Star/JetDirect port)
+    const defaultPrinterType = port === 9100 ? 'star' : undefined;
+    
     const device: PrinterDevice = {
       id: `${address}:${port}`,
       name: name || `Manual Printer (${address}:${port})`,
@@ -1254,6 +1257,7 @@ export class PrinterService {
       port: port,
       isConnected: false,
       status: 'offline',
+      printerType: defaultPrinterType,
       capabilities: {
         paperWidth: 80,
         supportsImages: true,
@@ -1521,24 +1525,42 @@ export class PrinterService {
   private isStarPrinter(device: PrinterDevice): boolean {
     // First check if printer type is explicitly set
     if (device.printerType === 'star') {
+      console.log(`🌟 Star printer detected: explicit printerType='star'`);
       return true;
     }
     if (device.printerType === 'escpos') {
+      console.log(`📄 ESC/POS printer detected: explicit printerType='escpos'`);
       return false;
     }
     
-    // Auto-detect based on name/model
+    // Default to Star for port 9100 (standard JetDirect/Star port)
+    if (device.port === 9100) {
+      console.log(`🌟 Star printer detected: port 9100 (JetDirect/Star standard)`);
+      return true;
+    }
+    
+    // Auto-detect based on name/model/address
     const name = (device.name || '').toLowerCase();
     const model = (device.metadata?.model || '').toLowerCase();
+    const address = (device.address || '').toLowerCase();
     
     // Check for Star printer keywords
-    return name.includes('star') || 
+    const isStar = name.includes('star') || 
            name.includes('mc-print') || 
            name.includes('mcp') ||
            name.includes('mc print') ||
            name.includes('tsp') || // TSP series
            model.includes('star') ||
-           model.includes('mc-print');
+           model.includes('mc-print') ||
+           address.includes('star');
+           
+    if (isStar) {
+      console.log(`🌟 Star printer detected: keyword match in name/model/address`);
+    } else {
+      console.log(`📄 Non-Star printer: defaulting to ESC/POS`);
+    }
+    
+    return isStar;
   }
 
   /**
