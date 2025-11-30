@@ -73,7 +73,7 @@ export function LounasMenuModal({
         description_ar: menu.description_ar || "",
         description_ru: menu.description_ru || "",
         description_sv: menu.description_sv || "",
-        price: menu.price.toString(),
+        price: menu.price || "",
         is_lactose_free: menu.is_lactose_free,
         is_gluten_free: menu.is_gluten_free,
         is_vegan: menu.is_vegan,
@@ -109,7 +109,7 @@ export function LounasMenuModal({
   }, [menu]);
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.price) {
+    if (!formData.name.trim()) {
       toast({
         title: t("Virhe", "Error"),
         description: t("Täytä pakolliset kentät", "Please fill required fields"),
@@ -134,7 +134,7 @@ export function LounasMenuModal({
         description_ar: formData.description_ar || undefined,
         description_ru: formData.description_ru || undefined,
         description_sv: formData.description_sv || undefined,
-        price: parseFloat(formData.price),
+        price: formData.price,
         is_lactose_free: formData.is_lactose_free,
         is_gluten_free: formData.is_gluten_free,
         is_vegan: formData.is_vegan,
@@ -252,13 +252,13 @@ export function LounasMenuModal({
           {/* Price */}
           <div className="space-y-2">
             <Label>
-              {t("Hinta (€)", "Price (€)")} <span className="text-red-500">*</span>
+              {t("Hinta", "Price")}
             </Label>
             <Input
-              type="number"
-              step="0.01"
+              type="text"
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              placeholder={t("Esim. 22 euroa / henkilö", "E.g. 22 euros per person")}
             />
           </div>
 

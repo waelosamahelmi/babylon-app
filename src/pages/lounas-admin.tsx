@@ -465,9 +465,9 @@ export default function LounasAdmin() {
                             <Calendar className="w-5 h-5 text-primary" />
                             {t(dayNames.fi[day], dayNames.en[day], "", "", "")}
                           </CardTitle>
-                          {dayMenus.length > 0 && (
+                          {dayMenus.length > 0 && dayMenus[0].price && (
                             <div className="text-xl font-bold text-primary">
-                              {dayMenus[0].price} €
+                              {dayMenus[0].price}
                             </div>
                           )}
                         </div>
