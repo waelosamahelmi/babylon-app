@@ -3,6 +3,7 @@ import { useLanguage } from "@/lib/language-context";
 import { useCart } from "@/lib/cart-context";
 import { useCreateOrder } from "@/hooks/use-orders";
 import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
+import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
   const { toast } = useToast();
   const createOrder = useCreateOrder();
   const { data: restaurantSettings } = useRestaurantSettings();
+  const { data: restaurantConfig } = useRestaurantConfig();
   
   // Load payment methods from database
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState([
@@ -95,8 +97,15 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
 
   const deliveryFee = calculateDeliveryFee();
   const totalAmount = totalPrice + deliveryFee;
+  
+  // Get minimum order from config for delivery only (pickup has no minimum)
+  const minimumOrderDelivery = formData.orderType === "delivery" 
+    ? (restaurantConfig?.deliveryConfig?.minimumOrderDelivery || 15.00)
+    : 0;
+  
+  // Long distance minimum (over 10km)
   const minimumOrderAmount = formData.orderType === "delivery" && 
-    deliveryInfo && deliveryInfo.distance > 10 ? 20.00 : 0;
+    deliveryInfo && deliveryInfo.distance > 10 ? 20.00 : minimumOrderDelivery;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

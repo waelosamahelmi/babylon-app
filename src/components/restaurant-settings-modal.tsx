@@ -49,6 +49,7 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
   const [autoAcceptEnabled, setAutoAcceptEnabled] = useState(false);
   const [autoAcceptDeliveryTime, setAutoAcceptDeliveryTime] = useState("30");
   const [autoAcceptPickupTime, setAutoAcceptPickupTime] = useState("15");
+  const [minimumOrderDelivery, setMinimumOrderDelivery] = useState("15.00");
 
   // Load settings when modal opens
   useEffect(() => {
@@ -58,6 +59,16 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
       setSpecialMessage(restaurantSettings.specialMessage ?? "");
     }
   }, [isOpen, restaurantSettings]);
+
+  // Load minimum order from restaurant config
+  useEffect(() => {
+    if (isOpen && restaurantConfig?.deliveryConfig) {
+      const minOrder = restaurantConfig.deliveryConfig.minimumOrderDelivery;
+      if (minOrder !== undefined && minOrder !== null) {
+        setMinimumOrderDelivery(minOrder.toString());
+      }
+    }
+  }, [isOpen, restaurantConfig]);
 
   // Load auto-accept settings from localStorage (legacy support)
   useEffect(() => {
@@ -88,6 +99,19 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
         deliveryHours: "Managed via Site Configuration",
         lunchBuffetHours: "Managed via Site Configuration",
       });
+
+      // Save minimum order to restaurant config if it exists
+      if (restaurantConfig?.id) {
+        const updatedDeliveryConfig = {
+          ...(restaurantConfig.deliveryConfig || {}),
+          minimumOrderDelivery: parseFloat(minimumOrderDelivery) || 15.00,
+        };
+
+        await updateConfig.mutateAsync({
+          id: restaurantConfig.id,
+          deliveryConfig: updatedDeliveryConfig,
+        });
+      }
 
       // Save auto-accept settings to localStorage (legacy)
       const autoAcceptSettings = {
@@ -347,6 +371,38 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
               </CardContent>
             </Card>
           )}
+
+          {/* Minimum Order Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Euro className="w-5 h-5" />
+                <span>{t("Minimitilaus", "Minimum Order")}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label className="flex items-center space-x-2">
+                  <Truck className="w-4 h-4" />
+                  <span>{t("Kotiinkuljetuksen minimitilaus (€)", "Delivery Minimum Order (€)")}</span>
+                </Label>
+                <Input
+                  type="number"
+                  step="0.50"
+                  min="0"
+                  value={minimumOrderDelivery}
+                  onChange={(e) => setMinimumOrderDelivery(e.target.value)}
+                  placeholder="15.00"
+                />
+                <p className="text-xs text-gray-500">
+                  {t(
+                    "Asiakkaiden täytyy tilata vähintään tämän summan verran kotiinkuljetuksessa. Noudossa ei ole minimitilausta.",
+                    "Customers must order at least this amount for delivery. There is no minimum for pickup orders."
+                  )}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
           <Separator />
 

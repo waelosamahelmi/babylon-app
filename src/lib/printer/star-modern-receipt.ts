@@ -122,61 +122,51 @@ export class StarModernReceipt {
     r.init();
     
     // ═══════════════════════════════════════
-    // HEADER - Restaurant Name & Info (SMALLER)
+    // HEADER - Restaurant Name & Info (VERY SMALL)
     // ═══════════════════════════════════════
     r.align(1); // Center
-    r.nl(2);
-    
-    // Restaurant name - 1x1 BOLD (smaller)
-    r.bold(true);
-    r.setSize(1, 1);
-    r.text('BABYLON');
     r.nl();
-    r.text('RAVINTOLA');
-    r.nl();
-    r.bold(false);
     
-    // Contact info - 1x1 (smaller)
+    // Restaurant name - 1x1 (small, no bold)
     r.setSize(1, 1);
+    r.text('BABYLON RAVINTOLA');
+    r.nl();
+    
+    // Contact info - 1x1 (small)
     r.text(data.restaurantAddress || 'Vapaudenkatu 28, 15140 Lahti');
     r.nl();
     r.text(data.restaurantPhone || 'Puh: +358-3-781-2222');
     r.nl();
     
-    r.text('===================='); // Shorter separator
+    r.text('====================');
     r.nl();
     
     // ═══════════════════════════════════════
-    // ORDER NUMBER & INFO
+    // ORDER NUMBER & INFO (SMALL)
     // ═══════════════════════════════════════
-    // Order number - 1x1 BOLD
-    r.bold(true);
+    // Order number - 1x1 (small)
     r.setSize(1, 1);
     r.text(`#${data.orderNumber}`);
     r.nl();
-    r.bold(false);
     
-    // Date & Time - 1x1
+    // Date & Time - 1x1 (small)
     const date = data.timestamp.toLocaleDateString('fi-FI');
     const time = data.timestamp.toLocaleTimeString('fi-FI', { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
-    r.setSize(1, 1);
     r.text(`${date} klo ${time}`);
     r.nl();
     
-    // Order Type - 1x1
+    // Order Type - 1x1 (small)
     const orderType = data.orderType === 'delivery' ? 'KOTIINKULJETUS' : 'NOUTO';
     r.text(orderType);
     r.nl();
     
-    // Payment - BOLD (show actual payment method from order)
+    // Payment - 1x1 (small, show actual payment method from order)
     const paymentMethod = originalOrder?.payment_method || originalOrder?.paymentMethod || data.paymentMethod;
     if (paymentMethod) {
-      r.bold(true);
       r.text(`Maksutapa: ${paymentMethod}`);
-      r.bold(false);
       r.nl();
     }
     
