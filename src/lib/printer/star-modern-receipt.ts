@@ -142,11 +142,6 @@ export class StarModernReceipt {
     r.nl();
     r.text(data.restaurantPhone || 'Puh: +358-3-781-2222');
     r.nl();
-    r.bold(false);
-    r.size(1, 1);
-    r.nl();
-    r.text('Vapaudenkatu 28, 15140 Lahti');
-    r.nl();
     
     r.text('===================='); // Shorter separator
     r.nl();
