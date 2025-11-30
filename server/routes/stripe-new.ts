@@ -97,22 +97,33 @@ router.get('/config', async (req, res) => {
 // Create payment intent
 router.post('/create-payment-intent', async (req, res) => {
   try {
+    console.log('📝 Create payment intent request:', { 
+      amount: req.body.amount, 
+      currency: req.body.currency,
+      metadata: req.body.metadata 
+    });
+
     const { amount, currency = 'eur', metadata = {}, forcePaymentMethods } = req.body;
 
     if (!amount || amount <= 0) {
+      console.error('❌ Invalid amount:', amount);
       return res.status(400).json({ 
         error: 'Invalid amount',
         message: 'Amount must be greater than 0'
       });
     }
 
+    console.log('🔑 Getting Stripe instance...');
     const stripe = await getStripeInstance();
     if (!stripe) {
+      console.error('❌ Stripe instance is null - keys not configured');
       return res.status(500).json({ 
         error: 'Stripe not configured',
         message: 'Please configure Stripe keys in restaurant settings'
       });
     }
+
+    console.log('✅ Stripe instance obtained successfully');
 
     // Create payment intent with automatic or manual payment methods
     // Stripe will show payment methods based on:
@@ -140,6 +151,7 @@ router.post('/create-payment-intent', async (req, res) => {
       };
     }
 
+    console.log('💳 Creating payment intent with options:', JSON.stringify(paymentIntentOptions, null, 2));
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentOptions);
 
     console.log('✅ Payment intent created:', paymentIntent.id);
@@ -149,10 +161,16 @@ router.post('/create-payment-intent', async (req, res) => {
       paymentIntentId: paymentIntent.id,
     });
   } catch (error) {
-    console.error('❌ Error creating payment intent:', error);
+    console.error('❌ Error creating payment intent:');
+    console.error('Error type:', error?.constructor?.name);
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Full error:', JSON.stringify(error, null, 2));
+    
     res.status(500).json({ 
       error: 'Failed to create payment intent',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
+      details: process.env.NODE_ENV === 'development' ? error : undefined
     });
   }
 });
