@@ -96,7 +96,25 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
   };
 
   const deliveryFee = calculateDeliveryFee();
-  const totalAmount = totalPrice + deliveryFee;
+  
+  // Calculate online payment service fee
+  const calculateServiceFee = () => {
+    if (!isStripePaymentMethod()) return 0;
+    
+    const feeAmount = parseFloat(restaurantSettings?.onlinePaymentServiceFee?.toString() || "0");
+    const feeType = restaurantSettings?.onlinePaymentServiceFeeType || "fixed";
+    
+    if (feeType === "percentage") {
+      // Calculate percentage of order subtotal + delivery
+      return ((totalPrice + deliveryFee) * feeAmount) / 100;
+    } else {
+      // Fixed amount
+      return feeAmount;
+    }
+  };
+  
+  const serviceFee = calculateServiceFee();
+  const totalAmount = totalPrice + deliveryFee + serviceFee;
   
   // Get minimum order from config for delivery only (pickup has no minimum)
   const minimumOrderDelivery = formData.orderType === "delivery" 
@@ -447,6 +465,12 @@ export function CheckoutModal({ isOpen, onClose, onBack }: CheckoutModalProps) {
                   <div className="flex justify-between text-sm">
                     <span>{t("Kuljetusmaksu", "Delivery fee")}</span>
                     <span>€{deliveryFee.toFixed(2)}</span>
+                  </div>
+                )}
+                {serviceFee > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span>{t("Verkkomaksu palvelumaksu", "Online payment service fee")}</span>
+                    <span>€{serviceFee.toFixed(2)}</span>
                   </div>
                 )}
               </div>

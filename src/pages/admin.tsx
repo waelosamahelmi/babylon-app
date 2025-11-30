@@ -12,6 +12,7 @@ import { useAndroid } from "@/lib/android-context";
 import { usePrinter } from "@/lib/printer-context";
 import { useLocation } from "wouter";
 import { sendOrderAcceptedEmail, sendOrderCancelledEmail, sendOrderDeliveredEmail } from "@/lib/email-service";
+import { processOrderRefund } from "@/lib/stripe-refund";
 import { LoginModal } from "@/components/login-modal";
 import { ProductManagementModal } from "@/components/product-management-modal";
 
@@ -390,6 +391,7 @@ export default function Admin() {
         const order = orders?.find((o: any) => o.id === orderId);
         if (order && (order.customer_email || order.customerEmail)) {
           const paymentMethod = order.payment_method || order.paymentMethod || 'cash';
+          const stripePaymentIntentId = order.stripe_payment_intent_id || order.stripePaymentIntentId;
           const isOnlinePayment = paymentMethod.toLowerCase().includes('card') || 
                                  paymentMethod.toLowerCase().includes('online') || 
                                  paymentMethod.toLowerCase().includes('stripe') ||
@@ -398,13 +400,50 @@ export default function Admin() {
           
           const totalAmount = parseFloat(order.total_amount || order.totalAmount || '0');
           
-          // TODO: Implement Stripe refund API call here
-          // If payment was made via Stripe, issue a refund
+          // Process Stripe refund if payment was made online
           let refundAmount = undefined;
-          if (isOnlinePayment && totalAmount > 0) {
+          let refundStatus = undefined;
+          if (isOnlinePayment && totalAmount > 0 && stripePaymentIntentId) {
             refundAmount = totalAmount;
-            console.log(`💳 Refund needed for order ${orderId}: €${refundAmount}`);
-            // Example: await stripe.refunds.create({ payment_intent: order.stripe_payment_id });
+            console.log(`💳 Processing refund for order ${orderId}: €${refundAmount}`);
+            
+            try {
+              const refundResult = await processOrderRefund({
+                orderId: orderId,
+                paymentIntentId: stripePaymentIntentId,
+                amount: refundAmount,
+                reason: 'requested_by_customer'
+              });
+              
+              if (refundResult.success) {
+                console.log(`✅ Refund processed successfully: ${refundResult.refundId}`);
+                refundStatus = 'processed';
+                toast({
+                  title: adminT("Hyvitys käsitelty", "Refund Processed", "تمت المعالجة"),
+                  description: adminT(
+                    `Hyvitys €${refundAmount.toFixed(2)} käsitelty onnistuneesti`,
+                    `Refund of €${refundAmount.toFixed(2)} processed successfully`,
+                    `تمت معالجة استرداد €${refundAmount.toFixed(2)} بنجاح`
+                  ),
+                });
+              } else {
+                console.error(`❌ Refund failed: ${refundResult.error}`);
+                refundStatus = 'failed';
+                toast({
+                  title: adminT("Hyvitys epäonnistui", "Refund Failed", "فشل الاسترداد"),
+                  description: refundResult.error || adminT("Hyvityksen käsittely epäonnistui", "Failed to process refund", "فشل معالجة الاسترداد"),
+                  variant: "destructive",
+                });
+              }
+            } catch (error) {
+              console.error(`❌ Error processing refund:`, error);
+              refundStatus = 'error';
+              toast({
+                title: adminT("Hyvitysvirhe", "Refund Error", "خطأ في الاسترداد"),
+                description: adminT("Hyvityksen käsittelyssä tapahtui virhe", "An error occurred processing the refund", "حدث خطأ في معالجة الاسترداد"),
+                variant: "destructive",
+              });
+            }
           }
           
           const emailData = {
@@ -426,7 +465,8 @@ export default function Admin() {
             branchAddress: 'Vapaudenkatu 28, 15140 Lahti',
             specialInstructions: order.special_instructions || order.specialInstructions,
             paymentMethod: paymentMethod,
-            refundAmount: refundAmount
+            refundAmount: refundAmount,
+            refundStatus: refundStatus
           };
           
           sendOrderCancelledEmail(emailData).then(result => {

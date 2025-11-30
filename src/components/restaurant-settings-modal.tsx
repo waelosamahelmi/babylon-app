@@ -24,7 +24,10 @@ import {
   Coffee,
   CheckCircle,
   Timer,
-  Settings
+  Settings,
+  CreditCard,
+  Euro,
+  Percent
 } from "lucide-react";
 
 interface RestaurantSettingsModalProps {
@@ -50,6 +53,8 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
   const [autoAcceptDeliveryTime, setAutoAcceptDeliveryTime] = useState("30");
   const [autoAcceptPickupTime, setAutoAcceptPickupTime] = useState("15");
   const [minimumOrderDelivery, setMinimumOrderDelivery] = useState("15.00");
+  const [serviceFee, setServiceFee] = useState("0.00");
+  const [serviceFeeType, setServiceFeeType] = useState<"fixed" | "percentage">("fixed");
 
   // Load settings when modal opens
   useEffect(() => {
@@ -57,6 +62,8 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
       setIsForceOpen(restaurantSettings.isOpen ?? false);
       setIsBusy(restaurantSettings.isBusy ?? false);
       setSpecialMessage(restaurantSettings.specialMessage ?? "");
+      setServiceFee((restaurantSettings.onlinePaymentServiceFee ?? "0.00").toString());
+      setServiceFeeType((restaurantSettings.onlinePaymentServiceFeeType ?? "fixed") as "fixed" | "percentage");
     }
   }, [isOpen, restaurantSettings]);
 
@@ -98,6 +105,8 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
         pickupHours: "Managed via Site Configuration", 
         deliveryHours: "Managed via Site Configuration",
         lunchBuffetHours: "Managed via Site Configuration",
+        onlinePaymentServiceFee: parseFloat(serviceFee) || 0.00,
+        onlinePaymentServiceFeeType: serviceFeeType,
       });
 
       // Save minimum order to restaurant config if it exists
@@ -399,6 +408,70 @@ export function RestaurantSettingsModal({ isOpen, onClose }: RestaurantSettingsM
                     "Asiakkaiden täytyy tilata vähintään tämän summan verran kotiinkuljetuksessa. Noudossa ei ole minimitilausta.",
                     "Customers must order at least this amount for delivery. There is no minimum for pickup orders."
                   )}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Online Payment Service Fee */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <CreditCard className="w-5 h-5" />
+                <span>{t("Verkkomaksu palvelumaksu", "Online Payment Service Fee")}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t("Maksun tyyppi", "Fee Type")}</Label>
+                <Select value={serviceFeeType} onValueChange={(value) => setServiceFeeType(value as "fixed" | "percentage")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixed">
+                      <div className="flex items-center space-x-2">
+                        <Euro className="w-4 h-4" />
+                        <span>{t("Kiinteä summa (€)", "Fixed Amount (€)")}</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="percentage">
+                      <div className="flex items-center space-x-2">
+                        <Percent className="w-4 h-4" />
+                        <span>{t("Prosentti (%)", "Percentage (%)")}</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>
+                  {serviceFeeType === "fixed" 
+                    ? t("Palvelumaksu (€)", "Service Fee (€)")
+                    : t("Palvelumaksu (%)", "Service Fee (%)")
+                  }
+                </Label>
+                <Input
+                  type="number"
+                  step={serviceFeeType === "fixed" ? "0.50" : "0.1"}
+                  min="0"
+                  max={serviceFeeType === "percentage" ? "100" : undefined}
+                  value={serviceFee}
+                  onChange={(e) => setServiceFee(e.target.value)}
+                  placeholder={serviceFeeType === "fixed" ? "2.00" : "2.5"}
+                />
+                <p className="text-xs text-gray-500">
+                  {serviceFeeType === "fixed" 
+                    ? t(
+                        "Kiinteä palvelumaksu, joka lisätään verkkomaksuihin (esim. 2,00 € per tilaus).",
+                        "Fixed service fee added to online payments (e.g., €2.00 per order)."
+                      )
+                    : t(
+                        "Prosentuaalinen palvelumaksu, joka lasketaan tilauksen summasta (esim. 2,5%).",
+                        "Percentage-based service fee calculated from order total (e.g., 2.5%)."
+                      )
+                  }
                 </p>
               </div>
             </CardContent>
