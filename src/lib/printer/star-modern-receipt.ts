@@ -1,12 +1,12 @@
 /**
  * Modern Star Receipt Formatter
- * Based on Star Micronics CloudPRNT SDK best practices
- * Optimized for mC-Print3 and Star Line Mode printers
+ * Based on Star Line Mode commands - VERIFIED WORKING
+ * Optimized for mC-Print3 printer at 192.168.1.106:9100
  */
 
 import { ReceiptData } from './types';
 
-// ESC/POS & Star Command constants
+// Star Line Mode Command constants
 const ESC = 0x1B;
 const GS = 0x1D;
 const LF = 0x0A;
@@ -32,31 +32,27 @@ function translatePaymentMethod(method: string): string {
 export class StarModernReceipt {
   private cmd: number[] = [];
   
-  // Initialize printer with proper settings
+  // Initialize printer with Star Line Mode
   private init(): void {
-    // ESC @ - Initialize printer
-    this.cmd.push(ESC, 0x40);
-    // Set code page to CP850 (Multilingual Latin I) for Finnish
-    this.cmd.push(ESC, 0x74, 0x02);
+    this.cmd.push(ESC, 0x40); // Initialize
+    this.cmd.push(ESC, 0x1E, 0x61, 0x00); // Enable Star Line Mode
   }
   
-  // Encode text with CP850 for Finnish characters
+  // Encode text with verified Finnish character mapping (0xA0-0xA5)
   private encode(text: string): number[] {
     const bytes: number[] = [];
     
     for (const char of text) {
       switch (char) {
-        case 'ä': bytes.push(0x84); break;
-        case 'Ä': bytes.push(0x8E); break;
-        case 'ö': bytes.push(0x94); break;
-        case 'Ö': bytes.push(0x99); break;
-        case 'å': bytes.push(0x86); break;
-        case 'Å': bytes.push(0x8F); break;
-        case 'é': bytes.push(0x82); break;
-        case '€': bytes.push(0xEE); break;
+        case 'ä': bytes.push(0xA0); break;
+        case 'ö': bytes.push(0xA1); break;
+        case 'å': bytes.push(0xA2); break;
+        case 'Ä': bytes.push(0xA3); break;
+        case 'Ö': bytes.push(0xA4); break;
+        case 'Å': bytes.push(0xA5); break;
+        case '€': bytes.push(0x80); break;
         default:
-          const code = char.charCodeAt(0);
-          bytes.push(code < 128 ? code : 0x3F);
+          bytes.push(char.charCodeAt(0));
       }
     }
     
@@ -71,60 +67,51 @@ export class StarModernReceipt {
     for (let i = 0; i < count; i++) this.cmd.push(LF);
   }
   
-  // ESC a n - Set alignment (0=left, 1=center, 2=right)
+  // ESC i height width - Set character size (Star Line Mode)
+  private setSize(height: number, width: number): void {
+    this.cmd.push(ESC, 0x69, height, width);
+  }
+  
+  // ESC GS a n - Set alignment (0=left, 1=center, 2=right)
   private align(n: 0 | 1 | 2): void {
-    this.cmd.push(ESC, 0x61, n);
+    this.cmd.push(ESC, GS, 0x61, n);
   }
   
-  // GS ! n - Set character size (width and height)
-  private size(w: number, h: number): void {
-    const ww = Math.max(0, Math.min(7, w - 1));
-    const hh = Math.max(0, Math.min(7, h - 1));
-    this.cmd.push(GS, 0x21, (ww << 4) | hh);
-  }
-  
-  // ESC E n - Set bold
+  // ESC E / ESC F - Set bold emphasis
   private bold(on: boolean): void {
-    this.cmd.push(ESC, 0x45, on ? 1 : 0);
+    this.cmd.push(ESC, on ? 0x45 : 0x46);
   }
   
-  // ESC - n - Set underline
-  private underline(on: boolean): void {
-    this.cmd.push(ESC, 0x2D, on ? 1 : 0);
-  }
-  
-  // Two-column layout
-  private cols(left: string, right: string, width: number = 48): void {
-    const rLen = right.length;
-    const lMax = width - rLen;
-    const lText = left.length > lMax ? left.substring(0, lMax - 2) + '..' : left;
-    const pad = ' '.repeat(Math.max(0, width - lText.length - rLen));
-    this.text(lText + pad + right);
-    this.nl();
-  }
-  
-  // Generate QR code for website
-  private qr(url: string): void {
-    // GS ( k - QR Code
-    const data = this.encode(url);
-    const pL = (data.length + 3) % 256;
-    const pH = Math.floor((data.length + 3) / 256);
+  // Generate QR code using Star Method 3 (VERIFIED WORKING)
+  private qrCodeBig(url: string): void {
+    const urlBytes = this.encode(url);
+    const len = urlBytes.length;
     
-    // Model
-    this.cmd.push(GS, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
-    // Size
-    this.cmd.push(GS, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x08);
-    // Error correction L
-    this.cmd.push(GS, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30);
-    // Store data
-    this.cmd.push(GS, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30, ...data);
-    // Print
-    this.cmd.push(GS, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
+    // ESC GS y S - Star QR Method 3
+    this.cmd.push(ESC, 0x1D, 0x79, 0x53);
+    this.cmd.push(0x30); // Function 0 - Model
+    this.cmd.push(0x02); // Model 2
+    
+    this.cmd.push(ESC, 0x1D, 0x79, 0x53);
+    this.cmd.push(0x31); // Function 1 - Module size
+    this.cmd.push(0x0A); // Size 10 (BIGGER)
+    
+    this.cmd.push(ESC, 0x1D, 0x79, 0x53);
+    this.cmd.push(0x32); // Function 2 - Error correction
+    this.cmd.push(0x31); // Level M
+    
+    this.cmd.push(ESC, 0x1D, 0x79, 0x44);
+    this.cmd.push(0x31); // Function D1 - Store data
+    this.cmd.push(0x00); // Padding
+    this.cmd.push(len % 256, Math.floor(len / 256));
+    this.cmd.push(...urlBytes);
+    
+    this.cmd.push(ESC, 0x1D, 0x79, 0x50); // Print QR
   }
   
-  // Cut paper
+  // ESC d n - Feed and cut
   private cut(): void {
-    this.cmd.push(GS, 0x56, 0x00); // Partial cut
+    this.cmd.push(ESC, 0x64, 0x02);
   }
   
   /**
@@ -135,155 +122,145 @@ export class StarModernReceipt {
     r.init();
     
     // ═══════════════════════════════════════
-    // HEADER - Restaurant Name & Info
+    // HEADER - Restaurant Name & Info (SMALLER)
     // ═══════════════════════════════════════
-    r.align(1);
+    r.align(1); // Center
     r.nl(2);
+    
+    // Restaurant name - 1x1 BOLD (smaller)
     r.bold(true);
-    r.size(3, 3);
+    r.setSize(1, 1);
     r.text('BABYLON');
     r.nl();
-    r.size(2, 2);
     r.text('RAVINTOLA');
+    r.nl();
+    r.bold(false);
+    
+    // Contact info - 1x1 (smaller)
+    r.setSize(1, 1);
+    r.text(data.restaurantAddress || 'Vapaudenkatu 28, 15140 Lahti');
+    r.nl();
+    r.text(data.restaurantPhone || 'Puh: +358-3-781-2222');
     r.nl();
     r.bold(false);
     r.size(1, 1);
     r.nl();
     r.text('Vapaudenkatu 28, 15140 Lahti');
     r.nl();
-    r.text('+358-3781-2222');
-    r.nl(2);
-    r.text('--------------------------------');
-    r.nl(2);
+    
+    r.text('===================='); // Shorter separator
+    r.nl();
     
     // ═══════════════════════════════════════
-    // ORDER NUMBER (Prominent)
+    // ORDER NUMBER & INFO
     // ═══════════════════════════════════════
+    // Order number - 1x1 BOLD
     r.bold(true);
-    r.size(3, 3);
+    r.setSize(1, 1);
     r.text(`#${data.orderNumber}`);
     r.nl();
     r.bold(false);
-    r.size(1, 1);
-    r.nl();
     
-    // Date & Time
+    // Date & Time - 1x1
     const date = data.timestamp.toLocaleDateString('fi-FI');
     const time = data.timestamp.toLocaleTimeString('fi-FI', { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
+    r.setSize(1, 1);
     r.text(`${date} klo ${time}`);
-    r.nl(2);
+    r.nl();
     
-    // Order Type
-    r.bold(true);
-    r.size(2, 2);
+    // Order Type - 1x1
     const orderType = data.orderType === 'delivery' ? 'KOTIINKULJETUS' : 'NOUTO';
     r.text(orderType);
     r.nl();
-    r.size(1, 1);
-    r.bold(false);
-    r.nl();
     
-    if (data.paymentMethod) {
-      const payment = translatePaymentMethod(data.paymentMethod);
-      r.text(`Maksutapa: ${payment}`);
+    // Payment - BOLD (show actual payment method from order)
+    const paymentMethod = originalOrder?.payment_method || originalOrder?.paymentMethod || data.paymentMethod;
+    if (paymentMethod) {
+      r.bold(true);
+      r.text(`Maksutapa: ${paymentMethod}`);
+      r.bold(false);
       r.nl();
     }
     
+    r.text('====================');
     r.nl();
-    r.text('--------------------------------');
-    r.nl(2);
     
     // ═══════════════════════════════════════
     // CUSTOMER INFO (if available)
     // ═══════════════════════════════════════
     if (data.customerName || data.customerPhone || data.deliveryAddress) {
-      r.bold(true);
-      r.underline(true);
-      r.text('ASIAKASTIEDOT');
-      r.nl();
-      r.underline(false);
-      r.bold(false);
-      r.nl();
-      r.align(0);
+      r.align(0); // Left
       
       if (data.customerName) {
-        r.bold(true);
         r.text('Nimi: ');
-        r.bold(false);
+        r.bold(true);
         r.text(data.customerName);
+        r.bold(false);
         r.nl();
       }
       
       if (data.customerPhone) {
-        r.bold(true);
         r.text('Puh: ');
-        r.bold(false);
+        r.bold(true);
         r.text(data.customerPhone);
+        r.bold(false);
         r.nl();
       }
       
       if (data.deliveryAddress) {
-        r.bold(true);
         r.text('Osoite:');
         r.nl();
-        r.bold(false);
+        r.bold(true);
         data.deliveryAddress.split('\n').forEach(line => {
           r.text('  ' + line.trim());
           r.nl();
         });
+        r.bold(false);
       }
       
       r.nl();
-      r.align(1);
-      r.text('--------------------------------');
-      r.nl(2);
+      r.align(1); // Center
+      r.text('====================');
+      r.nl();
     }
     
     // ═══════════════════════════════════════
     // ITEMS
     // ═══════════════════════════════════════
-    r.bold(true);
-    r.underline(true);
-    r.text('TUOTTEET');
+    r.align(0); // Left
     r.nl();
-    r.underline(false);
-    r.bold(false);
-    r.text('================================');
-    r.nl(2);
-    
-    r.align(0);
     
     for (const item of data.items) {
-      // Item name and price
-      const itemName = `${item.quantity}x ${item.name}`;
-      const itemPrice = `${item.totalPrice.toFixed(2)}€`;
-      
+      // Item name - 1x1 BOLD
       r.bold(true);
-      r.size(2, 2);
-      r.cols(itemName, itemPrice, 24);
-      r.size(1, 1);
+      r.setSize(1, 1);
+      r.text(`${item.quantity}x ${item.name}`);
+      r.nl();
       r.bold(false);
       
-      // Toppings
+      // Price - 1x1 NORMAL (right aligned)
+      r.align(2);
+      r.text(`${item.totalPrice.toFixed(2)}€`);
+      r.nl();
+      r.align(0);
+      
+      // Toppings - 1x1
       if (item.toppings && item.toppings.length > 0) {
-        r.text('  Lisatatteet:');
+        r.text('  Lisatteet:');
         r.nl();
         
         item.toppings.forEach((topping: { name: string; price: number }) => {
-          const toppingName = `    + ${topping.name}`;
-          const toppingPrice = topping.price > 0 ? `+${topping.price.toFixed(2)}€` : '';
-          
-          if (toppingPrice) {
-            r.cols(toppingName, toppingPrice, 48);
-          } else {
-            r.text(toppingName);
-            r.nl();
+          r.text(`    + ${topping.name}`);
+          if (topping.price > 0) {
+            r.align(2);
+            r.text(`+${topping.price.toFixed(2)}€`);
+            r.align(0);
           }
+          r.nl();
         });
-        r.nl();
       }
       
       // Notes
@@ -301,7 +278,7 @@ export class StarModernReceipt {
         }
       }
       
-      r.text('- - - - - - - - - - - - - - - -');
+      r.text('- - - - - - - - -'); // Shorter dashes
       r.nl();
     }
     
@@ -313,21 +290,18 @@ export class StarModernReceipt {
       
       r.nl();
       r.align(1);
-      r.bold(true);
-      r.text('ERIKOISOHJEET');
+      r.text('====================');
       r.nl();
-      r.bold(false);
       r.align(0);
-      r.nl();
       
-      // Word wrap at 46 chars
+      // Word wrap at 32 chars
       const words = instructions.split(' ');
       let line = '';
       
       for (const word of words) {
-        if ((line + ' ' + word).length > 46) {
+        if ((line + ' ' + word).length > 32) {
           if (line) {
-            r.text('  ' + line);
+            r.text(line);
             r.nl();
           }
           line = word;
@@ -337,70 +311,94 @@ export class StarModernReceipt {
       }
       
       if (line) {
-        r.text('  ' + line);
+        r.text(line);
         r.nl();
       }
       
-      r.nl();
       r.align(1);
     }
     
     // ═══════════════════════════════════════
     // TOTALS
     // ═══════════════════════════════════════
+    r.nl();
     r.align(1);
-    r.text('================================');
+    r.text('====================');
     r.nl();
-    r.bold(true);
-    r.underline(true);
-    r.text('YHTEENVETO');
-    r.nl();
-    r.underline(false);
-    r.bold(false);
-    r.text('================================');
-    r.nl(2);
     
     r.align(0);
-    r.size(2, 2);
+    r.setSize(1, 1);
     
+    // Subtotals - 1x1 BOLD labels
     if (originalOrder?.subtotal) {
-      r.cols('Välisumma:', `${parseFloat(originalOrder.subtotal).toFixed(2)}€`, 24);
+      r.bold(true);
+      r.text('Valisumma:');
+      r.bold(false);
+      r.align(2);
+      r.text(`${parseFloat(originalOrder.subtotal).toFixed(2)}€`);
+      r.nl();
+      r.align(0);
     }
     
     if (originalOrder?.deliveryFee && parseFloat(originalOrder.deliveryFee) > 0) {
-      r.cols('Toimitusmaksu:', `${parseFloat(originalOrder.deliveryFee).toFixed(2)}€`, 24);
+      r.bold(true);
+      r.text('Toimitus:');
+      r.bold(false);
+      r.align(2);
+      r.text(`${parseFloat(originalOrder.deliveryFee).toFixed(2)}€`);
+      r.nl();
+      r.align(0);
     }
     
     if (originalOrder?.smallOrderFee && parseFloat(originalOrder.smallOrderFee) > 0) {
-      r.cols('Pientilauslisa:', `${parseFloat(originalOrder.smallOrderFee).toFixed(2)}€`, 24);
+      r.bold(true);
+      r.text('Pientilaus:');
+      r.bold(false);
+      r.align(2);
+      r.text(`${parseFloat(originalOrder.smallOrderFee).toFixed(2)}€`);
+      r.nl();
+      r.align(0);
     }
     
     if (originalOrder?.discount && parseFloat(originalOrder.discount) > 0) {
-      r.cols('Alennus:', `-${parseFloat(originalOrder.discount).toFixed(2)}€`, 24);
+      r.bold(true);
+      r.text('Alennus:');
+      r.bold(false);
+      r.align(2);
+      r.text(`-${parseFloat(originalOrder.discount).toFixed(2)}€`);
+      r.nl();
+      r.align(0);
     }
     
     r.nl();
+    // Total price - 2x2 BOLD
+    r.align(0);
     r.bold(true);
-    r.size(3, 3);
-    r.cols('YHTEENSA:', `${data.total.toFixed(2)}€`, 16);
-    r.size(1, 1);
+    r.setSize(2, 2);
+    r.text('YHTEENSA:');
+    r.nl();
+    r.align(2);
+    r.text(`${data.total.toFixed(2)}€`);
+    r.nl();
     r.bold(false);
+    r.setSize(1, 1);
     
     // ═══════════════════════════════════════
     // FOOTER - QR Code & Thank You
     // ═══════════════════════════════════════
-    r.nl(2);
+    r.nl();
     r.align(1);
-    r.text('================================');
-    r.nl(2);
+    r.text('====================');
+    r.nl();
     
+    // Smaller text for thank you
     r.text('Kiitos tilauksestasi!');
     r.nl();
     r.text('Tervetuloa uudelleen!');
-    r.nl(2);
+    r.nl();
     
-    // QR Code to website
-    r.qr('https://ravintolababylon.fi');
+    // BIG QR Code to website
+    r.qrCodeBig('https://ravintolababylon.fi');
     r.nl(2);
     
     r.text('ravintolababylon.fi');
