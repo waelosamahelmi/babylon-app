@@ -67,18 +67,24 @@ export default function LounasAdmin() {
 
   // Get the actual date for a day of week in the selected week
   const getDateForDay = (dayOfWeek: number) => {
-    // Get first day of the year
-    const firstDayOfYear = new Date(year, 0, 1);
-    // ISO week starts on Monday, so we need to adjust
-    const daysSinceFirstMonday = (weekNumber - 1) * 7 + (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-    // Find the first Monday of the year
-    const firstMonday = new Date(firstDayOfYear);
-    const dayOfWeekJan1 = firstMonday.getDay();
-    const daysToFirstMonday = dayOfWeekJan1 === 0 ? 1 : (8 - dayOfWeekJan1);
-    firstMonday.setDate(firstMonday.getDate() + daysToFirstMonday);
-    // Calculate the target date
-    const targetDate = new Date(firstMonday);
-    targetDate.setDate(targetDate.getDate() + daysSinceFirstMonday);
+    // ISO 8601 week date calculation
+    // Week 1 is the week with the first Thursday of the year
+    const jan4 = new Date(year, 0, 4); // January 4th is always in week 1
+    const jan4DayOfWeek = jan4.getDay() || 7; // Sunday = 7, Monday = 1
+    const weekOneMonday = new Date(jan4);
+    weekOneMonday.setDate(jan4.getDate() - jan4DayOfWeek + 1);
+
+    // Calculate the Monday of the selected week
+    const selectedWeekMonday = new Date(weekOneMonday);
+    selectedWeekMonday.setDate(weekOneMonday.getDate() + (weekNumber - 1) * 7);
+
+    // Add days to get to the target day of week
+    // dayOfWeek: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    // ISO week: Monday = 0, Tuesday = 1, ..., Sunday = 6
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const targetDate = new Date(selectedWeekMonday);
+    targetDate.setDate(selectedWeekMonday.getDate() + daysFromMonday);
+
     return targetDate;
   };
 

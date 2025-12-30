@@ -64,10 +64,11 @@ router.post('/create-payment-intent', async (req, res) => {
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to smallest currency unit (öre for SEK)
+      amount: Math.round(amount * 100), // Convert to smallest currency unit (cents for EUR)
       currency: currency.toLowerCase(),
       metadata,
-      // Removed automatic_payment_methods to use Stripe Dashboard settings
+      // Finland-specific payment methods only
+      payment_method_types: ['card', 'klarna'],
     });
 
     res.json({
@@ -132,27 +133,122 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
     const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
 
+    console.log('📧 Webhook received:', {
+      type: event.type,
+      id: event.id,
+      created: event.created,
+    });
+
     // Handle the event
     switch (event.type) {
       case 'payment_intent.succeeded':
-        const paymentIntent = event.data.object;
-        console.log('PaymentIntent succeeded:', paymentIntent.id);
-        // TODO: Update order status in database
-        break;
-      case 'payment_intent.payment_failed':
-        const failedPayment = event.data.object;
-        console.log('PaymentIntent failed:', failedPayment.id);
-        // TODO: Handle failed payment
-        break;
-      default:
-        console.log(`Unhandled event type ${event.type}`);
-    }
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
 
-    res.json({ received: true });
+        console.log('💰 Payment succeeded:', {
+          id: paymentIntent.id,
+          amount: paymentIntent.amount,
+          currency: paymentIntent.currency,
+          payment_method_types: paymentIntent.payment_method_types,
+          status: paymentIntent.status,
+        });
+
+        // Check if this is a Klarna payment
+        const isKlarna = paymentIntent.payment_method_types?.includes('klarna');
+        if (isKlarna) {
+          console.log('🛍️ KLARNA payment detected - ensuring order creation');
+        }
+
+        // Get order data from metadata
+        const orderData = paymentIntent.metadata;
+        if (!orderData || !orderData.cart) {
+          console.error('❌ No order data in payment intent metadata');
+          return res.status(400).json({ error: 'No order data' });
+        }
+
+        try {
+          // Create order in database
+          const order = await createOrderFromPayment(paymentIntent);
+
+          console.log(`✅ Order created: ${order.id}`, {
+            payment_method: isKlarna ? 'klarna' : 'card',
+            total: order.total,
+            customer_email: orderData.customer_email,
+          });
+
+          res.json({ received: true, order_id: order.id });
+        } catch (orderError) {
+          console.error('❌ Failed to create order from payment:', orderError);
+          // Return success to Stripe anyway to prevent retries
+          res.json({ received: true, error: 'Order creation failed but payment succeeded' });
+        }
+        break;
+
+      case 'payment_intent.payment_failed':
+        const failedPayment = event.data.object as Stripe.PaymentIntent;
+        console.error('❌ Payment failed:', {
+          id: failedPayment.id,
+          last_payment_error: failedPayment.last_payment_error,
+        });
+        res.json({ received: true });
+        break;
+
+      case 'payment_intent.canceled':
+        const canceledPayment = event.data.object as Stripe.PaymentIntent;
+        console.log('🚫 Payment canceled:', canceledPayment.id);
+        res.json({ received: true });
+        break;
+
+      default:
+        console.log(`ℹ️ Unhandled event type: ${event.type}`);
+        res.json({ received: true });
+    }
   } catch (error) {
-    console.error('Webhook error:', error);
+    console.error('❌ Webhook error:', error);
     res.status(400).send(`Webhook Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 });
+
+// Helper function to create order from payment intent
+async function createOrderFromPayment(paymentIntent: Stripe.PaymentIntent) {
+  const metadata = paymentIntent.metadata;
+  const cart = JSON.parse(metadata.cart || '[]');
+
+  // Import orders table
+  const { orders, orderItems } = await import('../../shared/schema');
+
+  // Create order
+  const [order] = await db.insert(orders).values({
+    customerName: metadata.customer_name || '',
+    customerEmail: metadata.customer_email || '',
+    customerPhone: metadata.customer_phone || '',
+    customerAddress: metadata.customer_address || '',
+    orderType: (metadata.order_type as 'delivery' | 'pickup') || 'delivery',
+    branchId: metadata.branch_id ? parseInt(metadata.branch_id) : null,
+    subtotal: parseFloat(metadata.subtotal || '0'),
+    deliveryFee: parseFloat(metadata.delivery_fee || '0'),
+    total: paymentIntent.amount / 100, // Convert from cents
+    paymentMethod: 'online',
+    paymentStatus: 'paid',
+    stripePaymentIntentId: paymentIntent.id,
+    status: 'pending',
+    notes: metadata.notes || '',
+  }).returning();
+
+  // Create order items
+  const items = cart.map((item: any) => ({
+    orderId: order.id,
+    menuItemId: item.id,
+    quantity: item.quantity,
+    price: item.price,
+    toppings: item.selectedToppings || [],
+    specialInstructions: item.specialInstructions || '',
+  }));
+
+  if (items.length > 0) {
+    await db.insert(orderItems).values(items);
+  }
+
+  return order;
+}
 
 export default router;
