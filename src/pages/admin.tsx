@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSupabaseOrders, useSupabaseUpdateOrderStatus } from "@/hooks/use-supabase-orders";
 import { useSupabaseMenuItems, useSupabaseUpdateMenuItem, useSupabaseCreateMenuItem, useSupabaseCategories, useSupabaseToppings } from "@/hooks/use-supabase-menu";
 import { useSupabaseRealtime } from "@/hooks/use-supabase-realtime";
+import { useRestaurantConfig } from "@/hooks/use-restaurant-config";
 import { useLanguage } from "@/lib/language-context";
 import { useSupabaseAuth } from "@/lib/supabase-auth-context";
 import { supabase } from "@/lib/supabase";
@@ -32,7 +33,7 @@ import { LoyaltyManagementModal } from "@/components/loyalty-management-modal";
 import { CouponsManagementModal } from "@/components/coupons-management-modal";
 import { CustomerManagementModal } from "@/components/customer-management-modal";
 import { BranchPaymentMethodsModal } from "@/components/branch-payment-methods-modal";
-import { AnalyticsExportModal } from "@/components/analytics-export-modal";
+import { AdvancedReportModal } from "@/components/advanced-report-modal";
 import { PaymentMethodsAnalytics } from "@/components/payment-methods-analytics";
 import { OrderDetailModal } from "@/components/order-detail-modal";
 import { OrderAcceptDialog } from "@/components/order-accept-dialog";
@@ -108,6 +109,7 @@ export default function Admin() {
   const { data: menuItems, isLoading: menuLoading } = useSupabaseMenuItems();
   const { data: categories } = useSupabaseCategories();
   const { data: toppings } = useSupabaseToppings();
+  const { data: restaurantConfig } = useRestaurantConfig();
   const updateOrderStatus = useSupabaseUpdateOrderStatus();
   const updateMenuItem = useSupabaseUpdateMenuItem();
   const createMenuItem = useSupabaseCreateMenuItem();
@@ -2368,10 +2370,11 @@ export default function Admin() {
         onClose={() => setShowStripeSettingsModal(false)}
       />
 
-      <AnalyticsExportModal
+      <AdvancedReportModal
         isOpen={showAnalyticsExportModal}
         onClose={() => setShowAnalyticsExportModal(false)}
         orders={filteredOrders}
+        restaurantName={restaurantConfig?.name || "Restaurant"}
       />
 
       {/* Site Configuration Modal */}
