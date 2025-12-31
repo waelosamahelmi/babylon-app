@@ -74,11 +74,19 @@ export function useSupabaseRealtime(options: UseSupabaseRealtimeOptions = {}) {
           table: 'orders'
         },
         (payload) => {
+          const order = payload.new;
+          
+          // Skip orders that are still waiting for payment (pending_payment)
+          // These will be processed when they're updated to 'paid' status
+          if (order.payment_status === 'pending_payment') {
+            console.log('⏳ New order pending payment, skipping notification:', order.id);
+            return;
+          }
+          
           console.log('🆕 New order received via Supabase realtime:', payload.new);
           
           // Send background notification for new orders
           if (isAndroid && hasNotificationPermission) {
-            const order = payload.new;
             const title = 'New Order Received!';
             const message = `Order #${order.order_number || order.id} from ${order.customer_name || 'Customer'} - €${order.total_amount}`;
             
@@ -97,6 +105,24 @@ export function useSupabaseRealtime(options: UseSupabaseRealtimeOptions = {}) {
           table: 'orders'
         },
         (payload) => {
+          const order = payload.new;
+          const oldOrder = payload.old;
+          
+          // If order was pending_payment and is now paid, treat it as a new order notification
+          if (oldOrder?.payment_status === 'pending_payment' && order.payment_status === 'paid') {
+            console.log('💳 Order payment completed, sending new order notification:', order.id);
+            
+            if (isAndroid && hasNotificationPermission) {
+              const title = 'New Order Received!';
+              const message = `Order #${order.order_number || order.id} from ${order.customer_name || 'Customer'} - €${order.total_amount}`;
+              sendNotification(title, message, "alert");
+            }
+            
+            // Trigger new order callback since this is effectively a new order for the kitchen
+            callbacksRef.current.onNewOrder?.(order);
+            return;
+          }
+          
           console.log('🔄 Order updated via Supabase realtime:', payload.new);
           
           // Send background notification for important status updates

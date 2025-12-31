@@ -19,7 +19,10 @@ export function useSupabaseOrders() {
             *,
             menu_items (*)
           )
-        `);
+        `)
+        // Only show orders that are paid or don't require online payment (cash/card on delivery)
+        // Filter out pending_payment orders - they haven't completed Stripe checkout yet
+        .neq('payment_status', 'pending_payment');
       
       // Filter by user's branch if they have one assigned
       if (userBranch !== null && userBranch !== undefined) {
