@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -10,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/language-context";
-import { CreditCard, Building2, Check, X, RefreshCw, Loader2 } from "lucide-react";
+import { CreditCard, Building2, Check, X, RefreshCw, Loader2, Banknote, Smartphone, Info } from "lucide-react";
 
 interface Branch {
   id: string;
@@ -35,16 +36,24 @@ interface BranchPaymentMethodsModalProps {
   onClose: () => void;
 }
 
-// Default payment methods available in Finland
-const DEFAULT_PAYMENT_METHODS = [
-  { key: "card", name: "Korttimaksu", name_en: "Card Payment", icon: "💳" },
-  { key: "mobilepay", name: "MobilePay", name_en: "MobilePay", icon: "📱" },
-  { key: "klarna", name: "Klarna", name_en: "Klarna", icon: "🛒" },
-  { key: "apple_pay", name: "Apple Pay", name_en: "Apple Pay", icon: "🍎" },
-  { key: "google_pay", name: "Google Pay", name_en: "Google Pay", icon: "🤖" },
-  { key: "cash", name: "Käteinen", name_en: "Cash", icon: "💵" },
-  { key: "invoice", name: "Lasku", name_en: "Invoice", icon: "📄" },
-  { key: "lunch_voucher", name: "Lounasseteli", name_en: "Lunch Voucher", icon: "🎟️" },
+// All possible payment methods (will be filtered by what's enabled in main settings)
+const ALL_PAYMENT_METHODS = [
+  // Basic methods
+  { key: "cash_or_card", name: "Käteinen tai kortti", name_en: "Cash or Card", icon: "💳", category: "basic" },
+  { key: "cash", name: "Käteinen", name_en: "Cash", icon: "💵", category: "basic" },
+  { key: "card", name: "Korttimaksu", name_en: "Card Payment", icon: "💳", category: "basic" },
+  // Stripe payment methods
+  { key: "stripe_card", name: "Verkkokortit (Stripe)", name_en: "Online Cards (Stripe)", icon: "💳", category: "stripe" },
+  { key: "apple_pay", name: "Apple Pay", name_en: "Apple Pay", icon: "🍎", category: "stripe" },
+  { key: "google_pay", name: "Google Pay", name_en: "Google Pay", icon: "🤖", category: "stripe" },
+  { key: "klarna", name: "Klarna", name_en: "Klarna", icon: "🛒", category: "stripe" },
+  { key: "link", name: "Link", name_en: "Link", icon: "🔗", category: "stripe" },
+  { key: "ideal", name: "iDEAL", name_en: "iDEAL", icon: "🏦", category: "stripe" },
+  { key: "sepa_debit", name: "SEPA-veloitus", name_en: "SEPA Debit", icon: "🏧", category: "stripe" },
+  // Other methods
+  { key: "mobilepay", name: "MobilePay", name_en: "MobilePay", icon: "📱", category: "other" },
+  { key: "invoice", name: "Lasku", name_en: "Invoice", icon: "📄", category: "other" },
+  { key: "lunch_voucher", name: "Lounasseteli", name_en: "Lunch Voucher", icon: "🎟️", category: "other" },
 ];
 
 export function BranchPaymentMethodsModal({ isOpen, onClose }: BranchPaymentMethodsModalProps) {
@@ -53,6 +62,69 @@ export function BranchPaymentMethodsModal({ isOpen, onClose }: BranchPaymentMeth
   const queryClient = useQueryClient();
 
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+
+  // Fetch restaurant settings to get enabled payment methods
+  const { data: restaurantSettings, isLoading: settingsLoading } = useRestaurantSettings();
+
+  // Get available payment methods based on restaurant settings
+  const availablePaymentMethods = useMemo(() => {
+    if (!restaurantSettings) return [];
+    
+    const methods: typeof ALL_PAYMENT_METHODS = [];
+    
+    // Check if cash/card is enabled in main payment methods
+    const mainPaymentMethods = restaurantSettings.paymentMethods || [];
+    const cashOrCardMethod = mainPaymentMethods.find((m: any) => 
+      m.id === 'cash_or_card' || m.id === 'cash' || m.id === 'card'
+    );
+    
+    if (cashOrCardMethod?.enabled !== false) {
+      methods.push(ALL_PAYMENT_METHODS.find(m => m.key === 'cash_or_card')!);
+    }
+    
+    // Check if online payment (Stripe) is enabled
+    const stripeEnabled = restaurantSettings.stripeEnabled === true;
+    
+    if (stripeEnabled) {
+      // Get Stripe payment methods config
+      let stripeConfig: Record<string, boolean> = { card: true }; // Card is always available with Stripe
+      
+      if (restaurantSettings.stripePaymentMethodsConfig) {
+        try {
+          stripeConfig = typeof restaurantSettings.stripePaymentMethodsConfig === 'string'
+            ? JSON.parse(restaurantSettings.stripePaymentMethodsConfig)
+            : restaurantSettings.stripePaymentMethodsConfig;
+        } catch (e) {
+          console.error('Failed to parse stripe payment methods config:', e);
+        }
+      }
+      
+      // Add Stripe card payments
+      methods.push(ALL_PAYMENT_METHODS.find(m => m.key === 'stripe_card')!);
+      
+      // Add other enabled Stripe methods
+      if (stripeConfig.applePay) {
+        methods.push(ALL_PAYMENT_METHODS.find(m => m.key === 'apple_pay')!);
+      }
+      if (stripeConfig.googlePay) {
+        methods.push(ALL_PAYMENT_METHODS.find(m => m.key === 'google_pay')!);
+      }
+      if (stripeConfig.klarna) {
+        methods.push(ALL_PAYMENT_METHODS.find(m => m.key === 'klarna')!);
+      }
+      if (stripeConfig.link) {
+        methods.push(ALL_PAYMENT_METHODS.find(m => m.key === 'link')!);
+      }
+      if (stripeConfig.ideal) {
+        methods.push(ALL_PAYMENT_METHODS.find(m => m.key === 'ideal')!);
+      }
+      if (stripeConfig.sepaDebit) {
+        methods.push(ALL_PAYMENT_METHODS.find(m => m.key === 'sepa_debit')!);
+      }
+    }
+    
+    return methods.filter(Boolean);
+  }, [restaurantSettings]);
 
   // Fetch branches
   const { data: branches, isLoading: branchesLoading } = useQuery({
@@ -101,7 +173,7 @@ export function BranchPaymentMethodsModal({ isOpen, onClose }: BranchPaymentMeth
             branch_id: branchId,
             payment_method: methodKey,
             is_enabled: enabled,
-            display_order: DEFAULT_PAYMENT_METHODS.findIndex(m => m.key === methodKey),
+            display_order: availablePaymentMethods.findIndex(m => m.key === methodKey),
           }]);
         if (error) throw error;
       }
@@ -124,7 +196,7 @@ export function BranchPaymentMethodsModal({ isOpen, onClose }: BranchPaymentMeth
       const existingMethods = paymentMethods?.filter(pm => pm.branch_id === branchId) || [];
       const existingKeys = existingMethods.map(m => m.payment_method);
       
-      const newMethods = DEFAULT_PAYMENT_METHODS
+      const newMethods = availablePaymentMethods
         .filter(m => !existingKeys.includes(m.key))
         .map((m, idx) => ({
           branch_id: branchId,
@@ -149,13 +221,15 @@ export function BranchPaymentMethodsModal({ isOpen, onClose }: BranchPaymentMeth
     },
   });
 
-  // Enable all for branch
+  // Enable all for branch (only available methods)
   const enableAllMutation = useMutation({
     mutationFn: async (branchId: string) => {
+      const availableKeys = availablePaymentMethods.map(m => m.key);
       const { error } = await supabase
         .from("branch_payment_methods")
         .update({ is_enabled: true, updated_at: new Date().toISOString() })
-        .eq("branch_id", branchId);
+        .eq("branch_id", branchId)
+        .in("payment_method", availableKeys);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -163,13 +237,15 @@ export function BranchPaymentMethodsModal({ isOpen, onClose }: BranchPaymentMeth
     },
   });
 
-  // Disable all for branch
+  // Disable all for branch (only available methods)
   const disableAllMutation = useMutation({
     mutationFn: async (branchId: string) => {
+      const availableKeys = availablePaymentMethods.map(m => m.key);
       const { error } = await supabase
         .from("branch_payment_methods")
         .update({ is_enabled: false, updated_at: new Date().toISOString() })
-        .eq("branch_id", branchId);
+        .eq("branch_id", branchId)
+        .in("payment_method", availableKeys);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -188,7 +264,7 @@ export function BranchPaymentMethodsModal({ isOpen, onClose }: BranchPaymentMeth
     return paymentMethods?.filter(pm => pm.branch_id === branchId && pm.is_enabled).length || 0;
   };
 
-  const isLoading = branchesLoading || methodsLoading;
+  const isLoading = branchesLoading || methodsLoading || settingsLoading;
 
   // Set first branch as selected if none selected
   if (!selectedBranchId && branches && branches.length > 0) {
@@ -263,42 +339,56 @@ export function BranchPaymentMethodsModal({ isOpen, onClose }: BranchPaymentMeth
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {DEFAULT_PAYMENT_METHODS.map((method) => {
-                    const isEnabled = getMethodStatus(branch.id, method.key);
-                    return (
-                      <Card 
-                        key={method.key} 
-                        className={`transition-all ${isEnabled ? 'border-green-300 bg-green-50/50 dark:bg-green-900/20' : 'opacity-60'}`}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="text-2xl">{method.icon}</span>
-                              <div>
-                                <p className="font-medium">
-                                  {language === 'en' ? method.name_en : method.name}
-                                </p>
-                                <p className="text-xs text-gray-500">{method.key}</p>
+                {availablePaymentMethods.length === 0 ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-200">
+                    <div className="flex items-center gap-2">
+                      <Info className="w-5 h-5" />
+                      <p>
+                        {t(
+                          "Ei maksutapoja määritetty. Määritä ensin maksutavat Asetukset → Maksutavat -sivulla.",
+                          "No payment methods configured. Please configure payment methods in Settings → Payment Methods first."
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {availablePaymentMethods.map((method) => {
+                      const isEnabled = getMethodStatus(branch.id, method.key);
+                      return (
+                        <Card 
+                          key={method.key} 
+                          className={`transition-all ${isEnabled ? 'border-green-300 bg-green-50/50 dark:bg-green-900/20' : 'opacity-60'}`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <span className="text-2xl">{method.icon}</span>
+                                <div>
+                                  <p className="font-medium">
+                                    {language === 'en' ? method.name_en : method.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500">{method.key}</p>
+                                </div>
                               </div>
+                              <Switch
+                                checked={isEnabled}
+                                onCheckedChange={(checked) => 
+                                  toggleMutation.mutate({ 
+                                    branchId: branch.id, 
+                                    methodKey: method.key, 
+                                    enabled: checked 
+                                  })
+                                }
+                                disabled={toggleMutation.isPending}
+                              />
                             </div>
-                            <Switch
-                              checked={isEnabled}
-                              onCheckedChange={(checked) => 
-                                toggleMutation.mutate({ 
-                                  branchId: branch.id, 
-                                  methodKey: method.key, 
-                                  enabled: checked 
-                                })
-                              }
-                              disabled={toggleMutation.isPending}
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {!branch.is_active && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-200">

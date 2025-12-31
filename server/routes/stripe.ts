@@ -9,15 +9,22 @@ const router = express.Router();
 async function getStripeInstance(): Promise<Stripe | null> {
   try {
     const settings = await db.select().from(restaurantSettings).limit(1);
+    console.log('🔍 Stripe settings check:', {
+      hasSettings: !!settings[0],
+      hasSecretKey: !!settings[0]?.stripeSecretKey,
+      stripeEnabled: settings[0]?.stripeEnabled,
+      secretKeyPrefix: settings[0]?.stripeSecretKey?.substring(0, 10) + '...',
+    });
     if (!settings[0]?.stripeSecretKey) {
-      console.error('Stripe secret key not found in database');
+      console.error('❌ Stripe secret key not found in database');
       return null;
     }
+    console.log('✅ Creating Stripe instance with secret key');
     return new Stripe(settings[0].stripeSecretKey, {
       apiVersion: '2024-11-20.acacia',
     });
   } catch (error) {
-    console.error('Error fetching Stripe settings from database:', error);
+    console.error('❌ Error fetching Stripe settings from database:', error);
     return null;
   }
 }
