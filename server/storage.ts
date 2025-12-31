@@ -4,7 +4,7 @@ import {
   categories, menuItems, orders, orderItems, toppings, toppingGroups, toppingGroupItems, menuItemToppingGroups, categoryToppingGroups, restaurantSettings, printers
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 
 export interface IStorage {
   // Categories
@@ -483,7 +483,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOrders(): Promise<Order[]> {
-    return await db.select().from(orders);
+    // Only return orders that are paid or don't require payment (cash/card on delivery)
+    // Filter out orders with pending_payment status - they haven't completed Stripe checkout yet
+    return await db.select().from(orders).where(ne(orders.paymentStatus, 'pending_payment'));
   }
 
   async getOrderById(id: number): Promise<Order | undefined> {
