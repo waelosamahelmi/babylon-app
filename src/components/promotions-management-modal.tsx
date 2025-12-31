@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/language-context";
-import { Plus, Edit, Trash2, Save, X, Tag, Store, Calendar, Percent, DollarSign } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, Tag, Store, Calendar, Percent, DollarSign, Package, Truck, Utensils } from "lucide-react";
 
 interface PromotionsManagementModalProps {
   isOpen: boolean;
@@ -46,6 +46,9 @@ export function PromotionsManagementModal({ isOpen, onClose }: PromotionsManagem
     isActive: true,
     minOrderAmount: "0",
     maxDiscountAmount: "",
+    pickupOnly: false,
+    deliveryOnly: false,
+    dineInOnly: false,
   });
 
   const resetForm = () => {
@@ -63,6 +66,9 @@ export function PromotionsManagementModal({ isOpen, onClose }: PromotionsManagem
       isActive: true,
       minOrderAmount: "0",
       maxDiscountAmount: "",
+      pickupOnly: false,
+      deliveryOnly: false,
+      dineInOnly: false,
     });
     setEditingId(null);
     setIsAdding(false);
@@ -83,6 +89,9 @@ export function PromotionsManagementModal({ isOpen, onClose }: PromotionsManagem
       isActive: promotion.isActive,
       minOrderAmount: promotion.minOrderAmount || "0",
       maxDiscountAmount: promotion.maxDiscountAmount || "",
+      pickupOnly: promotion.pickupOnly || false,
+      deliveryOnly: promotion.deliveryOnly || false,
+      dineInOnly: promotion.dineInOnly || false,
     });
     setEditingId(promotion.id);
     setIsAdding(false);
@@ -122,6 +131,9 @@ export function PromotionsManagementModal({ isOpen, onClose }: PromotionsManagem
         is_active: formData.isActive,
         min_order_amount: parseFloat(formData.minOrderAmount) || 0,
         max_discount_amount: formData.maxDiscountAmount ? parseFloat(formData.maxDiscountAmount) : null,
+        pickup_only: formData.pickupOnly,
+        delivery_only: formData.deliveryOnly,
+        dine_in_only: formData.dineInOnly,
       };
 
       if (editingId) {
@@ -387,6 +399,37 @@ export function PromotionsManagementModal({ isOpen, onClose }: PromotionsManagem
                   <Label htmlFor="isActive">{t("Aktiivinen", "Active")}</Label>
                 </div>
 
+                <div className="space-y-3 border-t pt-4">
+                  <Label className="text-sm font-medium">{t("Tilaustyyppi-rajoitukset", "Order Type Restrictions")}</Label>
+                  <div className="flex flex-wrap gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="pickupOnly"
+                        checked={formData.pickupOnly}
+                        onCheckedChange={(checked) => setFormData({ ...formData, pickupOnly: checked, deliveryOnly: false, dineInOnly: false })}
+                      />
+                      <Label htmlFor="pickupOnly">{t("Vain nouto", "Pickup only")}</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="deliveryOnly"
+                        checked={formData.deliveryOnly}
+                        onCheckedChange={(checked) => setFormData({ ...formData, deliveryOnly: checked, pickupOnly: false, dineInOnly: false })}
+                      />
+                      <Label htmlFor="deliveryOnly">{t("Vain toimitus", "Delivery only")}</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="dineInOnly"
+                        checked={formData.dineInOnly}
+                        onCheckedChange={(checked) => setFormData({ ...formData, dineInOnly: checked, pickupOnly: false, deliveryOnly: false })}
+                      />
+                      <Label htmlFor="dineInOnly">{t("Vain syö paikan päällä", "Dine-in only")}</Label>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t("Jätä kaikki pois käytöstä, jos tarjous pätee kaikkiin tilaustyypeille.", "Leave all off if promotion applies to all order types.")}</p>
+                </div>
+
                 <div className="flex gap-2">
                   <Button onClick={handleSave} className="flex-1">
                     <Save className="w-4 h-4 mr-2" />
@@ -452,6 +495,27 @@ export function PromotionsManagementModal({ isOpen, onClose }: PromotionsManagem
                             </div>
                           )}
                           {!promotion.branchId && <div className="text-xs">{t("Kaikki toimipisteet", "All branches")}</div>}
+                          {/* Order type restrictions */}
+                          <div className="flex gap-2 flex-wrap mt-1">
+                            {promotion.pickupOnly && (
+                              <Badge variant="secondary" className="flex items-center gap-1">
+                                <Package className="w-3 h-3" />
+                                {t("Nouto", "Pickup")}
+                              </Badge>
+                            )}
+                            {promotion.deliveryOnly && (
+                              <Badge variant="secondary" className="flex items-center gap-1">
+                                <Truck className="w-3 h-3" />
+                                {t("Toimitus", "Delivery")}
+                              </Badge>
+                            )}
+                            {promotion.dineInOnly && (
+                              <Badge variant="secondary" className="flex items-center gap-1">
+                                <Utensils className="w-3 h-3" />
+                                {t("Paikan päällä", "Dine-in")}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-2">

@@ -27,6 +27,11 @@ import { CategoryManagementModal } from "@/components/category-management-modal"
 import { EmailMarketing } from "@/components/email-marketing";
 import { BranchManagementModal } from "@/components/branch-management-modal";
 import { PromotionsManagementModal } from "@/components/promotions-management-modal";
+import { BlacklistManagementModal } from "@/components/blacklist-management-modal";
+import { LoyaltyManagementModal } from "@/components/loyalty-management-modal";
+import { CouponsManagementModal } from "@/components/coupons-management-modal";
+import { CustomerManagementModal } from "@/components/customer-management-modal";
+import { BranchPaymentMethodsModal } from "@/components/branch-payment-methods-modal";
 import { AnalyticsExportModal } from "@/components/analytics-export-modal";
 import { PaymentMethodsAnalytics } from "@/components/payment-methods-analytics";
 import { OrderDetailModal } from "@/components/order-detail-modal";
@@ -88,7 +93,10 @@ import {
   Download,
   Wallet,
   Banknote,
-  Palette
+  Palette,
+  Ticket,
+  UserX,
+  Gift
 } from "lucide-react";
 
 export default function Admin() {
@@ -118,6 +126,11 @@ export default function Admin() {
   const [showPaymentMethodsModal, setShowPaymentMethodsModal] = useState(false);
   const [showStripeSettingsModal, setShowStripeSettingsModal] = useState(false);
   const [showPromotionsModal, setShowPromotionsModal] = useState(false);
+  const [showBlacklistModal, setShowBlacklistModal] = useState(false);
+  const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
+  const [showCouponsModal, setShowCouponsModal] = useState(false);
+  const [showBranchPaymentMethodsModal, setShowBranchPaymentMethodsModal] = useState(false);
+  const [showCustomerManagementModal, setShowCustomerManagementModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAnalyticsExportModal, setShowAnalyticsExportModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -2209,6 +2222,57 @@ export default function Admin() {
                   <ManualUpdateButton />
                 </CardContent>
               </Card>
+
+              {/* Customer & Marketing Settings Card */}
+              <Card className="border-0 shadow-lg bg-white dark:bg-gray-800">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                    {adminT("Asiakkaat & markkinointi", "Customers & Marketing", "العملاء والتسويق")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button 
+                    onClick={() => setShowCustomerManagementModal(true)}
+                    variant="outline"
+                    className="w-full justify-start bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 border-blue-200 dark:border-blue-800"
+                  >
+                    <Users className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" />
+                    {adminT("Asiakashallinta", "Customer Management", "إدارة العملاء")}
+                  </Button>
+                  <Button 
+                    onClick={() => setShowBlacklistModal(true)}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <UserX className="w-4 h-4 mr-2" />
+                    {adminT("Estolista", "Blacklist", "القائمة السوداء")}
+                  </Button>
+                  <Button 
+                    onClick={() => setShowLoyaltyModal(true)}
+                    variant="outline"
+                    className="w-full justify-start bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border-amber-200 dark:border-amber-800"
+                  >
+                    <Gift className="w-4 h-4 mr-2 text-amber-600 dark:text-amber-400" />
+                    {adminT("Kanta-asiakasohjelma", "Loyalty Program", "برنامج الولاء")}
+                  </Button>
+                  <Button 
+                    onClick={() => setShowCouponsModal(true)}
+                    variant="outline"
+                    className="w-full justify-start bg-gradient-to-r from-purple-50 to-fuchsia-50 dark:from-purple-950 dark:to-fuchsia-950 border-purple-200 dark:border-purple-800"
+                  >
+                    <Ticket className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" />
+                    {adminT("Kuponkikoodit", "Coupon Codes", "رموز الخصم")}
+                  </Button>
+                  <Button 
+                    onClick={() => setShowBranchPaymentMethodsModal(true)}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Wallet className="w-4 h-4 mr-2" />
+                    {adminT("Toimipisteen maksutavat", "Branch Payment Methods", "طرق الدفع للفرع")}
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
@@ -2385,6 +2449,36 @@ export default function Admin() {
       <PromotionsManagementModal
         isOpen={showPromotionsModal}
         onClose={() => setShowPromotionsModal(false)}
+      />
+
+      {/* Blacklist Management Modal */}
+      <BlacklistManagementModal
+        isOpen={showBlacklistModal}
+        onClose={() => setShowBlacklistModal(false)}
+      />
+
+      {/* Loyalty Management Modal */}
+      <LoyaltyManagementModal
+        isOpen={showLoyaltyModal}
+        onClose={() => setShowLoyaltyModal(false)}
+      />
+
+      {/* Coupons Management Modal */}
+      <CouponsManagementModal
+        isOpen={showCouponsModal}
+        onClose={() => setShowCouponsModal(false)}
+      />
+
+      {/* Branch Payment Methods Modal */}
+      <BranchPaymentMethodsModal
+        isOpen={showBranchPaymentMethodsModal}
+        onClose={() => setShowBranchPaymentMethodsModal(false)}
+      />
+
+      {/* Customer Management Modal */}
+      <CustomerManagementModal
+        open={showCustomerManagementModal}
+        onOpenChange={setShowCustomerManagementModal}
       />
     </div>
   );
