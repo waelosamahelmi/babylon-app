@@ -29,6 +29,30 @@ async function getStripeInstance(): Promise<Stripe | null> {
   }
 }
 
+// Debug endpoint to check Stripe configuration status
+router.get('/debug-config', async (req, res) => {
+  try {
+    const settings = await db.select().from(restaurantSettings).limit(1);
+    
+    res.json({
+      hasSettings: !!settings[0],
+      stripeEnabled: settings[0]?.stripeEnabled ?? false,
+      hasPublishableKey: !!settings[0]?.stripePublishableKey,
+      hasSecretKey: !!settings[0]?.stripeSecretKey,
+      hasWebhookSecret: !!settings[0]?.stripeWebhookSecret,
+      testMode: settings[0]?.stripeTestMode ?? true,
+      publishableKeyPrefix: settings[0]?.stripePublishableKey?.substring(0, 12) || null,
+      secretKeyPrefix: settings[0]?.stripeSecretKey?.substring(0, 10) || null,
+    });
+  } catch (error) {
+    console.error('Error checking Stripe config:', error);
+    res.status(500).json({ 
+      error: 'Failed to check Stripe configuration',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Get Stripe publishable key (for frontend)
 router.get('/config', async (req, res) => {
   try {
@@ -52,6 +76,7 @@ router.get('/config', async (req, res) => {
     });
   }
 });
+
 
 // Create payment intent
 router.post('/create-payment-intent', async (req, res) => {
