@@ -1,8 +1,9 @@
 import express from 'express';
 import Stripe from 'stripe';
 import { db } from '../db';
-import { restaurantSettings, orders } from '../../shared/schema';
+import { restaurantSettings, orders, orderItems, menuItems, branches } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
+import { sendOrderConfirmationEmail } from '../email-service';
 
 const router = express.Router();
 
@@ -330,6 +331,57 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                 .where(eq(orders.id, orderToUpdate.id));
 
               console.log(`✅ Order #${orderToUpdate.id} (${orderToUpdate.orderNumber}) marked as paid`);
+
+              // Send order confirmation email if customer has email
+              if (orderToUpdate.customerEmail) {
+                try {
+                  console.log(`📧 Sending confirmation email to ${orderToUpdate.customerEmail}`);
+
+                  // Fetch order items with menu item details
+                  const items = await db.select()
+                    .from(orderItems)
+                    .leftJoin(menuItems, eq(orderItems.menuItemId, menuItems.id))
+                    .where(eq(orderItems.orderId, orderToUpdate.id));
+
+                  // Fetch branch info if available
+                  let branchInfo = null;
+                  if (orderToUpdate.branchId) {
+                    const branchResult = await db.select()
+                      .from(branches)
+                      .where(eq(branches.id, orderToUpdate.branchId))
+                      .limit(1);
+                    branchInfo = branchResult[0];
+                  }
+
+                  // Prepare email data
+                  const emailData = {
+                    orderNumber: orderToUpdate.orderNumber || `#${orderToUpdate.id}`,
+                    customerName: orderToUpdate.customerName,
+                    customerEmail: orderToUpdate.customerEmail,
+                    items: items.map(item => ({
+                      name: item.menu_items?.name || 'Item',
+                      quantity: item.order_items.quantity,
+                      price: parseFloat(item.order_items.unitPrice),
+                      totalPrice: parseFloat(item.order_items.totalPrice),
+                      toppings: item.order_items.toppings as Array<{ name: string; price: number; }> || [],
+                    })),
+                    subtotal: parseFloat(orderToUpdate.subtotal),
+                    deliveryFee: parseFloat(orderToUpdate.deliveryFee || '0'),
+                    totalAmount: parseFloat(orderToUpdate.totalAmount),
+                    orderType: orderToUpdate.orderType as 'delivery' | 'pickup',
+                    deliveryAddress: orderToUpdate.deliveryAddress || undefined,
+                  };
+
+                  const emailSent = await sendOrderConfirmationEmail(emailData);
+                  if (emailSent) {
+                    console.log(`✅ Confirmation email sent successfully`);
+                  } else {
+                    console.error(`❌ Failed to send confirmation email`);
+                  }
+                } catch (emailError) {
+                  console.error('❌ Error sending confirmation email:', emailError);
+                }
+              }
             } else {
               console.log(`ℹ️ Order #${orderToUpdate.id} already marked as paid, skipping`);
             }
