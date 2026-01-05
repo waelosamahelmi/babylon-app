@@ -293,21 +293,52 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         console.log('✅ PaymentIntent succeeded:', paymentIntent.id);
-        
-        // Update order status to paid
-        if (paymentIntent.metadata.orderId) {
-          try {
-            await db.update(orders)
-              .set({ 
-                paymentStatus: 'paid',
-                stripePaymentIntentId: paymentIntent.id,
-              })
-              .where(eq(orders.id, parseInt(paymentIntent.metadata.orderId)));
-            
-            console.log(`✅ Order ${paymentIntent.metadata.orderId} marked as paid`);
-          } catch (error) {
-            console.error('❌ Error updating order status:', error);
+        console.log('📦 Metadata:', paymentIntent.metadata);
+
+        // Try to find and update order - use multiple lookup strategies
+        try {
+          let orderToUpdate = null;
+
+          // Strategy 1: Look up by orderId in metadata (primary method)
+          if (paymentIntent.metadata.orderId) {
+            console.log(`🔍 Looking up order by ID: ${paymentIntent.metadata.orderId}`);
+            const result = await db.select()
+              .from(orders)
+              .where(eq(orders.id, parseInt(paymentIntent.metadata.orderId)))
+              .limit(1);
+            orderToUpdate = result[0];
           }
+
+          // Strategy 2: Fallback - look up by stripe_payment_intent_id
+          if (!orderToUpdate) {
+            console.log(`🔍 Fallback: Looking up order by payment intent ID: ${paymentIntent.id}`);
+            const result = await db.select()
+              .from(orders)
+              .where(eq(orders.stripePaymentIntentId, paymentIntent.id))
+              .limit(1);
+            orderToUpdate = result[0];
+          }
+
+          if (orderToUpdate) {
+            // Only update if not already paid (prevent duplicate processing)
+            if (orderToUpdate.paymentStatus !== 'paid') {
+              await db.update(orders)
+                .set({
+                  paymentStatus: 'paid',
+                  stripePaymentIntentId: paymentIntent.id,
+                })
+                .where(eq(orders.id, orderToUpdate.id));
+
+              console.log(`✅ Order #${orderToUpdate.id} (${orderToUpdate.orderNumber}) marked as paid`);
+            } else {
+              console.log(`ℹ️ Order #${orderToUpdate.id} already marked as paid, skipping`);
+            }
+          } else {
+            console.error(`❌ Could not find order for payment intent ${paymentIntent.id}`);
+            console.error(`   Metadata orderId: ${paymentIntent.metadata.orderId || 'missing'}`);
+          }
+        } catch (error) {
+          console.error('❌ Error updating order status:', error);
         }
         break;
       }
