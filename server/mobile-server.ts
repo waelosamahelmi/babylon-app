@@ -13,6 +13,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { authService } from "./auth";
 import { initializeComprehensiveToppings } from "./initialize-toppings";
 import { cloudPRNTServer } from "./cloudprnt-server";
+import stripeRouter from "./routes/stripe-new";
 
 const app = express();
 
@@ -74,6 +75,10 @@ app.use(cors(corsOptions));
 
 // Handle preflight requests
 app.options('*', cors(corsOptions));
+
+// CRITICAL: Register Stripe webhook BEFORE express.json() to preserve raw body
+// The webhook needs the raw body buffer for signature verification
+app.use("/api/stripe", stripeRouter);
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));

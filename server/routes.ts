@@ -102,11 +102,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount new payment routes (recommended for new implementations)
   app.use("/api/payment", paymentRouter);
 
-  // ===== STRIPE PAYMENT ROUTES (Legacy - kept for backwards compatibility) =====
-  // Old Stripe routes - will be deprecated
-  // Routes: GET /api/stripe/config, POST /api/stripe/create-payment-intent,
-  //         POST /api/stripe/confirm-payment, POST /api/stripe/webhook
-  app.use("/api/stripe", stripeRouter);
+  // ===== STRIPE PAYMENT ROUTES =====
+  // NOTE: Stripe routes are registered in mobile-server.ts BEFORE express.json()
+  // This is required for webhook signature verification to work correctly
+  // The webhook route needs access to the raw request body
+  // DO NOT register stripeRouter here - it will break webhook verification
 
   // Email Marketing API
   app.post("/api/send-email", async (req, res) => {
