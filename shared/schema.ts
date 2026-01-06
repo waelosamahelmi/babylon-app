@@ -52,6 +52,72 @@ export const menuItems = pgTable("menu_items", {
   branchId: integer("branch_id").references(() => branches.id), // NULL = available at all branches
 });
 
+export const customers = pgTable("customers", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name"),
+  phone: text("phone"),
+  stripeCustomerId: text("stripe_customer_id").unique(),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const savedPaymentMethods = pgTable("saved_payment_methods", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id),
+  stripePaymentMethodId: text("stripe_payment_method_id").notNull().unique(),
+  type: text("type").notNull(),
+  cardBrand: text("card_brand"),
+  cardLast4: text("card_last4"),
+  cardExpMonth: integer("card_exp_month"),
+  cardExpYear: integer("card_exp_year"),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const paymentAttempts = pgTable("payment_attempts", {
+  id: serial("id").primaryKey(),
+  orderId: text("order_id").notNull(), // TEXT to support both integer and uuid
+  stripePaymentIntentId: text("stripe_payment_intent_id").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("eur"),
+  status: text("status").notNull(),
+  errorCode: text("error_code"),
+  errorMessage: text("error_message"),
+  paymentMethodType: text("payment_method_type"),
+  attemptNumber: integer("attempt_number").default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const paymentAnalytics = pgTable("payment_analytics", {
+  id: serial("id").primaryKey(),
+  date: timestamp("date").notNull().unique(),
+  totalAttempts: integer("total_attempts").default(0),
+  successfulPayments: integer("successful_payments").default(0),
+  failedPayments: integer("failed_payments").default(0),
+  canceledPayments: integer("canceled_payments").default(0),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).default("0"),
+  refundedAmount: decimal("refunded_amount", { precision: 10, scale: 2 }).default("0"),
+  paymentMethodBreakdown: jsonb("payment_method_breakdown").default({}),
+  averageTransactionAmount: decimal("average_transaction_amount", { precision: 10, scale: 2 }).default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const paymentReceipts = pgTable("payment_receipts", {
+  id: serial("id").primaryKey(),
+  orderId: text("order_id").notNull(), // TEXT to support both integer and uuid
+  receiptNumber: text("receipt_number").notNull().unique(),
+  receiptUrl: text("receipt_url"),
+  pdfUrl: text("pdf_url"),
+  emailSent: boolean("email_sent").default(false),
+  emailSentAt: timestamp("email_sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   orderNumber: text("order_number").notNull().unique(),
@@ -61,15 +127,19 @@ export const orders = pgTable("orders", {
   deliveryAddress: text("delivery_address"),
   orderType: text("order_type").notNull(), // 'delivery', 'pickup'
   branchId: integer("branch_id").references(() => branches.id),
+  customerId: integer("customer_id").references(() => customers.id),
   status: text("status").notNull().default("pending"), // 'pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).default("0"),
   smallOrderFee: decimal("small_order_fee", { precision: 10, scale: 2 }).default("0"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   paymentMethod: text("payment_method").default("cash"), // 'cash', 'card', 'stripe'
-  paymentStatus: text("payment_status").default("pending"), // 'pending', 'paid', 'failed', 'refunded'
+  paymentStatus: text("payment_status").default("pending"), // 'pending', 'processing', 'paid', 'failed', 'canceled', 'refunded', 'partially_refunded'
   stripePaymentIntentId: text("stripe_payment_intent_id"),
+  savedPaymentMethodId: integer("saved_payment_method_id").references(() => savedPaymentMethods.id),
   paymentMethodDetails: jsonb("payment_method_details"),
+  paymentRetryCount: integer("payment_retry_count").default(0),
+  lastPaymentError: jsonb("last_payment_error"),
   refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }),
   refundReason: text("refund_reason"),
   refundedAt: timestamp("refunded_at"),

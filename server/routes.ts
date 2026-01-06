@@ -9,6 +9,8 @@ import { updateMenuItemImages, addImageToMenuItem, getMenuItemsWithoutImages } f
 import { upload, uploadImageToSupabase, deleteImageFromSupabase, ensureStorageBucket } from "./file-upload";
 import { uploadImageToHostinger, testHostingerConnection } from "./hostinger-upload";
 import stripeRouter from "./routes/stripe-new";
+import paymentRouter from "./routes/payment";
+import { paymentService } from "./services/payment-service";
 import { z } from "zod";
 import nodemailer from "nodemailer";
 
@@ -91,9 +93,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // ===== STRIPE PAYMENT ROUTES =====
-  // All Stripe routes are now handled by the stripe router
-  // Routes: GET /api/stripe/config, POST /api/stripe/create-payment-intent, 
+  // ===== PAYMENT ROUTES (New Payment System) =====
+  // Initialize payment service
+  paymentService.initialize().catch(err => {
+    console.error('❌ Failed to initialize payment service:', err);
+  });
+
+  // Mount new payment routes (recommended for new implementations)
+  app.use("/api/payment", paymentRouter);
+
+  // ===== STRIPE PAYMENT ROUTES (Legacy - kept for backwards compatibility) =====
+  // Old Stripe routes - will be deprecated
+  // Routes: GET /api/stripe/config, POST /api/stripe/create-payment-intent,
   //         POST /api/stripe/confirm-payment, POST /api/stripe/webhook
   app.use("/api/stripe", stripeRouter);
 
