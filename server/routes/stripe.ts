@@ -152,13 +152,21 @@ router.post('/confirm-payment', async (req, res) => {
 // Webhook handler for Stripe events
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (!webhookSecret || !sig) {
-    return res.status(400).send('Webhook secret not configured');
+  if (!sig) {
+    return res.status(400).send('No signature header');
   }
 
   try {
+    // Fetch webhook secret from database (same pattern as Stripe keys)
+    const settings = await db.select().from(restaurantSettings).limit(1);
+    const webhookSecret = settings[0]?.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!webhookSecret) {
+      console.error('❌ Stripe webhook secret not found in database or environment');
+      return res.status(400).send('Webhook secret not configured');
+    }
+
     const stripe = await getStripeInstance();
     if (!stripe) {
       return res.status(500).send('Stripe not configured');
