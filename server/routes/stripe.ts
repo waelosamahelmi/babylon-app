@@ -2,6 +2,7 @@ import express from 'express';
 import Stripe from 'stripe';
 import { db } from '../db';
 import { restaurantSettings } from '../../shared/schema';
+import { eq } from 'drizzle-orm';
 
 const router = express.Router();
 
@@ -184,34 +185,53 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           status: paymentIntent.status,
         });
 
-        // Check if this is a Klarna payment
-        const isKlarna = paymentIntent.payment_method_types?.includes('klarna');
-        if (isKlarna) {
-          console.log('🛍️ KLARNA payment detected - ensuring order creation');
-        }
-
-        // Get order data from metadata
-        const orderData = paymentIntent.metadata;
-        if (!orderData || !orderData.cart) {
-          console.error('❌ No order data in payment intent metadata');
-          return res.status(400).json({ error: 'No order data' });
-        }
-
         try {
-          // Create order in database
-          const order = await createOrderFromPayment(paymentIntent);
+          // First check if order already exists with this payment intent
+          const { orders } = await import('../../shared/schema');
+          const existingOrders = await db.select().from(orders).where(
+            eq(orders.stripePaymentIntentId, paymentIntent.id)
+          ).limit(1);
 
-          console.log(`✅ Order created: ${order.id}`, {
-            payment_method: isKlarna ? 'klarna' : 'card',
-            total: order.total,
-            customer_email: orderData.customer_email,
-          });
+          if (existingOrders.length > 0) {
+            // Order already exists - update it to paid
+            const existingOrder = existingOrders[0];
+            console.log('📝 Order already exists, updating payment status:', {
+              order_id: existingOrder.id,
+              current_status: existingOrder.paymentStatus,
+            });
 
-          res.json({ received: true, order_id: order.id });
+            await db.update(orders).set({
+              paymentStatus: 'paid',
+            }).where(eq(orders.id, existingOrder.id));
+
+            console.log(`✅ Order #${existingOrder.id} updated to paid`);
+            res.json({ received: true, order_id: existingOrder.id });
+          } else {
+            // No existing order - create new one (Klarna flow)
+            const isKlarna = paymentIntent.payment_method_types?.includes('klarna');
+            console.log(isKlarna ? '🛍️ KLARNA payment - creating new order' : '🆕 Creating new order from payment');
+
+            // Get order data from metadata
+            const orderData = paymentIntent.metadata;
+            if (!orderData || !orderData.cart) {
+              console.error('❌ No order data in payment intent metadata');
+              return res.status(400).json({ error: 'No order data' });
+            }
+
+            const order = await createOrderFromPayment(paymentIntent);
+
+            console.log(`✅ Order created: ${order.id}`, {
+              payment_method: isKlarna ? 'klarna' : 'card',
+              total: order.total,
+              customer_email: orderData.customer_email,
+            });
+
+            res.json({ received: true, order_id: order.id });
+          }
         } catch (orderError) {
-          console.error('❌ Failed to create order from payment:', orderError);
+          console.error('❌ Failed to process order from payment:', orderError);
           // Return success to Stripe anyway to prevent retries
-          res.json({ received: true, error: 'Order creation failed but payment succeeded' });
+          res.json({ received: true, error: 'Order processing failed but payment succeeded' });
         }
         break;
 
