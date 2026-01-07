@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { sendOrderConfirmationEmail } from '../email-service';
 
 const router = express.Router();
+const webhookRouter = express.Router();
 
 // Helper function to get Stripe instance with keys from database
 async function getStripeInstance(): Promise<Stripe | null> {
@@ -257,8 +258,8 @@ router.post('/refund', async (req, res) => {
   }
 });
 
-// Webhook handler for Stripe events
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+// Webhook handler for Stripe events - use webhookRouter to separate from other routes
+webhookRouter.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
 
   if (!sig) {
@@ -454,88 +455,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   } catch (error) {
     console.error('❌ Webhook error:', error);
     res.status(400).send(`Webhook Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-});
-
-// Create a refund for a payment intent
-router.post('/refund', express.json(), async (req, res) => {
-  try {
-    const { paymentIntentId, amount, orderId } = req.body;
-
-    console.log('💰 Refund request:', { paymentIntentId, amount, orderId });
-
-    if (!paymentIntentId) {
-      return res.status(400).json({
-        error: 'Missing payment intent ID',
-        message: 'Payment intent ID is required for refund'
-      });
-    }
-
-    // Get Stripe instance
-    console.log('🔑 Getting Stripe instance for refund...');
-    const stripe = await getStripeInstance();
-    if (!stripe) {
-      return res.status(500).json({
-        error: 'Stripe not configured',
-        message: 'Stripe is not properly configured'
-      });
-    }
-    console.log('✅ Stripe instance obtained for refund');
-
-    // Create refund
-    console.log('💳 Creating refund with options:', JSON.stringify({
-      payment_intent: paymentIntentId,
-      amount: amount ? Math.round(amount * 100) : undefined
-    }));
-
-    const refundOptions: Stripe.RefundCreateParams = {
-      payment_intent: paymentIntentId
-    };
-
-    // Only add amount if specified (otherwise refund full amount)
-    if (amount) {
-      refundOptions.amount = Math.round(amount * 100);
-    }
-
-    const refund = await stripe.refunds.create(refundOptions);
-
-    // Update order status in database if orderId provided
-    if (orderId) {
-      try {
-        await db.update(orders)
-          .set({ paymentStatus: 'refunded' })
-          .where(eq(orders.id, orderId));
-        console.log(`✅ Order #${orderId} marked as refunded`);
-      } catch (dbError) {
-        console.error('⚠️ Failed to update order status:', dbError);
-      }
-    }
-
-    console.log('✅ Refund created successfully:', refund.id, 'Status:', refund.status);
-
-    res.json({
-      success: true,
-      refundId: refund.id,
-      status: refund.status,
-      amount: refund.amount / 100, // Convert back to euros
-      currency: refund.currency
-    });
-  } catch (error) {
-    console.error('❌ Error creating refund:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorType = (error as any)?.type || 'unknown';
-    
-    console.error('Error type:', errorType);
-    console.error('Error message:', errorMessage);
-    if ((error as any)?.raw) {
-      console.error('Full error details:', JSON.stringify((error as any).raw, null, 2));
-    }
-
-    res.status(500).json({
-      error: 'Refund failed',
-      message: errorMessage,
-      type: errorType
-    });
   }
 });
 
@@ -770,3 +689,4 @@ router.post('/link-payment', express.json(), async (req, res) => {
 });
 
 export default router;
+export { webhookRouter };

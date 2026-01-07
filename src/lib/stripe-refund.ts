@@ -25,7 +25,8 @@ export async function processOrderRefund(params: RefundOrderParams): Promise<Ref
   const { paymentIntentId, amount, reason = 'requested_by_customer' } = params;
 
   try {
-    const response = await fetch('/api/stripe/refund', {
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://babylon-admin.fly.dev';
+    const response = await fetch(`${apiUrl}/api/stripe/refund`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

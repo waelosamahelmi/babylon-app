@@ -78,10 +78,14 @@ app.options('*', cors(corsOptions));
 
 // CRITICAL: Register Stripe webhook BEFORE express.json() to preserve raw body
 // The webhook needs the raw body buffer for signature verification
-app.use("/api/stripe", stripeRouter);
+app.use("/api/stripe", webhookRouter);
 
+// Now add JSON parsing middleware for all other routes
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+
+// Register the rest of the Stripe routes AFTER express.json()
+app.use("/api/stripe", stripeRouter);
 
 // Session configuration for mobile
 const PgSession = connectPgSimple(session);

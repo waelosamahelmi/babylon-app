@@ -71,7 +71,8 @@ export function StripeSettingsModal({ isOpen, onClose, onConfigured }: StripeSet
     setIsValidating(true);
     try {
       // Call backend to validate keys
-      const response = await fetch('/api/stripe/validate-keys', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://babylon-admin.fly.dev';
+      const response = await fetch(`${apiUrl}/api/stripe/validate-keys`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
