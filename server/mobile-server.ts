@@ -13,7 +13,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { authService } from "./auth";
 import { initializeComprehensiveToppings } from "./initialize-toppings";
 import { cloudPRNTServer } from "./cloudprnt-server";
-import stripeRouter from "./routes/stripe-new";
+import stripeRouter, { webhookRouter } from "./routes/stripe-new";
 
 const app = express();
 
