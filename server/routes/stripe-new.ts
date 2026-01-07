@@ -458,11 +458,11 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 });
 
 // Create a refund for a payment intent
-router.post('/refund', async (req, res) => {
+router.post('/refund', express.json(), async (req, res) => {
   try {
-    const { paymentIntentId, amount, reason = 'requested_by_customer' } = req.body;
+    const { paymentIntentId, amount, orderId } = req.body;
 
-    console.log('💰 Refund request:', { paymentIntentId, amount, reason });
+    console.log('💰 Refund request:', { paymentIntentId, amount, orderId });
 
     if (!paymentIntentId) {
       return res.status(400).json({
@@ -485,13 +485,11 @@ router.post('/refund', async (req, res) => {
     // Create refund
     console.log('💳 Creating refund with options:', JSON.stringify({
       payment_intent: paymentIntentId,
-      amount: amount ? Math.round(amount * 100) : undefined, // Convert to cents if amount specified
-      reason
+      amount: amount ? Math.round(amount * 100) : undefined
     }));
 
     const refundOptions: Stripe.RefundCreateParams = {
-      payment_intent: paymentIntentId,
-      reason: reason as Stripe.RefundCreateParams.Reason
+      payment_intent: paymentIntentId
     };
 
     // Only add amount if specified (otherwise refund full amount)
@@ -500,6 +498,18 @@ router.post('/refund', async (req, res) => {
     }
 
     const refund = await stripe.refunds.create(refundOptions);
+
+    // Update order status in database if orderId provided
+    if (orderId) {
+      try {
+        await db.update(orders)
+          .set({ paymentStatus: 'refunded' })
+          .where(eq(orders.id, orderId));
+        console.log(`✅ Order #${orderId} marked as refunded`);
+      } catch (dbError) {
+        console.error('⚠️ Failed to update order status:', dbError);
+      }
+    }
 
     console.log('✅ Refund created successfully:', refund.id, 'Status:', refund.status);
 
@@ -525,6 +535,236 @@ router.post('/refund', async (req, res) => {
       error: 'Refund failed',
       message: errorMessage,
       type: errorType
+    });
+  }
+});
+
+// Sync payments from Stripe - fetch all payment intents and compare with database
+router.get('/sync-payments', async (req, res) => {
+  try {
+    console.log('🔄 Starting Stripe payment sync...');
+
+    // Get Stripe instance
+    const stripe = await getStripeInstance();
+    if (!stripe) {
+      return res.status(500).json({
+        error: 'Stripe not configured',
+        message: 'Stripe is not properly configured'
+      });
+    }
+
+    // Fetch all payment intents from Stripe (last 100, you can paginate if needed)
+    console.log('📥 Fetching payment intents from Stripe...');
+    const paymentIntents = await stripe.paymentIntents.list({
+      limit: 100,
+    });
+
+    console.log(`✅ Found ${paymentIntents.data.length} payment intents in Stripe`);
+
+    // Get all orders from database
+    const allOrders = await db.select().from(orders);
+    console.log(`📊 Found ${allOrders.length} orders in database`);
+
+    const syncResults = {
+      total_stripe_payments: paymentIntents.data.length,
+      total_db_orders: allOrders.length,
+      updated: 0,
+      already_synced: 0,
+      not_found_in_db: [] as string[],
+      errors: [] as any[]
+    };
+
+    // Process each payment intent
+    for (const pi of paymentIntents.data) {
+      try {
+        // Only process succeeded payments
+        if (pi.status !== 'succeeded') {
+          continue;
+        }
+
+        // Find matching order in database by payment intent ID
+        const matchingOrders = allOrders.filter(
+          order => order.stripePaymentIntentId === pi.id
+        );
+
+        if (matchingOrders.length === 0) {
+          // Payment exists in Stripe but not in our database
+          syncResults.not_found_in_db.push(pi.id);
+          console.log(`⚠️ Payment intent ${pi.id} not found in database`);
+          continue;
+        }
+
+        // Update order status if it's still pending
+        for (const order of matchingOrders) {
+          if (order.paymentStatus === 'pending_payment') {
+            await db.update(orders)
+              .set({ paymentStatus: 'paid' })
+              .where(eq(orders.id, order.id));
+
+            syncResults.updated++;
+            console.log(`✅ Updated order #${order.id} to paid (was pending_payment)`);
+          } else if (order.paymentStatus === 'paid') {
+            syncResults.already_synced++;
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error processing payment intent ${pi.id}:`, error);
+        syncResults.errors.push({
+          payment_intent_id: pi.id,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    console.log('🎉 Sync completed!');
+    console.log(`   Updated: ${syncResults.updated}`);
+    console.log(`   Already synced: ${syncResults.already_synced}`);
+    console.log(`   Not found in DB: ${syncResults.not_found_in_db.length}`);
+    console.log(`   Errors: ${syncResults.errors.length}`);
+
+    res.json({
+      success: true,
+      ...syncResults
+    });
+  } catch (error) {
+    console.error('❌ Error syncing payments:', error);
+    res.status(500).json({
+      error: 'Sync failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get all payments from Stripe with details
+router.get('/stripe-payments', async (req, res) => {
+  try {
+    console.log('💳 Fetching all payment intents from Stripe...');
+
+    // Get Stripe instance
+    const stripe = await getStripeInstance();
+    if (!stripe) {
+      return res.status(500).json({
+        error: 'Stripe not configured',
+        message: 'Stripe is not properly configured'
+      });
+    }
+
+    // Fetch payment intents from Stripe
+    const limit = parseInt(req.query.limit as string) || 100;
+    const paymentIntents = await stripe.paymentIntents.list({
+      limit,
+    });
+
+    // Get all orders from database
+    const allOrders = await db.select().from(orders);
+
+    // Map payment intents with database order info
+    const paymentsWithOrderInfo = paymentIntents.data.map(pi => {
+      const matchingOrder = allOrders.find(
+        order => order.stripePaymentIntentId === pi.id
+      );
+
+      return {
+        stripe_payment_intent_id: pi.id,
+        stripe_status: pi.status,
+        stripe_amount: pi.amount / 100, // Convert from cents to euros
+        stripe_currency: pi.currency,
+        stripe_created: new Date(pi.created * 1000).toISOString(),
+        stripe_customer_email: pi.receipt_email || null,
+        stripe_description: pi.description || null,
+        stripe_metadata: pi.metadata || {},
+        db_order_id: matchingOrder?.id || null,
+        db_order_number: matchingOrder?.orderNumber || null,
+        db_payment_status: matchingOrder?.paymentStatus || null,
+        db_customer_name: matchingOrder?.customerName || null,
+        db_customer_email: matchingOrder?.customerEmail || null,
+        is_synced: matchingOrder
+          ? (pi.status === 'succeeded' && matchingOrder.paymentStatus === 'paid')
+          : false,
+        needs_sync: matchingOrder
+          ? (pi.status === 'succeeded' && matchingOrder.paymentStatus === 'pending_payment')
+          : false,
+      };
+    });
+
+    // Count statistics
+    const stats = {
+      total_stripe_payments: paymentIntents.data.length,
+      succeeded_in_stripe: paymentsWithOrderInfo.filter(p => p.stripe_status === 'succeeded').length,
+      synced: paymentsWithOrderInfo.filter(p => p.is_synced).length,
+      needs_sync: paymentsWithOrderInfo.filter(p => p.needs_sync).length,
+      not_in_db: paymentsWithOrderInfo.filter(p => !p.db_order_id).length,
+    };
+
+    console.log('📊 Stripe payments stats:', stats);
+
+    res.json({
+      success: true,
+      stats,
+      payments: paymentsWithOrderInfo
+    });
+  } catch (error) {
+    console.error('❌ Error fetching Stripe payments:', error);
+    res.status(500).json({
+      error: 'Failed to fetch payments',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Link a Stripe payment intent to an existing order
+router.post('/link-payment', express.json(), async (req, res) => {
+  try {
+    const { paymentIntentId, orderId } = req.body;
+
+    console.log('🔗 Link payment request:', { paymentIntentId, orderId });
+
+    if (!paymentIntentId || !orderId) {
+      return res.status(400).json({
+        error: 'Missing parameters',
+        message: 'Both payment intent ID and order ID are required'
+      });
+    }
+
+    // Verify the payment intent exists in Stripe
+    const stripe = await getStripeInstance();
+    if (!stripe) {
+      return res.status(500).json({
+        error: 'Stripe not configured',
+        message: 'Stripe is not properly configured'
+      });
+    }
+
+    try {
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      // Update order with payment intent ID
+      await db.update(orders)
+        .set({
+          stripePaymentIntentId: paymentIntentId,
+          paymentStatus: paymentIntent.status === 'succeeded' ? 'paid' : 'pending_payment'
+        })
+        .where(eq(orders.id, orderId));
+
+      console.log(`✅ Linked payment intent ${paymentIntentId} to order #${orderId}`);
+
+      res.json({
+        success: true,
+        message: 'Payment linked successfully',
+        paymentStatus: paymentIntent.status === 'succeeded' ? 'paid' : 'pending_payment'
+      });
+    } catch (error) {
+      console.error('❌ Error linking payment:', error);
+      res.status(400).json({
+        error: 'Failed to link payment',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error in link-payment endpoint:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

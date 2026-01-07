@@ -2165,13 +2165,21 @@ export default function Admin() {
                     <Palette className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" />
                     {adminT("Teema & ulkoasu", "Theme & Layout", "المظهر والتخطيط")}
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => setShowPaymentMethodsModal(true)}
                     variant="outline"
                     className="w-full justify-start"
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
                     {adminT("Maksutavat", "Payment Methods", "طرق الدفع")}
+                  </Button>
+                  <Button
+                    onClick={() => navigate("/payments")}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Wallet className="w-4 h-4 mr-2" />
+                    {adminT("Maksut & palautukset", "Payments & Refunds", "المدفوعات والمرتجعات")}
                   </Button>
                   <Button
                     onClick={() => setShowToppingGroupsModal(true)}

@@ -16,6 +16,7 @@ import Login from "@/pages/login";
 import LocationsAdmin from "@/pages/locations-admin";
 import BranchesAdmin from "@/pages/branches-admin";
 import LounasAdmin from "@/pages/lounas-admin";
+import PaymentsPage from "@/pages/payments";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/locations" component={LocationsAdmin} />
       <Route path="/branches" component={BranchesAdmin} />
       <Route path="/lounas" component={LounasAdmin} />
+      <Route path="/payments" component={PaymentsPage} />
       <Route component={NotFound} />
     </Switch>
   );
