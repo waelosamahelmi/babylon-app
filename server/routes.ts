@@ -597,10 +597,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Notify admins of new order
-      const notifyAdmins = (app as any).notifyAdminsNewOrder;
-      if (notifyAdmins) {
-        notifyAdmins(newOrder);
+      // Notify admins of new order ONLY if payment is completed or not required
+      // Don't notify for pending_payment status (waiting for Stripe confirmation)
+      const shouldNotify = newOrder.paymentStatus === 'paid' || 
+                          newOrder.paymentStatus === 'pending' || 
+                          newOrder.paymentStatus === 'cash';
+      
+      if (shouldNotify) {
+        const notifyAdmins = (app as any).notifyAdminsNewOrder;
+        if (notifyAdmins) {
+          console.log('📢 Notifying admins of order:', newOrder.orderNumber, 'status:', newOrder.paymentStatus);
+          notifyAdmins(newOrder);
+        }
+      } else {
+        console.log('⏳ Skipping notification for order:', newOrder.orderNumber, 'status:', newOrder.paymentStatus, '(waiting for payment)');
       }
 
       // Send order confirmation email
@@ -667,6 +677,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update order status" });
+    }
+  });
+
+  // Update order payment intent ID (for Stripe redirect-based payments)
+  app.patch("/api/orders/:id/payment-intent", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { paymentIntentId } = req.body;
+      
+      if (!paymentIntentId) {
+        return res.status(400).json({ error: "Payment intent ID is required" });
+      }
+      
+      const result = await db.update(orders)
+        .set({ stripePaymentIntentId: paymentIntentId })
+        .where(eq(orders.id, id))
+        .returning();
+      
+      if (!result || result.length === 0) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      console.log(`✅ Updated order ${id} with payment intent ${paymentIntentId}`);
+      res.json(result[0]);
+    } catch (error) {
+      console.error('❌ Error updating payment intent ID:', error);
+      res.status(500).json({ error: "Failed to update payment intent ID" });
     }
   });
 

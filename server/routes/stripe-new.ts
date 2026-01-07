@@ -105,7 +105,7 @@ router.post('/create-payment-intent', async (req, res) => {
       metadata: req.body.metadata 
     });
 
-    const { amount, currency = 'eur', metadata = {}, forcePaymentMethods } = req.body;
+    const { amount, currency = 'eur', metadata = {}, forcePaymentMethods, paymentMethodTypes } = req.body;
 
     if (!amount || amount <= 0) {
       console.error('❌ Invalid amount:', amount);
@@ -143,13 +143,17 @@ router.post('/create-payment-intent', async (req, res) => {
     };
 
     // If forcePaymentMethods is provided (for testing), use specific methods
-    // Otherwise use automatic payment methods
+    // Otherwise use automatic payment methods with explicit types if provided
     if (forcePaymentMethods && Array.isArray(forcePaymentMethods)) {
       console.log('🧪 Testing mode: Forcing payment methods:', forcePaymentMethods);
       paymentIntentOptions.payment_method_types = forcePaymentMethods;
+    } else if (paymentMethodTypes && Array.isArray(paymentMethodTypes) && paymentMethodTypes.length > 0) {
+      console.log('📋 Explicit payment methods requested:', paymentMethodTypes);
+      paymentIntentOptions.payment_method_types = paymentMethodTypes;
     } else {
       paymentIntentOptions.automatic_payment_methods = {
         enabled: true, // This enables all payment methods configured in Stripe Dashboard
+        allow_redirects: 'always', // Enable redirect-based payment methods (bank transfers, SEPA, etc.)
       };
     }
 
@@ -332,6 +336,20 @@ webhookRouter.post('/webhook', express.raw({ type: 'application/json' }), async 
                 .where(eq(orders.id, orderToUpdate.id));
 
               console.log(`✅ Order #${orderToUpdate.id} (${orderToUpdate.orderNumber}) marked as paid`);
+
+              // Notify admins of the paid order
+              const notifyAdmins = (app as any).notifyAdminsNewOrder;
+              if (notifyAdmins) {
+                console.log('📢 Notifying admins of paid order:', orderToUpdate.orderNumber);
+                // Refresh order data to get latest state
+                const refreshedOrder = await db.select()
+                  .from(orders)
+                  .where(eq(orders.id, orderToUpdate.id))
+                  .limit(1);
+                if (refreshedOrder[0]) {
+                  notifyAdmins(refreshedOrder[0]);
+                }
+              }
 
               // Send order confirmation email if customer has email
               if (orderToUpdate.customerEmail) {
