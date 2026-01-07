@@ -707,6 +707,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get order by payment intent ID (for order success page after redirect)
+  app.get("/api/orders/by-payment-intent/:paymentIntentId", async (req, res) => {
+    try {
+      const { paymentIntentId } = req.params;
+      
+      console.log('🔍 Looking up order by payment intent:', paymentIntentId);
+      
+      const result = await db.select()
+        .from(orders)
+        .where(eq(orders.stripePaymentIntentId, paymentIntentId))
+        .limit(1);
+      
+      if (!result || result.length === 0) {
+        console.log('❌ Order not found for payment intent:', paymentIntentId);
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      console.log('✅ Found order:', result[0].id, result[0].orderNumber);
+      res.json(result[0]);
+    } catch (error) {
+      console.error('❌ Error fetching order by payment intent:', error);
+      res.status(500).json({ error: "Failed to fetch order" });
+    }
+  });
+
   // Product management routes
 
   // Create new menu item
