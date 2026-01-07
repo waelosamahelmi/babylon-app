@@ -132,6 +132,7 @@ export const orders = pgTable("orders", {
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).default("0"),
   smallOrderFee: decimal("small_order_fee", { precision: 10, scale: 2 }).default("0"),
+  serviceFee: decimal("service_fee", { precision: 10, scale: 2 }).default("0"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   paymentMethod: text("payment_method").default("cash"), // 'cash', 'card', 'stripe'
   paymentStatus: text("payment_status").default("pending"), // 'pending', 'processing', 'paid', 'failed', 'canceled', 'refunded', 'partially_refunded'

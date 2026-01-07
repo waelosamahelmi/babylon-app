@@ -17,6 +17,8 @@ interface OrderEmailData {
   }>;
   subtotal: number;
   deliveryFee: number;
+  smallOrderFee?: number;
+  serviceFee?: number;
   totalAmount: number;
   orderType: 'delivery' | 'pickup';
   deliveryAddress?: string;
@@ -32,6 +34,8 @@ export async function sendOrderConfirmationEmail(orderData: OrderEmailData): Pro
       items,
       subtotal,
       deliveryFee,
+      smallOrderFee,
+      serviceFee,
       totalAmount,
       orderType,
       deliveryAddress,
@@ -82,6 +86,8 @@ export async function sendOrderConfirmationEmail(orderData: OrderEmailData): Pro
               <td style="padding: 10px; text-align: right;" colspan="2">
                 <strong>Subtotal:</strong> €${subtotal.toFixed(2)}<br>
                 ${deliveryFee > 0 ? `<strong>Delivery Fee:</strong> €${deliveryFee.toFixed(2)}<br>` : ''}
+                ${smallOrderFee && smallOrderFee > 0 ? `<strong>Small Order Fee:</strong> €${smallOrderFee.toFixed(2)}<br>` : ''}
+                ${serviceFee && serviceFee > 0 ? `<strong>Service Fee:</strong> €${serviceFee.toFixed(2)}<br>` : ''}
                 <strong>Total:</strong> €${totalAmount.toFixed(2)}
               </td>
             </tr>

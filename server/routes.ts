@@ -3,7 +3,9 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertOrderSchema, insertOrderItemSchema, insertToppingSchema, insertMenuItemSchema } from "@shared/schema";
+import { insertOrderSchema, insertOrderItemSchema, insertToppingSchema, insertMenuItemSchema, orders } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { authService, type AuthUser } from "./auth";
 import { updateMenuItemImages, addImageToMenuItem, getMenuItemsWithoutImages } from "./image-updater";
 import { upload, uploadImageToSupabase, deleteImageFromSupabase, ensureStorageBucket } from "./file-upload";
@@ -576,7 +578,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate delivery fee and small order fee
       const deliveryFee = order.orderType === 'delivery' ? parseFloat(order.deliveryFee || '3.50') : 0;
       const smallOrderFee = parseFloat(order.smallOrderFee || '0');
-      const totalAmount = subtotal + deliveryFee + smallOrderFee;
+      const serviceFee = parseFloat(order.serviceFee || '0');
+      const totalAmount = subtotal + deliveryFee + smallOrderFee + serviceFee;
       
       // Create order
       const newOrder = await storage.createOrder({
@@ -584,6 +587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subtotal: subtotal.toFixed(2),
         deliveryFee: deliveryFee.toFixed(2),
         smallOrderFee: smallOrderFee.toFixed(2),
+        serviceFee: serviceFee.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
       });
       
@@ -637,6 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             subtotal: parseFloat(subtotal.toString()),
             deliveryFee: parseFloat(deliveryFee.toString()),
             smallOrderFee: parseFloat(smallOrderFee.toString()),
+            serviceFee: parseFloat(serviceFee.toString()),
             totalAmount: parseFloat(totalAmount.toString()),
             orderType: (newOrder.orderType as 'delivery' | 'pickup') || 'pickup',
             deliveryAddress: newOrder.deliveryAddress || undefined,
