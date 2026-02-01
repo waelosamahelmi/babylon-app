@@ -290,8 +290,14 @@ export function AIAssistantChat() {
         });
         if (response.ok) {
           const data = await response.json();
-          setConfig(data);
-          setEditConfig(data);
+          // Parse numeric fields that might come as strings from DB
+          const parsedConfig: AIConfig = {
+            ...data,
+            max_tokens: parseInt(data.max_tokens) || 2000,
+            temperature: parseFloat(data.temperature) || 0.7,
+          };
+          setConfig(parsedConfig);
+          setEditConfig(parsedConfig);
         }
       } catch (error) {
         console.error('Failed to load AI config:', error);

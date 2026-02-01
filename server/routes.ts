@@ -181,8 +181,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== AI ASSISTANT SQL EXECUTION ROUTES =====
   
-  // Get AI Assistant configuration
-  app.get("/api/ai/config", requireAuth, async (req, res) => {
+  // Get AI Assistant configuration (no auth required - config is needed on load)
+  app.get("/api/ai/config", async (req, res) => {
     try {
       console.log(`🤖 [AI Assistant] Fetching config`);
       
@@ -213,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Update AI Assistant configuration
+  // Update AI Assistant configuration (requires auth)
   app.put("/api/ai/config", requireAuth, async (req, res) => {
     try {
       const { api_provider, api_key, model, api_base_url, max_tokens, temperature, is_enabled } = req.body;
