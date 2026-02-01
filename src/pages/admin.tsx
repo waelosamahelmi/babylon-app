@@ -16,6 +16,7 @@ import { sendOrderAcceptedEmail, sendOrderCancelledEmail, sendOrderDeliveredEmai
 import { processOrderRefund } from "@/lib/stripe-refund";
 import { LoginModal } from "@/components/login-modal";
 import { ProductManagementModal } from "@/components/product-management-modal";
+import { AIAssistantChat } from "@/components/ai-assistant-chat";
 
 import { ToppingGroupManagementModal } from "@/components/topping-group-management-modal";
 import { RestaurantSettingsModal } from "@/components/restaurant-settings-modal";
@@ -2491,6 +2492,9 @@ export default function Admin() {
         open={showCustomerManagementModal}
         onOpenChange={setShowCustomerManagementModal}
       />
+
+      {/* AI Assistant Chat */}
+      <AIAssistantChat />
     </div>
   );
 }

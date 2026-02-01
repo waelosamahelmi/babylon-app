@@ -179,6 +179,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== AI ASSISTANT SQL EXECUTION ROUTES =====
+  
+  // Execute SQL query from AI assistant
+  app.post("/api/ai/execute-sql", requireAuth, async (req, res) => {
+    try {
+      const { sql, isDestructive } = req.body;
+      
+      if (!sql) {
+        return res.status(400).json({ error: "SQL query is required" });
+      }
+      
+      console.log(`🤖 [AI Assistant] Executing SQL: ${sql.substring(0, 100)}...`);
+      console.log(`🔒 Destructive: ${isDestructive}`);
+      
+      // Basic SQL injection prevention - only allow certain statements
+      const normalizedSql = sql.trim().toLowerCase();
+      const allowedStatements = ['select', 'update', 'insert', 'delete'];
+      const startsWithAllowed = allowedStatements.some(stmt => normalizedSql.startsWith(stmt));
+      
+      if (!startsWithAllowed) {
+        console.log(`❌ [AI Assistant] Blocked non-allowed SQL statement`);
+        return res.status(403).json({ error: "Only SELECT, UPDATE, INSERT, DELETE statements are allowed" });
+      }
+      
+      // Block dangerous patterns
+      const dangerousPatterns = [
+        /drop\s+(table|database|schema|index)/i,
+        /truncate\s+table/i,
+        /alter\s+table/i,
+        /create\s+(table|database|schema|index)/i,
+        /grant\s+/i,
+        /revoke\s+/i,
+        /pg_/i,
+        /information_schema/i,
+        /--/,
+        /;.*;/,
+      ];
+      
+      for (const pattern of dangerousPatterns) {
+        if (pattern.test(sql)) {
+          console.log(`❌ [AI Assistant] Blocked dangerous SQL pattern: ${pattern}`);
+          return res.status(403).json({ error: "This SQL operation is not allowed for safety reasons" });
+        }
+      }
+      
+      // Execute the query using drizzle
+      const result = await db.execute(sql);
+      
+      console.log(`✅ [AI Assistant] Query executed successfully`);
+      
+      res.json({ 
+        data: result.rows || result,
+        rowCount: result.rowCount || (Array.isArray(result) ? result.length : 0)
+      });
+    } catch (error) {
+      console.error(`❌ [AI Assistant] SQL execution error:`, error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Query execution failed" 
+      });
+    }
+  });
+  
+  // Get database schema info for AI context
+  app.get("/api/ai/schema-info", requireAuth, async (req, res) => {
+    try {
+      console.log(`🤖 [AI Assistant] Fetching schema info`);
+      
+      const schemaQuery = `
+        SELECT 
+          table_name,
+          column_name,
+          data_type,
+          is_nullable
+        FROM information_schema.columns 
+        WHERE table_schema = 'public'
+        ORDER BY table_name, ordinal_position
+      `;
+      
+      const result = await db.execute(schemaQuery);
+      
+      // Group by table
+      const schema: Record<string, any[]> = {};
+      for (const row of (result.rows || result) as any[]) {
+        if (!schema[row.table_name]) {
+          schema[row.table_name] = [];
+        }
+        schema[row.table_name].push({
+          column: row.column_name,
+          type: row.data_type,
+          nullable: row.is_nullable === 'YES'
+        });
+      }
+      
+      console.log(`✅ [AI Assistant] Schema info fetched for ${Object.keys(schema).length} tables`);
+      
+      res.json({ schema });
+    } catch (error) {
+      console.error(`❌ [AI Assistant] Failed to fetch schema info:`, error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to fetch schema info" 
+      });
+    }
+  });
+  
+  // Get analytics context for AI
+  app.get("/api/ai/analytics-context", requireAuth, async (req, res) => {
+    try {
+      console.log(`🤖 [AI Assistant] Fetching analytics context`);
+      
+      // Get summary stats for AI context
+      const [ordersCount, menuItemsCount, categoriesCount, branchesCount] = await Promise.all([
+        db.execute(`SELECT COUNT(*) as count FROM orders`),
+        db.execute(`SELECT COUNT(*) as count FROM menu_items`),
+        db.execute(`SELECT COUNT(*) as count FROM categories`),
+        db.execute(`SELECT COUNT(*) as count FROM branches`)
+      ]);
+      
+      const context = {
+        totalOrders: (ordersCount.rows?.[0] as any)?.count || 0,
+        totalMenuItems: (menuItemsCount.rows?.[0] as any)?.count || 0,
+        totalCategories: (categoriesCount.rows?.[0] as any)?.count || 0,
+        totalBranches: (branchesCount.rows?.[0] as any)?.count || 0,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log(`✅ [AI Assistant] Analytics context fetched`);
+      
+      res.json(context);
+    } catch (error) {
+      console.error(`❌ [AI Assistant] Failed to fetch analytics context:`, error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to fetch analytics context" 
+      });
+    }
+  });
+
   // ===== PRINTER MANAGEMENT ROUTES =====
   
   // Get all printers
