@@ -265,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Execute SQL query from AI assistant
-  app.post("/api/ai/execute-sql", requireAuth, async (req, res) => {
+  app.post("/api/ai/execute-sql", async (req, res) => {
     try {
       const { sql, isDestructive } = req.body;
       
