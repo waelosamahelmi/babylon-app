@@ -181,6 +181,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== AI ASSISTANT SQL EXECUTION ROUTES =====
   
+  // Get AI Assistant configuration
+  app.get("/api/ai/config", requireAuth, async (req, res) => {
+    try {
+      console.log(`🤖 [AI Assistant] Fetching config`);
+      
+      const result = await db.execute(`SELECT * FROM ai_assistant_config LIMIT 1`);
+      const config = (result.rows || result)?.[0];
+      
+      if (!config) {
+        // Return default config if none exists
+        return res.json({
+          id: null,
+          api_provider: 'openrouter',
+          api_key: '',
+          model: 'z-ai/glm-4.5-air:free',
+          api_base_url: 'https://openrouter.ai/api/v1/chat/completions',
+          max_tokens: 2000,
+          temperature: 0.7,
+          is_enabled: true
+        });
+      }
+      
+      console.log(`✅ [AI Assistant] Config fetched`);
+      res.json(config);
+    } catch (error) {
+      console.error(`❌ [AI Assistant] Failed to fetch config:`, error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to fetch AI config" 
+      });
+    }
+  });
+  
+  // Update AI Assistant configuration
+  app.put("/api/ai/config", requireAuth, async (req, res) => {
+    try {
+      const { api_provider, api_key, model, api_base_url, max_tokens, temperature, is_enabled } = req.body;
+      
+      console.log(`🤖 [AI Assistant] Updating config`);
+      
+      // Check if config exists
+      const existing = await db.execute(`SELECT id FROM ai_assistant_config LIMIT 1`);
+      const existingRow = (existing.rows || existing)?.[0];
+      
+      if (existingRow) {
+        // Update existing config
+        await db.execute(`
+          UPDATE ai_assistant_config 
+          SET 
+            api_provider = '${api_provider || 'openrouter'}',
+            api_key = '${api_key}',
+            model = '${model || 'z-ai/glm-4.5-air:free'}',
+            api_base_url = '${api_base_url || 'https://openrouter.ai/api/v1/chat/completions'}',
+            max_tokens = ${max_tokens || 2000},
+            temperature = ${temperature || 0.7},
+            is_enabled = ${is_enabled !== false}
+          WHERE id = ${existingRow.id}
+        `);
+      } else {
+        // Insert new config
+        await db.execute(`
+          INSERT INTO ai_assistant_config (api_provider, api_key, model, api_base_url, max_tokens, temperature, is_enabled)
+          VALUES (
+            '${api_provider || 'openrouter'}',
+            '${api_key}',
+            '${model || 'z-ai/glm-4.5-air:free'}',
+            '${api_base_url || 'https://openrouter.ai/api/v1/chat/completions'}',
+            ${max_tokens || 2000},
+            ${temperature || 0.7},
+            ${is_enabled !== false}
+          )
+        `);
+      }
+      
+      console.log(`✅ [AI Assistant] Config updated`);
+      res.json({ success: true });
+    } catch (error) {
+      console.error(`❌ [AI Assistant] Failed to update config:`, error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update AI config" 
+      });
+    }
+  });
+  
   // Execute SQL query from AI assistant
   app.post("/api/ai/execute-sql", requireAuth, async (req, res) => {
     try {

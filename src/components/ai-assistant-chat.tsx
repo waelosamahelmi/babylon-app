@@ -30,6 +30,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Bot, 
@@ -52,7 +61,11 @@ import {
   Zap,
   AlertTriangle,
   Play,
-  Languages
+  Languages,
+  Settings,
+  Save,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +95,17 @@ interface SuggestionCategory {
   icon: React.ReactNode;
   title: { en: string; fi: string; ar: string };
   suggestions: { en: string; fi: string; ar: string }[];
+}
+
+interface AIConfig {
+  id: number | null;
+  api_provider: string;
+  api_key: string;
+  model: string;
+  api_base_url: string;
+  max_tokens: number;
+  temperature: number;
+  is_enabled: boolean;
 }
 
 // Translations
@@ -115,6 +139,20 @@ const translations = {
     promotions: "Promotions",
     workingHours: "Working Hours",
     productManagement: "Product Management",
+    settings: "Settings",
+    apiSettings: "API Settings",
+    apiSettingsDesc: "Configure the AI provider and API key",
+    apiProvider: "API Provider",
+    apiKey: "API Key",
+    model: "Model",
+    apiBaseUrl: "API Base URL",
+    maxTokens: "Max Tokens",
+    temperature: "Temperature",
+    saveSettings: "Save Settings",
+    settingsSaved: "Settings saved successfully",
+    settingsSaveFailed: "Failed to save settings",
+    loadingConfig: "Loading configuration...",
+    configNotSet: "API key not configured. Click settings to configure.",
   },
   fi: {
     aiAssistant: "AI Avustaja",
@@ -145,6 +183,20 @@ const translations = {
     promotions: "Tarjoukset",
     workingHours: "Aukioloajat",
     productManagement: "Tuotehallinta",
+    settings: "Asetukset",
+    apiSettings: "API-asetukset",
+    apiSettingsDesc: "Määritä AI-palveluntarjoaja ja API-avain",
+    apiProvider: "API-palveluntarjoaja",
+    apiKey: "API-avain",
+    model: "Malli",
+    apiBaseUrl: "API-perus-URL",
+    maxTokens: "Enimmäistokenit",
+    temperature: "Lämpötila",
+    saveSettings: "Tallenna asetukset",
+    settingsSaved: "Asetukset tallennettu onnistuneesti",
+    settingsSaveFailed: "Asetusten tallennus epäonnistui",
+    loadingConfig: "Ladataan asetuksia...",
+    configNotSet: "API-avainta ei ole määritetty. Napsauta asetuksia määrittääksesi.",
   },
   ar: {
     aiAssistant: "مساعد الذكاء الاصطناعي",
@@ -175,11 +227,34 @@ const translations = {
     promotions: "العروض",
     workingHours: "ساعات العمل",
     productManagement: "إدارة المنتجات",
+    settings: "الإعدادات",
+    apiSettings: "إعدادات API",
+    apiSettingsDesc: "تكوين مزود الذكاء الاصطناعي ومفتاح API",
+    apiProvider: "مزود API",
+    apiKey: "مفتاح API",
+    model: "النموذج",
+    apiBaseUrl: "عنوان API الأساسي",
+    maxTokens: "الحد الأقصى للرموز",
+    temperature: "درجة الحرارة",
+    saveSettings: "حفظ الإعدادات",
+    settingsSaved: "تم حفظ الإعدادات بنجاح",
+    settingsSaveFailed: "فشل حفظ الإعدادات",
+    loadingConfig: "جاري تحميل الإعدادات...",
+    configNotSet: "لم يتم تكوين مفتاح API. انقر على الإعدادات للتكوين.",
   }
 };
 
-const OPENROUTER_API_KEY = "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";
-const MODEL = "z-ai/glm-4.5-air:free";
+// Default config - will be loaded from database
+const DEFAULT_CONFIG: AIConfig = {
+  id: null,
+  api_provider: 'openrouter',
+  api_key: '',
+  model: 'z-ai/glm-4.5-air:free',
+  api_base_url: 'https://openrouter.ai/api/v1/chat/completions',
+  max_tokens: 2000,
+  temperature: 0.7,
+  is_enabled: true
+};
 
 export function AIAssistantChat() {
   const { language: appLanguage } = useLanguage();
@@ -194,9 +269,72 @@ export function AIAssistantChat() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // Config state
+  const [config, setConfig] = useState<AIConfig>(DEFAULT_CONFIG);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [editConfig, setEditConfig] = useState<AIConfig>(DEFAULT_CONFIG);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const t = translations[chatLanguage];
   const isRTL = chatLanguage === "ar";
+  
+  // Load config from database on mount
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const response = await fetch('/api/ai/config', {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setConfig(data);
+          setEditConfig(data);
+        }
+      } catch (error) {
+        console.error('Failed to load AI config:', error);
+      } finally {
+        setIsLoadingConfig(false);
+      }
+    };
+    loadConfig();
+  }, []);
+  
+  // Save config to database
+  const saveConfig = async () => {
+    setIsSavingConfig(true);
+    try {
+      const response = await fetch('/api/ai/config', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editConfig),
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        setConfig(editConfig);
+        setShowSettingsDialog(false);
+        toast({
+          title: t.settingsSaved,
+          description: t.settingsSaved,
+        });
+      } else {
+        throw new Error('Failed to save');
+      }
+    } catch (error) {
+      toast({
+        title: t.error,
+        description: t.settingsSaveFailed,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -347,9 +485,20 @@ ${languageInstruction}`;
     }
   };
 
-  // Send message to OpenRouter AI
+  // Send message to AI provider
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return;
+    
+    // Check if API key is configured
+    if (!config.api_key) {
+      toast({
+        title: t.error,
+        description: t.configNotSet,
+        variant: "destructive"
+      });
+      setShowSettingsDialog(true);
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -373,16 +522,16 @@ ${languageInstruction}`;
     setMessages(prev => [...prev, thinkingMessage]);
 
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const response = await fetch(config.api_base_url, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+          "Authorization": `Bearer ${config.api_key}`,
           "Content-Type": "application/json",
           "HTTP-Referer": window.location.origin,
           "X-Title": "Babylon Restaurant Admin"
         },
         body: JSON.stringify({
-          model: MODEL,
+          model: config.model,
           messages: [
             { role: "system", content: getDatabaseContext() },
             ...messages.filter(m => m.role !== "system").map(m => ({
@@ -391,8 +540,8 @@ ${languageInstruction}`;
             })),
             { role: "user", content: content.trim() }
           ],
-          temperature: 0.7,
-          max_tokens: 2000
+          temperature: config.temperature,
+          max_tokens: config.max_tokens
         })
       });
 
@@ -497,7 +646,7 @@ ${languageInstruction}`;
     } finally {
       setIsLoading(false);
     }
-  }, [messages, isLoading, toast, t, chatLanguage]);
+  }, [messages, isLoading, toast, t, chatLanguage, config]);
 
   // Handle confirmation of destructive queries
   const handleConfirmQuery = async () => {
@@ -725,6 +874,20 @@ ${languageInstruction}`;
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+              
+              {/* Settings Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setEditConfig(config);
+                  setShowSettingsDialog(true);
+                }}
+                className="text-white hover:bg-white/20"
+                title={t.settings}
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
               
               <Button
                 variant="ghost"
@@ -1036,6 +1199,147 @@ ${languageInstruction}`;
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Settings Dialog */}
+      <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+        <DialogContent className="sm:max-w-[500px]" dir={isRTL ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+              <Settings className="w-5 h-5 text-violet-600" />
+              {t.apiSettings}
+            </DialogTitle>
+            <DialogDescription>
+              {t.apiSettingsDesc}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            {/* API Provider */}
+            <div className="grid gap-2">
+              <Label htmlFor="api_provider" className={isRTL ? "text-right" : ""}>
+                {t.apiProvider}
+              </Label>
+              <Input
+                id="api_provider"
+                value={editConfig.api_provider}
+                onChange={(e) => setEditConfig({...editConfig, api_provider: e.target.value})}
+                placeholder="openrouter"
+                className={isRTL ? "text-right" : ""}
+              />
+            </div>
+            
+            {/* API Key */}
+            <div className="grid gap-2">
+              <Label htmlFor="api_key" className={isRTL ? "text-right" : ""}>
+                {t.apiKey}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="api_key"
+                  type={showApiKey ? "text" : "password"}
+                  value={editConfig.api_key}
+                  onChange={(e) => setEditConfig({...editConfig, api_key: e.target.value})}
+                  placeholder="sk-or-v1-..."
+                  className={cn("pr-10", isRTL ? "text-right" : "")}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            
+            {/* Model */}
+            <div className="grid gap-2">
+              <Label htmlFor="model" className={isRTL ? "text-right" : ""}>
+                {t.model}
+              </Label>
+              <Input
+                id="model"
+                value={editConfig.model}
+                onChange={(e) => setEditConfig({...editConfig, model: e.target.value})}
+                placeholder="z-ai/glm-4.5-air:free"
+                className={isRTL ? "text-right" : ""}
+              />
+            </div>
+            
+            {/* API Base URL */}
+            <div className="grid gap-2">
+              <Label htmlFor="api_base_url" className={isRTL ? "text-right" : ""}>
+                {t.apiBaseUrl}
+              </Label>
+              <Input
+                id="api_base_url"
+                value={editConfig.api_base_url}
+                onChange={(e) => setEditConfig({...editConfig, api_base_url: e.target.value})}
+                placeholder="https://openrouter.ai/api/v1/chat/completions"
+                className={isRTL ? "text-right" : ""}
+              />
+            </div>
+            
+            {/* Max Tokens */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="max_tokens" className={isRTL ? "text-right" : ""}>
+                  {t.maxTokens}
+                </Label>
+                <Input
+                  id="max_tokens"
+                  type="number"
+                  value={editConfig.max_tokens}
+                  onChange={(e) => setEditConfig({...editConfig, max_tokens: parseInt(e.target.value) || 2000})}
+                  min={100}
+                  max={8000}
+                  className={isRTL ? "text-right" : ""}
+                />
+              </div>
+              
+              {/* Temperature */}
+              <div className="grid gap-2">
+                <Label htmlFor="temperature" className={isRTL ? "text-right" : ""}>
+                  {t.temperature}
+                </Label>
+                <Input
+                  id="temperature"
+                  type="number"
+                  step="0.1"
+                  value={editConfig.temperature}
+                  onChange={(e) => setEditConfig({...editConfig, temperature: parseFloat(e.target.value) || 0.7})}
+                  min={0}
+                  max={2}
+                  className={isRTL ? "text-right" : ""}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className={isRTL ? "flex-row-reverse sm:flex-row-reverse" : ""}>
+            <Button
+              variant="outline"
+              onClick={() => setShowSettingsDialog(false)}
+            >
+              {t.cancel}
+            </Button>
+            <Button
+              onClick={saveConfig}
+              disabled={isSavingConfig}
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
+            >
+              {isSavingConfig ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              {t.saveSettings}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }
