@@ -112,10 +112,10 @@ interface AIConfig {
 const translations = {
   en: {
     aiAssistant: "AI Assistant",
-    manageSmartly: "Manage your restaurant smartly",
+    manageSmartly: "Your intelligent restaurant partner",
     clearChat: "Clear chat",
     welcome: "Welcome to AI Assistant!",
-    welcomeDesc: "I can help you analyze sales, create offers, manage products and much more.",
+    welcomeDesc: "I can help you with ideas, planning, strategy, analyzing sales, managing products, and much more. Just ask me anything!",
     typeMessage: "Type your message...",
     newChat: "New chat",
     processing: "Processing...",
@@ -156,10 +156,10 @@ const translations = {
   },
   fi: {
     aiAssistant: "AI Avustaja",
-    manageSmartly: "Hallitse ravintolaasi älykkäästi",
+    manageSmartly: "Älykäs ravintolakumppanisi",
     clearChat: "Tyhjennä keskustelu",
     welcome: "Tervetuloa AI Avustajaan!",
-    welcomeDesc: "Voin auttaa sinua analysoimaan myyntiä, luomaan tarjouksia, hallitsemaan tuotteita ja paljon muuta.",
+    welcomeDesc: "Voin auttaa sinua ideoissa, suunnittelussa, strategiassa, myynnin analysoinnissa, tuotteiden hallinnassa ja paljon muussa. Kysy vain!",
     typeMessage: "Kirjoita viestisi...",
     newChat: "Uusi keskustelu",
     processing: "Käsitellään...",
@@ -200,10 +200,10 @@ const translations = {
   },
   ar: {
     aiAssistant: "مساعد الذكاء الاصطناعي",
-    manageSmartly: "أدر مطعمك بذكاء",
+    manageSmartly: "شريكك الذكي في إدارة المطعم",
     clearChat: "مسح المحادثة",
     welcome: "مرحباً بك في مساعد الذكاء الاصطناعي!",
-    welcomeDesc: "يمكنني مساعدتك في تحليل المبيعات وإنشاء العروض وإدارة المنتجات والمزيد.",
+    welcomeDesc: "يمكنني مساعدتك في الأفكار والتخطيط والاستراتيجية وتحليل المبيعات وإدارة المنتجات والمزيد. اسألني أي شيء!",
     typeMessage: "اكتب رسالتك...",
     newChat: "محادثة جديدة",
     processing: "جاري المعالجة...",
@@ -358,6 +358,19 @@ export function AIAssistantChat() {
 
   const suggestionCategories: SuggestionCategory[] = [
     {
+      icon: <Sparkles className="w-4 h-4 text-yellow-500" />,
+      title: { 
+        en: "Ideas & Planning", 
+        fi: "Ideat ja suunnittelu", 
+        ar: "الأفكار والتخطيط" 
+      },
+      suggestions: [
+        { en: "Give me ideas to increase weekend sales", fi: "Anna ideoita viikonlopun myynnin kasvattamiseen", ar: "أعطني أفكاراً لزيادة مبيعات عطلة نهاية الأسبوع" },
+        { en: "Help me create a summer marketing plan", fi: "Auta minua luomaan kesän markkinointisuunnitelma", ar: "ساعدني في إنشاء خطة تسويقية صيفية" },
+        { en: "What new menu items would attract more customers?", fi: "Mitkä uudet ruokalistan tuotteet houkuttelisivat enemmän asiakkaita?", ar: "ما هي الأطباق الجديدة التي ستجذب المزيد من العملاء؟" },
+      ]
+    },
+    {
       icon: <TrendingUp className="w-4 h-4 text-green-500" />,
       title: { 
         en: "Sales Analysis", 
@@ -379,7 +392,7 @@ export function AIAssistantChat() {
       },
       suggestions: [
         { en: "Create 20% offer for Margherita pizza", fi: "Luo 20% tarjous Margherita-pizzalle", ar: "إنشاء عرض 20% على بيتزا مارجريتا" },
-        { en: "Suggest offers for poor selling products", fi: "Ehdota tarjouksia huonommin myyville tuotteille", ar: "اقترح عروضاً للمنتجات ضعيفة المبيعات" },
+        { en: "Suggest promotion strategies for slow days", fi: "Ehdota tarjousstrategioita hiljaisille päiville", ar: "اقترح استراتيجيات ترويجية للأيام الهادئة" },
         { en: "Remove all expired offers", fi: "Poista kaikki vanhentuneet tarjoukset", ar: "إزالة جميع العروض المنتهية" },
       ]
     },
@@ -406,7 +419,7 @@ export function AIAssistantChat() {
       suggestions: [
         { en: "Mark 'Pepperoni Pizza' as unavailable", fi: "Merkitse 'Pepperoni Pizza' loppuneeksi", ar: "وضع علامة 'بيتزا بيبروني' غير متوفرة" },
         { en: "Increase all pizza prices by 5%", fi: "Nosta kaikkien pizzojen hintoja 5%", ar: "زيادة أسعار جميع البيتزا بنسبة 5%" },
-        { en: "List all products without images", fi: "Listaa kaikki tuotteet ilman kuvia", ar: "عرض جميع المنتجات بدون صور" },
+        { en: "Help me write a description for a new dish", fi: "Auta minua kirjoittamaan kuvaus uudelle ruoalle", ar: "ساعدني في كتابة وصف لطبق جديد" },
       ]
     }
   ];
@@ -419,9 +432,26 @@ export function AIAssistantChat() {
         ? "Respond in Arabic." 
         : "Respond in English.";
     
-    return `You are an AI assistant for a restaurant admin panel (Babylon Restaurant). You help manage the restaurant through SQL queries on a PostgreSQL database.
+    return `You are an intelligent AI assistant for Babylon Restaurant's admin panel. You are a versatile assistant who can help with many different tasks.
 
-DATABASE SCHEMA:
+YOUR CAPABILITIES:
+1. **General Assistance**: Answer questions, provide advice, create plans, brainstorm ideas, explain concepts
+2. **Restaurant Strategy**: Help with marketing ideas, menu planning, pricing strategies, customer engagement
+3. **Business Analysis**: Discuss trends, suggest improvements, analyze business challenges
+4. **Database Operations**: ONLY when explicitly needed to read or modify restaurant data
+
+RESPONSE BEHAVIOR - CRITICAL:
+- For general questions, discussions, planning, or advice: Respond naturally in plain text. Do NOT use SQL.
+- For "create a plan", "help me think about", "what do you suggest", "explain", "how should I": Respond with helpful text/bullet points. NO SQL.
+- ONLY use SQL when the user EXPLICITLY wants to:
+  * View/query actual data from the database (e.g., "show me sales", "list products", "what orders came today")
+  * Modify data (e.g., "change the price of X", "create an offer for Y", "update working hours")
+  * Analyze real numbers from the database (e.g., "analyze this week's sales", "which products sold best")
+
+WHEN SQL IS NEEDED (and ONLY then), return it in this JSON format:
+{"sql": "YOUR_SQL_QUERY", "explanation": "Brief explanation", "isDestructive": true/false}
+
+DATABASE SCHEMA (use only when SQL is needed):
 - categories: id, name, name_en, display_order, is_active
 - branches: id, name, name_en, address, city, postal_code, latitude, longitude, phone, email, is_active, display_order, opening_hours (jsonb)
 - menu_items: id, category_id, name, name_en, description, description_en, price, image_url, is_vegetarian, is_vegan, is_gluten_free, display_order, is_available, offer_price, offer_percentage, offer_start_date, offer_end_date, has_conditional_pricing, included_toppings_count, branch_id
@@ -432,16 +462,25 @@ DATABASE SCHEMA:
 - restaurant_settings: id, is_open, opening_hours, pickup_hours, delivery_hours, lunch_buffet_hours, special_message, stripe_enabled, online_payment_service_fee
 - restaurant_config: id, name, name_en, tagline, tagline_en, description, description_en, phone, email, address (jsonb), social_media (jsonb), hours (jsonb), services (jsonb), delivery_config (jsonb), theme (jsonb)
 
-IMPORTANT RULES:
-1. ONLY generate SELECT, UPDATE, INSERT queries for safe operations
-2. NEVER generate DELETE queries that could delete critical data without explicit user confirmation
-3. For offers/promotions, use the offer_price, offer_percentage, offer_start_date, offer_end_date fields in menu_items
-4. Always return the SQL query in a JSON format: {"sql": "YOUR_SQL_QUERY", "explanation": "Brief explanation", "isDestructive": true/false}
-5. If the request is unclear or potentially dangerous, ask for clarification
-6. For analysis queries, generate detailed SELECT queries with aggregations
-7. When creating offers, set reasonable date ranges (e.g., 1-2 weeks)
-8. Times should be in 24-hour format
-9. Currency is in EUR (€)
+SQL RULES (only when SQL is appropriate):
+1. Use SELECT for reading data, UPDATE/INSERT for modifications
+2. NEVER use DELETE without explicit user confirmation
+3. For offers: use offer_price, offer_percentage, offer_start_date, offer_end_date in menu_items
+4. Mark operations as isDestructive: true for UPDATE/INSERT/DELETE
+5. Times in 24-hour format, currency in EUR (€)
+
+EXAMPLES OF WHEN NOT TO USE SQL:
+- "Give me ideas for a new pizza" → Respond with creative suggestions (no SQL)
+- "Create a marketing plan for summer" → Provide a detailed plan (no SQL)
+- "How can I increase sales?" → Give strategic advice (no SQL)
+- "What's the best way to handle complaints?" → Provide guidance (no SQL)
+- "Help me write a menu description" → Write the description (no SQL)
+
+EXAMPLES OF WHEN TO USE SQL:
+- "Show me today's orders" → SQL query to fetch orders
+- "Change Margherita price to 15€" → SQL UPDATE statement
+- "What were our best selling items last month?" → SQL query with aggregation
+- "Create a 20% offer on all pizzas" → SQL UPDATE for offer fields
 
 CURRENT DATE: ${new Date().toISOString().split('T')[0]}
 
