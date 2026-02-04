@@ -4,16 +4,9 @@ import { useSupabaseAuth } from "@/lib/supabase-auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetTrigger,
-  SheetDescription
-} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +22,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -38,6 +32,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -65,11 +65,22 @@ import {
   Settings,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  Maximize2,
+  Minimize2,
+  ChevronDown,
+  Lightbulb,
+  PanelRightClose,
+  PanelRightOpen,
+  Mic,
+  Paperclip,
+  MoreVertical,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ChatLanguage = "en" | "fi" | "ar";
+type ChatSize = "minimized" | "normal" | "expanded" | "fullscreen";
 
 interface Message {
   id: string;
@@ -265,10 +276,13 @@ export function AIAssistantChat() {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [chatSize, setChatSize] = useState<ChatSize>("normal");
   const [pendingQuery, setPendingQuery] = useState<PendingQuery | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   
   // Config state
   const [config, setConfig] = useState<AIConfig>(DEFAULT_CONFIG);
@@ -848,382 +862,573 @@ ${languageInstruction}`;
     { code: "ar" as ChatLanguage, label: "العربية", flag: "🇸🇦" },
   ];
 
+  // Get size classes for the chat container
+  const getSizeClasses = () => {
+    switch (chatSize) {
+      case "minimized":
+        return "w-80 h-14";
+      case "normal":
+        return "w-[420px] h-[600px]";
+      case "expanded":
+        return "w-[600px] h-[700px]";
+      case "fullscreen":
+        return "fixed inset-4 w-auto h-auto";
+      default:
+        return "w-[420px] h-[600px]";
+    }
+  };
+
+  // Handle keyboard shortcut for sending
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as unknown as React.FormEvent);
+    }
+  };
+
+  // Typing indicator component
+  const TypingIndicator = () => (
+    <div className="flex items-center gap-1 px-4 py-3">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg">
+          <Bot className="w-4 h-4 text-white" />
+        </div>
+        <div className="flex gap-1">
+          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 z-50"
-          size="icon"
+    <TooltipProvider>
+      {/* Floating Chat Button */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 z-50 group"
         >
           <div className="relative">
-            <Bot className="w-6 h-6 text-white" />
-            <Sparkles className="w-3 h-3 text-yellow-300 absolute -top-1 -right-1 animate-pulse" />
-          </div>
-        </Button>
-      </SheetTrigger>
-      <SheetContent 
-        side="right" 
-        className={cn(
-          "w-full sm:w-[500px] md:w-[600px] p-0 flex flex-col bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800",
-          isRTL && "text-right"
-        )}
-        dir={isRTL ? "rtl" : "ltr"}
-      >
-        {/* Header */}
-        <SheetHeader className="p-4 border-b bg-gradient-to-r from-violet-600 to-indigo-600 text-white">
-          <div className="flex items-center justify-between">
-            <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                <Bot className="w-5 h-5" />
-              </div>
-              <div>
-                <SheetTitle className="text-white text-lg font-bold">
-                  {t.aiAssistant}
-                </SheetTitle>
-                <SheetDescription className="text-violet-100 text-sm">
-                  {t.manageSmartly}
-                </SheetDescription>
-              </div>
+            {/* Pulse ring */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 animate-ping opacity-25" />
+            
+            {/* Main button */}
+            <div className="relative h-14 w-14 rounded-full bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 shadow-2xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 hover:shadow-violet-500/50 hover:shadow-xl">
+              <Bot className="w-7 h-7 text-white" />
+              <Sparkles className="w-4 h-4 text-yellow-300 absolute -top-0.5 -right-0.5 animate-pulse" />
             </div>
-            <div className="flex items-center gap-2">
-              {/* Language Selector */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+            
+            {/* Tooltip on hover */}
+            <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
+              {t.aiAssistant}
+              <div className="absolute top-full right-4 border-4 border-transparent border-t-gray-900" />
+            </div>
+          </div>
+        </button>
+      )}
+
+      {/* Chat Window */}
+      {isOpen && (
+        <div 
+          ref={chatContainerRef}
+          className={cn(
+            "fixed z-50 transition-all duration-300 ease-out",
+            chatSize === "fullscreen" ? "inset-4" : "bottom-6 right-6",
+            getSizeClasses()
+          )}
+        >
+          <div className={cn(
+            "flex flex-col h-full rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden backdrop-blur-xl",
+            "bg-white/95 dark:bg-gray-900/95",
+            chatSize === "minimized" && "cursor-pointer"
+          )}
+          onClick={() => chatSize === "minimized" && setChatSize("normal")}
+          >
+            {/* Header */}
+            <div className={cn(
+              "flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800",
+              "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600"
+            )}>
+              <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
+                </div>
+                <div className={chatSize === "minimized" ? "hidden" : ""}>
+                  <h3 className="text-white font-semibold text-sm">{t.aiAssistant}</h3>
+                  <p className="text-violet-100 text-xs">{t.manageSmartly}</p>
+                </div>
+                {chatSize === "minimized" && (
+                  <span className="text-white font-medium">{t.aiAssistant}</span>
+                )}
+              </div>
+              
+              <div className={cn("flex items-center gap-1", chatSize === "minimized" && "hidden")}>
+                {/* Language Selector */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20"
+                    >
+                      <span className="text-base">
+                        {languageOptions.find(l => l.code === chatLanguage)?.flag}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[140px]">
+                    {languageOptions.map((lang) => (
+                      <DropdownMenuItem
+                        key={lang.code}
+                        onClick={() => setChatLanguage(lang.code)}
+                        className={cn(
+                          "gap-2 cursor-pointer",
+                          chatLanguage === lang.code && "bg-violet-50 dark:bg-violet-900/20"
+                        )}
+                      >
+                        <span>{lang.flag}</span>
+                        <span>{lang.label}</span>
+                        {chatLanguage === lang.code && (
+                          <CheckCircle className="w-3 h-3 ml-auto text-violet-600" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* More Options */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[160px]">
+                    <DropdownMenuItem onClick={() => {
+                      setEditConfig(config);
+                      setShowSettingsDialog(true);
+                    }}>
+                      <Settings className="w-4 h-4 mr-2" />
+                      {t.settings}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={clearChat}>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {t.clearChat}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setChatSize("normal")}>
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Normal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setChatSize("expanded")}>
+                      <Maximize2 className="w-4 h-4 mr-2" />
+                      Expanded
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setChatSize("fullscreen")}>
+                      <PanelRightOpen className="w-4 h-4 mr-2" />
+                      Fullscreen
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Size toggle */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20"
+                      onClick={() => setChatSize(chatSize === "fullscreen" ? "normal" : "fullscreen")}
+                    >
+                      {chatSize === "fullscreen" ? (
+                        <Minimize2 className="w-4 h-4" />
+                      ) : (
+                        <Maximize2 className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {chatSize === "fullscreen" ? "Minimize" : "Fullscreen"}
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Minimize */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20"
+                      onClick={() => setChatSize("minimized")}
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Minimize</TooltipContent>
+                </Tooltip>
+
+                {/* Close */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Close</TooltipContent>
+                </Tooltip>
+              </div>
+
+              {/* Minimized state controls */}
+              {chatSize === "minimized" && (
+                <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-white/20 gap-1.5"
+                    size="icon"
+                    className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20"
+                    onClick={(e) => { e.stopPropagation(); setChatSize("normal"); }}
                   >
-                    <Languages className="w-4 h-4" />
-                    <span className="text-sm">
-                      {languageOptions.find(l => l.code === chatLanguage)?.flag}
-                    </span>
+                    <Maximize2 className="w-4 h-4" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {languageOptions.map((lang) => (
-                    <DropdownMenuItem
-                      key={lang.code}
-                      onClick={() => setChatLanguage(lang.code)}
-                      className={cn(
-                        "gap-2 cursor-pointer",
-                        chatLanguage === lang.code && "bg-violet-50 dark:bg-violet-900/20"
-                      )}
-                    >
-                      <span>{lang.flag}</span>
-                      <span>{lang.label}</span>
-                      {chatLanguage === lang.code && (
-                        <CheckCircle className="w-3 h-3 ml-auto text-violet-600" />
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              {/* Settings Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setEditConfig(config);
-                  setShowSettingsDialog(true);
-                }}
-                className="text-white hover:bg-white/20"
-                title={t.settings}
-              >
-                <Settings className="w-4 h-4" />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={clearChat}
-                className="text-white hover:bg-white/20"
-                title={t.clearChat}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </SheetHeader>
-
-        {/* Messages Area */}
-        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-          {messages.length === 0 ? (
-            <div className="space-y-6">
-              {/* Welcome Message */}
-              <div className="text-center py-6">
-                <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30 flex items-center justify-center mb-4">
-                  <Bot className="w-8 h-8 text-violet-600 dark:text-violet-400" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20"
+                    onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  {t.welcome}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm mx-auto">
-                  {t.welcomeDesc}
-                </p>
-              </div>
+              )}
+            </div>
 
-              {/* Suggestion Categories */}
-              <div className="space-y-4">
-                {suggestionCategories.map((category, idx) => (
-                  <Card key={idx} className="border-0 shadow-sm bg-white dark:bg-gray-800/50">
-                    <CardHeader className="pb-2">
-                      <CardTitle className={cn(
-                        "text-sm font-medium flex items-center gap-2",
-                        isRTL && "flex-row-reverse"
-                      )}>
-                        {category.icon}
-                        {category.title[chatLanguage]}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="flex flex-wrap gap-2">
-                        {category.suggestions.map((suggestion, sIdx) => (
-                          <Button
-                            key={sIdx}
-                            variant="outline"
-                            size="sm"
-                            className="text-xs h-auto py-1.5 px-3 bg-gray-50 dark:bg-gray-700/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
-                            onClick={() => handleSuggestionClick(suggestion)}
+            {/* Messages Area - Hidden when minimized */}
+            {chatSize !== "minimized" && (
+              <>
+                <ScrollArea className="flex-1 px-4 py-4" ref={scrollAreaRef}>
+                  {messages.length === 0 ? (
+                    <div className="space-y-6 animate-in fade-in duration-500">
+                      {/* Welcome Message */}
+                      <div className="text-center py-8">
+                        <div className="relative inline-block">
+                          <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30 flex items-center justify-center mb-4 shadow-lg">
+                            <Bot className="w-10 h-10 text-violet-600 dark:text-violet-400" />
+                          </div>
+                          <Sparkles className="w-6 h-6 text-yellow-500 absolute -top-1 -right-1 animate-pulse" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                          {t.welcome}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
+                          {t.welcomeDesc}
+                        </p>
+                      </div>
+
+                      {/* Suggestion Categories */}
+                      <div className="space-y-3">
+                        {suggestionCategories.map((category, idx) => (
+                          <div 
+                            key={idx} 
+                            className="group rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 p-3 hover:border-violet-200 dark:hover:border-violet-800 transition-all duration-200"
                           >
-                            {suggestion[chatLanguage]}
-                          </Button>
+                            <h4 className={cn(
+                              "text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2 mb-2",
+                              isRTL && "flex-row-reverse"
+                            )}>
+                              {category.icon}
+                              {category.title[chatLanguage]}
+                            </h4>
+                            <div className="flex flex-wrap gap-1.5">
+                              {category.suggestions.map((suggestion, sIdx) => (
+                                <button
+                                  key={sIdx}
+                                  className="text-xs px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-700 dark:hover:text-violet-300 transition-all duration-200 shadow-sm hover:shadow"
+                                  onClick={() => handleSuggestionClick(suggestion)}
+                                >
+                                  {suggestion[chatLanguage]}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex gap-3",
-                    message.role === "user" 
-                      ? isRTL ? "flex-row" : "flex-row-reverse" 
-                      : isRTL ? "flex-row-reverse" : "flex-row"
-                  )}
-                >
-                  {/* Avatar */}
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-                    message.role === "user" 
-                      ? "bg-blue-600" 
-                      : "bg-gradient-to-r from-violet-600 to-indigo-600"
-                  )}>
-                    {message.role === "user" ? (
-                      <User className="w-4 h-4 text-white" />
-                    ) : (
-                      <Bot className="w-4 h-4 text-white" />
-                    )}
-                  </div>
-
-                  {/* Message Content */}
-                  <div className={cn(
-                    "flex-1 max-w-[85%]",
-                    message.role === "user" 
-                      ? isRTL ? "text-left" : "text-right"
-                      : isRTL ? "text-right" : "text-left"
-                  )}>
-                    <div className={cn(
-                      "inline-block rounded-2xl px-4 py-2.5",
-                      message.role === "user"
-                        ? "bg-blue-600 text-white rounded-tr-sm"
-                        : "bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 rounded-tl-sm"
-                    )}>
-                      {message.isExecuting ? (
-                        <div className={cn(
-                          "flex items-center gap-2 text-gray-600 dark:text-gray-400",
-                          isRTL && "flex-row-reverse"
-                        )}>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="text-sm">{t.processing}</span>
-                        </div>
-                      ) : (
-                        <>
-                          <p className={cn(
-                            "text-sm whitespace-pre-wrap",
-                            message.role === "user" ? "text-white" : "text-gray-800 dark:text-gray-200"
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {messages.map((message, index) => (
+                        <div
+                          key={message.id}
+                          className={cn(
+                            "flex gap-3 animate-in slide-in-from-bottom-2 duration-300",
+                            message.role === "user" 
+                              ? isRTL ? "flex-row" : "flex-row-reverse" 
+                              : isRTL ? "flex-row-reverse" : "flex-row"
+                          )}
+                          style={{ animationDelay: `${index * 50}ms` }}
+                        >
+                          {/* Avatar */}
+                          <div className={cn(
+                            "w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md",
+                            message.role === "user" 
+                              ? "bg-gradient-to-br from-blue-500 to-blue-600" 
+                              : "bg-gradient-to-br from-violet-500 to-indigo-600"
                           )}>
-                            {message.content}
-                          </p>
+                            {message.role === "user" ? (
+                              <User className="w-4 h-4 text-white" />
+                            ) : (
+                              <Bot className="w-4 h-4 text-white" />
+                            )}
+                          </div>
 
-                          {/* SQL Query Display */}
-                          {message.sqlExecuted && (
-                            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                              <div className="flex items-center justify-between mb-1">
+                          {/* Message Content */}
+                          <div className={cn(
+                            "flex-1 max-w-[85%]",
+                            message.role === "user" 
+                              ? isRTL ? "text-left" : "text-right"
+                              : isRTL ? "text-right" : "text-left"
+                          )}>
+                            <div className={cn(
+                              "inline-block rounded-2xl px-4 py-3 shadow-sm",
+                              message.role === "user"
+                                ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
+                                : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
+                            )}>
+                              {message.isExecuting ? (
                                 <div className={cn(
-                                  "flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400",
+                                  "flex items-center gap-2 text-gray-600 dark:text-gray-400",
                                   isRTL && "flex-row-reverse"
                                 )}>
-                                  <Database className="w-3 h-3" />
-                                  <span>SQL</span>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span className="text-sm">{t.processing}</span>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => copyToClipboard(message.sqlExecuted!)}
-                                >
-                                  <Copy className="w-3 h-3" />
-                                </Button>
-                              </div>
-                              <pre className="text-xs bg-gray-900 text-green-400 p-2 rounded overflow-x-auto" dir="ltr">
-                                {message.sqlExecuted}
-                              </pre>
-                            </div>
-                          )}
+                              ) : (
+                                <>
+                                  <p className={cn(
+                                    "text-sm whitespace-pre-wrap leading-relaxed",
+                                    message.role === "user" ? "text-white" : "text-gray-800 dark:text-gray-200"
+                                  )}>
+                                    {message.content}
+                                  </p>
 
-                          {/* SQL Result */}
-                          {message.sqlResult && !message.error && (
-                            <div className="mt-2">
-                              <div className={cn(
-                                "flex items-center gap-1 text-xs text-green-600 dark:text-green-400 mb-1",
-                                isRTL && "flex-row-reverse"
-                              )}>
-                                <CheckCircle className="w-3 h-3" />
-                                <span>{t.result}</span>
-                              </div>
-                              {formatSQLResult(message.sqlResult)}
-                            </div>
-                          )}
+                                  {/* SQL Query Display */}
+                                  {message.sqlExecuted && (
+                                    <div className="mt-3 pt-3 border-t border-gray-200/50 dark:border-gray-600/50">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className={cn(
+                                          "flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400",
+                                          isRTL && "flex-row-reverse"
+                                        )}>
+                                          <Database className="w-3.5 h-3.5" />
+                                          <span>SQL Query</span>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          onClick={() => copyToClipboard(message.sqlExecuted!)}
+                                        >
+                                          <Copy className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto font-mono" dir="ltr">
+                                        {message.sqlExecuted}
+                                      </pre>
+                                    </div>
+                                  )}
 
-                          {/* Error Display */}
-                          {message.error && (
-                            <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
-                              <div className={cn(
-                                "flex items-center gap-1 text-xs text-red-600 dark:text-red-400",
-                                isRTL && "flex-row-reverse"
-                              )}>
-                                <AlertCircle className="w-3 h-3" />
-                                <span>{message.error}</span>
-                              </div>
-                            </div>
-                          )}
+                                  {/* SQL Result */}
+                                  {message.sqlResult && !message.error && (
+                                    <div className="mt-3">
+                                      <div className={cn(
+                                        "flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400 mb-2",
+                                        isRTL && "flex-row-reverse"
+                                      )}>
+                                        <CheckCircle className="w-3.5 h-3.5" />
+                                        <span>{t.result}</span>
+                                      </div>
+                                      {formatSQLResult(message.sqlResult)}
+                                    </div>
+                                  )}
 
-                          {/* Pending Confirmation UI */}
-                          {message.pendingConfirmation && message.sqlExecuted && (
-                            <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                              <div className={cn(
-                                "flex items-center gap-2 text-amber-700 dark:text-amber-300 mb-2",
-                                isRTL && "flex-row-reverse"
-                              )}>
-                                <AlertTriangle className="w-4 h-4" />
-                                <span className="text-sm font-medium">{t.modifyData}</span>
-                              </div>
-                              <div className={cn("flex gap-2", isRTL && "flex-row-reverse")}>
-                                <Button
-                                  size="sm"
-                                  onClick={() => executeManualQuery(message.id, message.sqlExecuted!)}
-                                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                                >
-                                  <Play className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} />
-                                  {t.execute}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setMessages(prev => prev.map(m => 
-                                    m.id === message.id 
-                                      ? { ...m, pendingConfirmation: false, error: t.operationCancelled }
-                                      : m
-                                  ))}
-                                  className="border-amber-300 dark:border-amber-700"
-                                >
-                                  {t.cancel}
-                                </Button>
-                              </div>
+                                  {/* Error Display */}
+                                  {message.error && (
+                                    <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                                      <div className={cn(
+                                        "flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400",
+                                        isRTL && "flex-row-reverse"
+                                      )}>
+                                        <AlertCircle className="w-3.5 h-3.5" />
+                                        <span>{message.error}</span>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Pending Confirmation UI */}
+                                  {message.pendingConfirmation && message.sqlExecuted && (
+                                    <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                                      <div className={cn(
+                                        "flex items-center gap-2 text-amber-700 dark:text-amber-300 mb-3",
+                                        isRTL && "flex-row-reverse"
+                                      )}>
+                                        <AlertTriangle className="w-4 h-4" />
+                                        <span className="text-sm font-medium">{t.modifyData}</span>
+                                      </div>
+                                      <div className={cn("flex gap-2", isRTL && "flex-row-reverse")}>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => executeManualQuery(message.id, message.sqlExecuted!)}
+                                          className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
+                                        >
+                                          <Play className={cn("w-3 h-3", isRTL ? "ml-1.5" : "mr-1.5")} />
+                                          {t.execute}
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => setMessages(prev => prev.map(m => 
+                                            m.id === message.id 
+                                              ? { ...m, pendingConfirmation: false, error: t.operationCancelled }
+                                              : m
+                                          ))}
+                                          className="border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                                        >
+                                          {t.cancel}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              )}
                             </div>
+                            
+                            {/* Timestamp */}
+                            <p className="text-[10px] text-gray-400 mt-1.5 px-1">
+                              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {/* Typing Indicator */}
+                      {isLoading && <TypingIndicator />}
+                    </div>
+                  )}
+                </ScrollArea>
+
+                {/* Input Area */}
+                <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
+                  <form onSubmit={handleSubmit} className="space-y-3">
+                    <div className={cn(
+                      "flex gap-2 items-end",
+                      isRTL && "flex-row-reverse"
+                    )}>
+                      <div className="flex-1 relative">
+                        <Textarea
+                          ref={inputRef}
+                          value={inputValue}
+                          onChange={(e) => setInputValue(e.target.value)}
+                          onKeyDown={handleKeyDown}
+                          placeholder={t.typeMessage}
+                          disabled={isLoading}
+                          rows={1}
+                          className={cn(
+                            "min-h-[44px] max-h-[120px] resize-none py-3 px-4 pr-12 rounded-xl",
+                            "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700",
+                            "focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500",
+                            "placeholder:text-gray-400 dark:placeholder:text-gray-500",
+                            "transition-all duration-200",
+                            isRTL && "text-right"
                           )}
-                        </>
-                      )}
+                          dir={isRTL ? "rtl" : "ltr"}
+                        />
+                        
+                        {/* Send button inside input */}
+                        <Button 
+                          type="submit" 
+                          disabled={isLoading || !inputValue.trim()}
+                          size="icon"
+                          className={cn(
+                            "absolute bottom-1.5 h-9 w-9 rounded-lg",
+                            "bg-gradient-to-br from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700",
+                            "shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40",
+                            "disabled:opacity-50 disabled:shadow-none",
+                            "transition-all duration-200",
+                            isRTL ? "left-1.5" : "right-1.5"
+                          )}
+                        >
+                          {isLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Send className={cn("w-4 h-4", isRTL && "rotate-180")} />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                     
-                    {/* Timestamp */}
-                    <p className="text-[10px] text-gray-400 mt-1 px-1">
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
+                    {/* Quick Actions */}
+                    <div className={cn(
+                      "flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 px-1",
+                      isRTL && "flex-row-reverse"
+                    )}>
+                      <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+                        <button 
+                          type="button"
+                          onClick={clearChat}
+                          className={cn(
+                            "flex items-center gap-1 hover:text-violet-600 dark:hover:text-violet-400 transition-colors",
+                            isRTL && "flex-row-reverse"
+                          )}
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          <span>{t.newChat}</span>
+                        </button>
+                      </div>
+                      <div className={cn("flex items-center gap-1 opacity-60", isRTL && "flex-row-reverse")}>
+                        <Zap className="w-3 h-3 text-yellow-500" />
+                        <span>AI Powered</span>
+                      </div>
+                    </div>
+                  </form>
                 </div>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-
-        {/* Input Area */}
-        <div className="p-4 border-t bg-white dark:bg-gray-800">
-          <form onSubmit={handleSubmit} className={cn("flex gap-2", isRTL && "flex-row-reverse")}>
-            <Input
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder={t.typeMessage}
-              disabled={isLoading}
-              className={cn(
-                "flex-1 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:ring-violet-500 focus:border-violet-500",
-                isRTL && "text-right"
-              )}
-              dir={isRTL ? "rtl" : "ltr"}
-            />
-            <Button 
-              type="submit" 
-              disabled={isLoading || !inputValue.trim()}
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className={cn("w-4 h-4", isRTL && "rotate-180")} />
-              )}
-            </Button>
-          </form>
-          
-          {/* Quick Actions */}
-          <div className={cn(
-            "flex items-center justify-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400",
-            isRTL && "flex-row-reverse"
-          )}>
-            <button 
-              onClick={clearChat}
-              className={cn(
-                "flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors",
-                isRTL && "flex-row-reverse"
-              )}
-            >
-              <RotateCcw className="w-3 h-3" />
-              {t.newChat}
-            </button>
-            <span>•</span>
-            <div className={cn("flex items-center gap-1", isRTL && "flex-row-reverse")}>
-              <Zap className="w-3 h-3 text-yellow-500" />
-              <span>Powered by AI</span>
-            </div>
+              </>
+            )}
           </div>
         </div>
-      </SheetContent>
+      )}
 
       {/* Confirmation Dialog for Destructive Operations */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent dir={isRTL ? "rtl" : "ltr"} className="max-w-lg">
+        <AlertDialogContent dir={isRTL ? "rtl" : "ltr"} className="max-w-lg rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className={cn(
               "flex items-center gap-2",
               isRTL && "flex-row-reverse"
             )}>
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
               {t.confirmAction}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className={isRTL ? "text-right" : "text-left"}>
-                <p className="mb-3">{t.confirmDesc}</p>
+                <p className="mb-4 text-gray-600 dark:text-gray-400">{t.confirmDesc}</p>
                 {pendingQuery && (
-                  <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
-                    <p className="text-gray-600 dark:text-gray-400 mb-1 font-medium">SQL:</p>
-                    <pre className="text-xs bg-gray-900 text-green-400 p-2 rounded overflow-x-auto whitespace-pre-wrap break-all max-h-40" dir="ltr">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium uppercase tracking-wider">SQL Query:</p>
+                    <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto whitespace-pre-wrap break-all max-h-40 font-mono" dir="ltr">
                       {pendingQuery.sql}
                     </pre>
                   </div>
@@ -1231,14 +1436,15 @@ ${languageInstruction}`;
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className={isRTL ? "flex-row-reverse" : ""}>
-            <AlertDialogCancel onClick={handleCancelQuery}>
+          <AlertDialogFooter className={cn("gap-2", isRTL && "flex-row-reverse")}>
+            <AlertDialogCancel onClick={handleCancelQuery} className="rounded-xl">
               {t.cancel}
             </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleConfirmQuery}
-              className="bg-amber-600 hover:bg-amber-700"
+              className="rounded-xl bg-amber-600 hover:bg-amber-700"
             >
+              <Play className="w-4 h-4 mr-1.5" />
               {t.execute}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1247,21 +1453,23 @@ ${languageInstruction}`;
 
       {/* Settings Dialog */}
       <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-        <DialogContent className="sm:max-w-[500px]" dir={isRTL ? "rtl" : "ltr"}>
+        <DialogContent className="sm:max-w-[500px] rounded-2xl" dir={isRTL ? "rtl" : "ltr"}>
           <DialogHeader>
-            <DialogTitle className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
-              <Settings className="w-5 h-5 text-violet-600" />
-              {t.apiSettings}
+            <DialogTitle className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+              <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                <Settings className="w-5 h-5 text-violet-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold">{t.apiSettings}</h3>
+                <p className="text-sm font-normal text-gray-500">{t.apiSettingsDesc}</p>
+              </div>
             </DialogTitle>
-            <DialogDescription>
-              {t.apiSettingsDesc}
-            </DialogDescription>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
             {/* API Provider */}
             <div className="grid gap-2">
-              <Label htmlFor="api_provider" className={isRTL ? "text-right" : ""}>
+              <Label htmlFor="api_provider" className={cn("text-sm font-medium", isRTL && "text-right")}>
                 {t.apiProvider}
               </Label>
               <Input
@@ -1269,13 +1477,13 @@ ${languageInstruction}`;
                 value={editConfig.api_provider}
                 onChange={(e) => setEditConfig({...editConfig, api_provider: e.target.value})}
                 placeholder="openrouter"
-                className={isRTL ? "text-right" : ""}
+                className={cn("rounded-xl", isRTL && "text-right")}
               />
             </div>
             
             {/* API Key */}
             <div className="grid gap-2">
-              <Label htmlFor="api_key" className={isRTL ? "text-right" : ""}>
+              <Label htmlFor="api_key" className={cn("text-sm font-medium", isRTL && "text-right")}>
                 {t.apiKey}
               </Label>
               <div className="relative">
@@ -1285,13 +1493,13 @@ ${languageInstruction}`;
                   value={editConfig.api_key}
                   onChange={(e) => setEditConfig({...editConfig, api_key: e.target.value})}
                   placeholder="sk-or-v1-..."
-                  className={cn("pr-10", isRTL ? "text-right" : "")}
+                  className={cn("pr-10 rounded-xl", isRTL && "text-right")}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg"
                   onClick={() => setShowApiKey(!showApiKey)}
                 >
                   {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -1301,7 +1509,7 @@ ${languageInstruction}`;
             
             {/* Model */}
             <div className="grid gap-2">
-              <Label htmlFor="model" className={isRTL ? "text-right" : ""}>
+              <Label htmlFor="model" className={cn("text-sm font-medium", isRTL && "text-right")}>
                 {t.model}
               </Label>
               <Input
@@ -1309,13 +1517,13 @@ ${languageInstruction}`;
                 value={editConfig.model}
                 onChange={(e) => setEditConfig({...editConfig, model: e.target.value})}
                 placeholder="z-ai/glm-4.5-air:free"
-                className={isRTL ? "text-right" : ""}
+                className={cn("rounded-xl", isRTL && "text-right")}
               />
             </div>
             
             {/* API Base URL */}
             <div className="grid gap-2">
-              <Label htmlFor="api_base_url" className={isRTL ? "text-right" : ""}>
+              <Label htmlFor="api_base_url" className={cn("text-sm font-medium", isRTL && "text-right")}>
                 {t.apiBaseUrl}
               </Label>
               <Input
@@ -1323,14 +1531,14 @@ ${languageInstruction}`;
                 value={editConfig.api_base_url}
                 onChange={(e) => setEditConfig({...editConfig, api_base_url: e.target.value})}
                 placeholder="https://openrouter.ai/api/v1/chat/completions"
-                className={isRTL ? "text-right" : ""}
+                className={cn("rounded-xl", isRTL && "text-right")}
               />
             </div>
             
-            {/* Max Tokens */}
+            {/* Max Tokens & Temperature */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="max_tokens" className={isRTL ? "text-right" : ""}>
+                <Label htmlFor="max_tokens" className={cn("text-sm font-medium", isRTL && "text-right")}>
                   {t.maxTokens}
                 </Label>
                 <Input
@@ -1340,13 +1548,12 @@ ${languageInstruction}`;
                   onChange={(e) => setEditConfig({...editConfig, max_tokens: parseInt(e.target.value) || 2000})}
                   min={100}
                   max={8000}
-                  className={isRTL ? "text-right" : ""}
+                  className={cn("rounded-xl", isRTL && "text-right")}
                 />
               </div>
               
-              {/* Temperature */}
               <div className="grid gap-2">
-                <Label htmlFor="temperature" className={isRTL ? "text-right" : ""}>
+                <Label htmlFor="temperature" className={cn("text-sm font-medium", isRTL && "text-right")}>
                   {t.temperature}
                 </Label>
                 <Input
@@ -1357,23 +1564,24 @@ ${languageInstruction}`;
                   onChange={(e) => setEditConfig({...editConfig, temperature: parseFloat(e.target.value) || 0.7})}
                   min={0}
                   max={2}
-                  className={isRTL ? "text-right" : ""}
+                  className={cn("rounded-xl", isRTL && "text-right")}
                 />
               </div>
             </div>
           </div>
           
-          <DialogFooter className={isRTL ? "flex-row-reverse sm:flex-row-reverse" : ""}>
+          <DialogFooter className={cn("gap-2", isRTL && "flex-row-reverse sm:flex-row-reverse")}>
             <Button
               variant="outline"
               onClick={() => setShowSettingsDialog(false)}
+              className="rounded-xl"
             >
               {t.cancel}
             </Button>
             <Button
               onClick={saveConfig}
               disabled={isSavingConfig}
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
+              className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
             >
               {isSavingConfig ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1385,7 +1593,7 @@ ${languageInstruction}`;
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Sheet>
+    </TooltipProvider>
   );
 }
 
