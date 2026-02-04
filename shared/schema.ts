@@ -24,6 +24,7 @@ export const branches = pgTable("branches", {
   isActive: boolean("is_active").default(true),
   displayOrder: integer("display_order").default(0),
   openingHours: jsonb("opening_hours"),
+  serviceCities: text("service_cities"), // Comma-separated list of cities this branch serves
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

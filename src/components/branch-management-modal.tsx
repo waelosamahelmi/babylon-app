@@ -38,6 +38,7 @@ export function BranchManagementModal({ isOpen, onClose }: BranchManagementModal
     email: "",
     displayOrder: 0,
     isActive: true,
+    serviceCities: "", // Comma-separated list of cities this branch serves
     openingHours: {
       monday: { open: "10:30", close: "22:00", closed: false },
       tuesday: { open: "10:30", close: "22:00", closed: false },
@@ -62,6 +63,7 @@ export function BranchManagementModal({ isOpen, onClose }: BranchManagementModal
       email: "",
       displayOrder: 0,
       isActive: true,
+      serviceCities: "",
       openingHours: {
         monday: { open: "10:30", close: "22:00", closed: false },
         tuesday: { open: "10:30", close: "22:00", closed: false },
@@ -89,6 +91,7 @@ export function BranchManagementModal({ isOpen, onClose }: BranchManagementModal
       email: branch.email || "",
       displayOrder: branch.displayOrder || 0,
       isActive: branch.isActive !== undefined ? branch.isActive : true,
+      serviceCities: branch.serviceCities || "",
       openingHours: branch.openingHours || {
         monday: { open: "10:30", close: "22:00", closed: false },
         tuesday: { open: "10:30", close: "22:00", closed: false },
@@ -285,6 +288,23 @@ export function BranchManagementModal({ isOpen, onClose }: BranchManagementModal
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="lahti@example.com"
                     />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="serviceCities">
+                      {t("Palvelualueen kaupungit", "Service Area Cities")}
+                    </Label>
+                    <Input
+                      id="serviceCities"
+                      value={formData.serviceCities}
+                      onChange={(e) => setFormData({ ...formData, serviceCities: e.target.value })}
+                      placeholder={t("Esim. Ylöjärvi,Nokia,Pirkkala", "e.g. Ylöjärvi,Nokia,Pirkkala")}
+                    />
+                    <p className="text-xs text-gray-500">
+                      {t(
+                        "Pilkuilla erotettu lista kaupungeista, joihin tämä toimipiste toimittaa (toimipisteen oman kaupungin lisäksi)",
+                        "Comma-separated list of cities this branch delivers to (in addition to its own city)"
+                      )}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="displayOrder">
