@@ -356,9 +356,19 @@ export default function Admin() {
       if (prepTime !== undefined) {
         updateData.prep_time = prepTime;
         // Calculate estimated delivery time by adding prepTime minutes to current time
-        const estimatedDeliveryTime = new Date();
-        estimatedDeliveryTime.setMinutes(estimatedDeliveryTime.getMinutes() + prepTime);
-        updateData.estimated_delivery_time = estimatedDeliveryTime.toISOString();
+        // Using Date.now() to get current timestamp in milliseconds
+        const currentTimestamp = Date.now();
+        const estimatedDeliveryTimestamp = currentTimestamp + (prepTime * 60 * 1000);
+        // Convert to ISO string for storage - this preserves timezone info
+        updateData.estimated_delivery_time = new Date(estimatedDeliveryTimestamp).toISOString();
+        console.log('⏰ Calculated estimated_delivery_time:', {
+          prepTime,
+          currentTimestamp,
+          estimatedDeliveryTimestamp,
+          isoString: updateData.estimated_delivery_time,
+          localTime: new Date(estimatedDeliveryTimestamp).toLocaleString('fi-FI'),
+          currentTime: new Date().toISOString()
+        });
       }
       
       await updateOrderStatus.mutateAsync(updateData);

@@ -123,12 +123,15 @@ export function useSupabaseUpdateOrderStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      console.log('📦 Updating order status in Supabase:', id, '->', status);
-      
+    mutationFn: async ({ id, status, ...additionalFields }: { id: number; status: string; [key: string]: any }) => {
+      console.log('📦 Updating order status in Supabase:', id, '->', status, additionalFields);
+
+      const updateData: any = { status, updated_at: new Date().toISOString() };
+      Object.assign(updateData, additionalFields);
+
       const { data, error } = await supabase
         .from('orders')
-        .update({ status, updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();

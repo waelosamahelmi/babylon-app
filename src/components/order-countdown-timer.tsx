@@ -17,14 +17,29 @@ export function OrderCountdownTimer({ estimatedDeliveryTime, className = "" }: O
 
   useEffect(() => {
     if (!estimatedDeliveryTime) {
+      console.log('⏰ No estimated delivery time provided');
       setTimeRemaining(null);
       return;
     }
 
+    console.log('⏰ Countdown timer initialized with:', {
+      estimatedDeliveryTime,
+      parsedDate: new Date(estimatedDeliveryTime).toISOString(),
+      currentTime: new Date().toISOString()
+    });
+
     const calculateTimeRemaining = () => {
-      const now = new Date().getTime();
+      const now = Date.now();
+      // Parse the ISO string - this will correctly handle the timezone
       const deliveryTime = new Date(estimatedDeliveryTime).getTime();
       const diff = deliveryTime - now;
+
+      console.log('⏰ Time remaining calculation:', {
+        now: new Date(now).toISOString(),
+        deliveryTime: new Date(deliveryTime).toISOString(),
+        diff,
+        diffMinutes: diff / (1000 * 60)
+      });
 
       if (diff <= 0) {
         return { minutes: 0, seconds: 0, isOverdue: true };

@@ -36,6 +36,9 @@ export function OrderAcceptDialog({ isOpen, onClose, onAccept, order }: OrderAcc
 
   if (!order) return null;
 
+  // Ensure we have the items array
+  const orderItems = order.items || order.order_items || [];
+
   return (
     <Dialog open={isOpen} onOpenChange={handleCancel}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden">
@@ -112,7 +115,7 @@ export function OrderAcceptDialog({ isOpen, onClose, onAccept, order }: OrderAcc
                     {t("Tilauksen sisältö", "Order Items")}
                   </p>
                   <div className="space-y-1">
-                    {(order.items || []).map((item: any, index: number) => (
+                    {orderItems.map((item: any, index: number) => (
                       <div key={index} className="text-sm flex justify-between">
                         <span>
                           {item.quantity}x {item.name || item.menuItem?.name}
