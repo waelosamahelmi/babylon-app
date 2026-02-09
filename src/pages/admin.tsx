@@ -38,6 +38,7 @@ import { AdvancedReportModal } from "@/components/advanced-report-modal";
 import { PaymentMethodsAnalytics } from "@/components/payment-methods-analytics";
 import { OrderDetailModal } from "@/components/order-detail-modal";
 import { OrderAcceptDialog } from "@/components/order-accept-dialog";
+import { OrderCountdownTimer } from "@/components/order-countdown-timer";
 import { PermissionsDialog } from "@/components/permissions-dialog";
 import { PrinterStatusIndicator } from "@/components/printer-status-indicator";
 import { PrintPreviewModal } from "@/components/print-preview-modal";
@@ -354,6 +355,10 @@ export default function Admin() {
       const updateData: any = { id: orderId, status };
       if (prepTime !== undefined) {
         updateData.prep_time = prepTime;
+        // Calculate estimated delivery time by adding prepTime minutes to current time
+        const estimatedDeliveryTime = new Date();
+        estimatedDeliveryTime.setMinutes(estimatedDeliveryTime.getMinutes() + prepTime);
+        updateData.estimated_delivery_time = estimatedDeliveryTime.toISOString();
       }
       
       await updateOrderStatus.mutateAsync(updateData);
@@ -1489,8 +1494,13 @@ export default function Admin() {
                               <p className="text-sm text-gray-500 dark:text-gray-400">
                                 {order.createdAt && new Date(order.createdAt).toLocaleString(language === "ar" ? "ar-SA" : language === "fi" ? "fi-FI" : "en-US")}
                               </p>
+                              {/* Countdown timer for orders with estimated delivery time */}
+                              <OrderCountdownTimer
+                                estimatedDeliveryTime={order.estimated_delivery_time || order.estimatedDeliveryTime}
+                                className="mt-1"
+                              />
                             </div>
-                            
+
                             <div className="flex flex-wrap gap-2">
                               {order.status === "pending" && (
                                 <>
