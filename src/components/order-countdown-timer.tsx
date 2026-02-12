@@ -69,9 +69,9 @@ export function OrderCountdownTimer({ estimatedDeliveryTime, className = "" }: O
   const { minutes, seconds, isOverdue } = timeRemaining;
 
   return (
-    <div className={`flex items-center space-x-2 ${className}`}>
-      <Clock className={`w-4 h-4 ${isOverdue ? 'text-red-600' : 'text-blue-600'}`} />
-      <span className={`text-sm font-medium ${isOverdue ? 'text-red-600' : 'text-blue-600'}`}>
+    <div className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg ${isOverdue ? 'bg-red-100 dark:bg-red-900/30' : 'bg-green-100 dark:bg-green-900/30'} ${className}`}>
+      <Clock className={`w-6 h-6 ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`} />
+      <span className={`text-xl font-bold ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
         {isOverdue
           ? t("Yliajo!", "Overdue!")
           : `${minutes}:${seconds.toString().padStart(2, '0')}`

@@ -1055,12 +1055,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all branches with their monthly report settings
   app.get("/api/monthly-report/branches", requireAuth, async (req, res) => {
     try {
-      const branchList = await db.select({
-        id: branches.id,
-        name: branches.name,
-        monthlyReportEmail: branches.monthlyReportEmail,
-        monthlyReportEnabled: branches.monthlyReportEnabled
-      }).from(branches).where(eq(branches.isActive, true));
+      // Try to fetch with new columns, fallback to basic info if columns don't exist
+      let branchList;
+      try {
+        branchList = await db.select({
+          id: branches.id,
+          name: branches.name,
+          monthlyReportEmail: branches.monthlyReportEmail,
+          monthlyReportEnabled: branches.monthlyReportEnabled
+        }).from(branches).where(eq(branches.isActive, true));
+      } catch (columnError) {
+        // Columns might not exist yet, fetch basic branch info
+        console.log('⚠️ Monthly report columns may not exist yet, fetching basic branch info');
+        const basicBranches = await db.select({
+          id: branches.id,
+          name: branches.name,
+        }).from(branches).where(eq(branches.isActive, true));
+        branchList = basicBranches.map(b => ({
+          ...b,
+          monthlyReportEmail: null,
+          monthlyReportEnabled: false
+        }));
+      }
       
       res.json({
         branches: branchList,

@@ -1505,11 +1505,6 @@ export default function Admin() {
                               <p className="text-sm text-gray-500 dark:text-gray-400">
                                 {order.createdAt && new Date(order.createdAt).toLocaleString(language === "ar" ? "ar-SA" : language === "fi" ? "fi-FI" : "en-US")}
                               </p>
-                              {/* Countdown timer for orders with estimated delivery time */}
-                              <OrderCountdownTimer
-                                estimatedDeliveryTime={order.estimated_delivery_time || order.estimatedDeliveryTime}
-                                className="mt-1"
-                              />
                             </div>
 
                             <div className="flex flex-wrap gap-2">
@@ -1591,6 +1586,11 @@ export default function Admin() {
                                 <Printer className="w-4 h-4 mr-1" />
                                 {adminT("Tulosta", "Print", "طباعة")}
                               </Button>
+                              {/* Countdown timer - positioned on the right under buttons */}
+                              <OrderCountdownTimer
+                                estimatedDeliveryTime={order.estimated_delivery_time || order.estimatedDeliveryTime}
+                                className="ml-auto"
+                              />
                             </div>
                           </div>
                         </CardContent>

@@ -93,7 +93,7 @@ export function MonthlyReportSettings() {
       setBranchesData(data);
       
       // Auto-select first branch if available
-      if (data.branches.length > 0 && !selectedBranchId) {
+      if (data.branches && data.branches.length > 0 && !selectedBranchId) {
         const firstBranch = data.branches[0];
         setSelectedBranchId(String(firstBranch.id));
         setEmail(firstBranch.monthlyReportEmail || "");
@@ -102,6 +102,8 @@ export function MonthlyReportSettings() {
       }
     } catch (error) {
       console.error("Error fetching branches:", error);
+      // Set empty branches so UI shows the warning
+      setBranchesData({ branches: [], schedulerRunning: false, nextRun: new Date().toISOString() });
       toast({
         title: t("Virhe", "Error", "خطأ"),
         description: t(
@@ -306,31 +308,52 @@ export function MonthlyReportSettings() {
             <Building className="w-4 h-4" />
             {t("Toimipiste", "Branch", "الفرع")}
           </Label>
-          <Select value={selectedBranchId} onValueChange={handleBranchChange}>
-            <SelectTrigger>
-              <SelectValue placeholder={t("Valitse toimipiste", "Select branch", "اختر الفرع")} />
-            </SelectTrigger>
-            <SelectContent>
-              {branchesData?.branches.map((branch) => (
-                <SelectItem key={branch.id} value={String(branch.id)}>
-                  {branch.name}
-                  {branch.monthlyReportEnabled && (
-                    <span className="ml-2 text-green-500">✓</span>
-                  )}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {t(
-              "Valitse toimipiste, jolle haluat määrittää kuukausiraportin asetukset",
-              "Select which branch to configure monthly report settings for",
-              "اختر الفرع الذي تريد تكوين إعدادات التقرير الشهري له"
-            )}
-          </p>
+          {branchesData?.branches && branchesData.branches.length > 0 ? (
+            <>
+              <Select value={selectedBranchId} onValueChange={handleBranchChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("Valitse toimipiste", "Select branch", "اختر الفرع")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {branchesData.branches.map((branch) => (
+                    <SelectItem key={branch.id} value={String(branch.id)}>
+                      {branch.name}
+                      {branch.monthlyReportEnabled && (
+                        <span className="ml-2 text-green-500">✓</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t(
+                  "Valitse toimipiste, jolle haluat määrittää kuukausiraportin asetukset",
+                  "Select which branch to configure monthly report settings for",
+                  "اختر الفرع الذي تريد تكوين إعدادات التقرير الشهري له"
+                )}
+              </p>
+            </>
+          ) : (
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                {t(
+                  "Ei toimipisteitä saatavilla. Varmista, että tietokanta on päivitetty.",
+                  "No branches available. Make sure the database is updated.",
+                  "لا توجد فروع متاحة. تأكد من تحديث قاعدة البيانات."
+                )}
+              </p>
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
+                {t(
+                  "Suorita SQL-migraatio: ALTER TABLE branches ADD COLUMN monthly_report_email TEXT, ADD COLUMN monthly_report_enabled BOOLEAN DEFAULT FALSE;",
+                  "Run SQL migration: ALTER TABLE branches ADD COLUMN monthly_report_email TEXT, ADD COLUMN monthly_report_enabled BOOLEAN DEFAULT FALSE;",
+                  "قم بتشغيل ترحيل SQL: ALTER TABLE branches ADD COLUMN monthly_report_email TEXT, ADD COLUMN monthly_report_enabled BOOLEAN DEFAULT FALSE;"
+                )}
+              </p>
+            </div>
+          )}
         </div>
 
-        {selectedBranchId && (
+        {selectedBranchId && branchesData?.branches && branchesData.branches.length > 0 && (
           <>
             {/* Auto Report Settings */}
             <div className="space-y-4">
