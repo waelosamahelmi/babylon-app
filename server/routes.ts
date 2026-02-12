@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertOrderSchema, insertOrderItemSchema, insertToppingSchema, insertMenuItemSchema, orders } from "@shared/schema";
+import { insertOrderSchema, insertOrderItemSchema, insertToppingSchema, insertMenuItemSchema, orders, restaurantSettings } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { authService, type AuthUser } from "./auth";
@@ -15,6 +15,8 @@ import paymentRouter from "./routes/payment";
 import { paymentService } from "./services/payment-service";
 import { z } from "zod";
 import nodemailer from "nodemailer";
+import { generateMonthlyReport, sendMonthlyReportEmail, triggerManualReport } from "./monthly-report-service";
+import { isSchedulerRunning, getNextScheduledRun } from "./scheduler";
 
 // Extend Express session interface
 declare module "express-session" {
@@ -1045,6 +1047,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
       });
+    }
+  });
+
+  // ===== MONTHLY REPORT ROUTES =====
+  
+  // Get monthly report settings
+  app.get("/api/monthly-report/settings", requireAuth, async (req, res) => {
+    try {
+      const settings = await db.select({
+        monthlyReportEmail: restaurantSettings.monthlyReportEmail,
+        monthlyReportEnabled: restaurantSettings.monthlyReportEnabled
+      }).from(restaurantSettings).limit(1);
+      
+      res.json({
+        email: settings[0]?.monthlyReportEmail || '',
+        enabled: settings[0]?.monthlyReportEnabled || false,
+        schedulerRunning: isSchedulerRunning(),
+        nextRun: getNextScheduledRun().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ Error fetching monthly report settings:', error);
+      res.status(500).json({ error: 'Failed to fetch settings' });
+    }
+  });
+  
+  // Update monthly report settings
+  app.put("/api/monthly-report/settings", requireAuth, async (req, res) => {
+    try {
+      const { email, enabled } = req.body;
+      
+      // Check if settings exist
+      const existing = await db.select().from(restaurantSettings).limit(1);
+      
+      if (existing.length === 0) {
+        return res.status(404).json({ error: 'Restaurant settings not found' });
+      }
+      
+      await db.update(restaurantSettings)
+        .set({
+          monthlyReportEmail: email || null,
+          monthlyReportEnabled: enabled === true
+        })
+        .where(eq(restaurantSettings.id, existing[0].id));
+      
+      console.log(`✅ Monthly report settings updated: email=${email}, enabled=${enabled}`);
+      
+      res.json({ 
+        success: true,
+        email: email || '',
+        enabled: enabled === true
+      });
+    } catch (error) {
+      console.error('❌ Error updating monthly report settings:', error);
+      res.status(500).json({ error: 'Failed to update settings' });
+    }
+  });
+  
+  // Preview monthly report (returns JSON data)
+  app.get("/api/monthly-report/preview", requireAuth, async (req, res) => {
+    try {
+      const { month, year } = req.query;
+      
+      let targetDate: Date | undefined;
+      if (month && year) {
+        targetDate = new Date(parseInt(year as string), parseInt(month as string) - 1, 1);
+      }
+      
+      const report = await generateMonthlyReport(targetDate);
+      
+      if (!report) {
+        return res.status(404).json({ error: 'No data available for the specified period' });
+      }
+      
+      res.json(report);
+    } catch (error) {
+      console.error('❌ Error generating report preview:', error);
+      res.status(500).json({ error: 'Failed to generate report' });
+    }
+  });
+  
+  // Send monthly report manually
+  app.post("/api/monthly-report/send", requireAuth, async (req, res) => {
+    try {
+      const { email, month, year } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email address is required' });
+      }
+      
+      const success = await triggerManualReport(
+        email,
+        month ? parseInt(month) : undefined,
+        year ? parseInt(year) : undefined
+      );
+      
+      if (success) {
+        res.json({ success: true, message: `Report sent to ${email}` });
+      } else {
+        res.status(500).json({ error: 'Failed to send report' });
+      }
+    } catch (error) {
+      console.error('❌ Error sending manual report:', error);
+      res.status(500).json({ error: 'Failed to send report' });
     }
   });
 

@@ -242,6 +242,9 @@ export const restaurantSettings = pgTable("restaurant_settings", {
   deliveryHours: text("delivery_hours").notNull(),
   lunchBuffetHours: text("lunch_buffet_hours").notNull(),
   specialMessage: text("special_message"),
+  // Monthly report settings
+  monthlyReportEmail: text("monthly_report_email"),
+  monthlyReportEnabled: boolean("monthly_report_enabled").default(false),
   // Printer settings
   defaultPrinterId: text("default_printer_id"),
   printerAutoReconnect: boolean("printer_auto_reconnect").default(true),

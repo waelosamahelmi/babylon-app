@@ -10,6 +10,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { authService } from "./auth";
 import { initializeComprehensiveToppings } from "./initialize-toppings";
+import { initializeMonthlyReportScheduler } from "./scheduler";
 
 const app = express();
 
@@ -126,6 +127,9 @@ app.use((req, res, next) => {
   
   // Initialize comprehensive toppings
   await initializeComprehensiveToppings();
+  
+  // Initialize monthly report scheduler
+  initializeMonthlyReportScheduler();
   
   const server = await registerRoutes(app);
 
