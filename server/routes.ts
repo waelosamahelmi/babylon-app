@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertOrderSchema, insertOrderItemSchema, insertToppingSchema, insertMenuItemSchema, orders, restaurantSettings } from "@shared/schema";
+import { insertOrderSchema, insertOrderItemSchema, insertToppingSchema, insertMenuItemSchema, orders, restaurantSettings, branches } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { authService, type AuthUser } from "./auth";
@@ -15,7 +15,7 @@ import paymentRouter from "./routes/payment";
 import { paymentService } from "./services/payment-service";
 import { z } from "zod";
 import nodemailer from "nodemailer";
-import { generateMonthlyReport, sendMonthlyReportEmail, triggerManualReport } from "./monthly-report-service";
+import { generateMonthlyReport, sendMonthlyReportEmail, triggerManualReport, sendAllBranchReports } from "./monthly-report-service";
 import { isSchedulerRunning, getNextScheduledRun } from "./scheduler";
 
 // Extend Express session interface
@@ -1052,17 +1052,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== MONTHLY REPORT ROUTES =====
   
-  // Get monthly report settings
-  app.get("/api/monthly-report/settings", requireAuth, async (req, res) => {
+  // Get all branches with their monthly report settings
+  app.get("/api/monthly-report/branches", requireAuth, async (req, res) => {
     try {
-      const settings = await db.select({
-        monthlyReportEmail: restaurantSettings.monthlyReportEmail,
-        monthlyReportEnabled: restaurantSettings.monthlyReportEnabled
-      }).from(restaurantSettings).limit(1);
+      const branchList = await db.select({
+        id: branches.id,
+        name: branches.name,
+        monthlyReportEmail: branches.monthlyReportEmail,
+        monthlyReportEnabled: branches.monthlyReportEnabled
+      }).from(branches).where(eq(branches.isActive, true));
       
       res.json({
-        email: settings[0]?.monthlyReportEmail || '',
-        enabled: settings[0]?.monthlyReportEnabled || false,
+        branches: branchList,
+        schedulerRunning: isSchedulerRunning(),
+        nextRun: getNextScheduledRun().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ Error fetching branches for monthly report:', error);
+      res.status(500).json({ error: 'Failed to fetch branches' });
+    }
+  });
+  
+  // Get monthly report settings for a specific branch
+  app.get("/api/monthly-report/settings/:branchId", requireAuth, async (req, res) => {
+    try {
+      const branchId = parseInt(req.params.branchId);
+      const branch = await db.select({
+        id: branches.id,
+        name: branches.name,
+        monthlyReportEmail: branches.monthlyReportEmail,
+        monthlyReportEnabled: branches.monthlyReportEnabled
+      }).from(branches).where(eq(branches.id, branchId)).limit(1);
+      
+      if (branch.length === 0) {
+        return res.status(404).json({ error: 'Branch not found' });
+      }
+      
+      res.json({
+        branchId: branch[0].id,
+        branchName: branch[0].name,
+        email: branch[0].monthlyReportEmail || '',
+        enabled: branch[0].monthlyReportEnabled || false,
         schedulerRunning: isSchedulerRunning(),
         nextRun: getNextScheduledRun().toISOString()
       });
@@ -1072,29 +1102,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Update monthly report settings
-  app.put("/api/monthly-report/settings", requireAuth, async (req, res) => {
+  // Update monthly report settings for a specific branch
+  app.put("/api/monthly-report/settings/:branchId", requireAuth, async (req, res) => {
     try {
+      const branchId = parseInt(req.params.branchId);
       const { email, enabled } = req.body;
       
-      // Check if settings exist
-      const existing = await db.select().from(restaurantSettings).limit(1);
+      // Check if branch exists
+      const existing = await db.select().from(branches).where(eq(branches.id, branchId)).limit(1);
       
       if (existing.length === 0) {
-        return res.status(404).json({ error: 'Restaurant settings not found' });
+        return res.status(404).json({ error: 'Branch not found' });
       }
       
-      await db.update(restaurantSettings)
+      await db.update(branches)
         .set({
           monthlyReportEmail: email || null,
           monthlyReportEnabled: enabled === true
         })
-        .where(eq(restaurantSettings.id, existing[0].id));
+        .where(eq(branches.id, branchId));
       
-      console.log(`✅ Monthly report settings updated: email=${email}, enabled=${enabled}`);
+      console.log(`✅ Monthly report settings updated for branch ${existing[0].name}: email=${email}, enabled=${enabled}`);
       
       res.json({ 
         success: true,
+        branchId,
         email: email || '',
         enabled: enabled === true
       });
@@ -1104,9 +1136,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Preview monthly report (returns JSON data)
-  app.get("/api/monthly-report/preview", requireAuth, async (req, res) => {
+  // Preview monthly report for a specific branch (returns JSON data)
+  app.get("/api/monthly-report/preview/:branchId", requireAuth, async (req, res) => {
     try {
+      const branchId = parseInt(req.params.branchId);
       const { month, year } = req.query;
       
       let targetDate: Date | undefined;
@@ -1114,7 +1147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetDate = new Date(parseInt(year as string), parseInt(month as string) - 1, 1);
       }
       
-      const report = await generateMonthlyReport(targetDate);
+      const report = await generateMonthlyReport(branchId, targetDate);
       
       if (!report) {
         return res.status(404).json({ error: 'No data available for the specified period' });
@@ -1127,9 +1160,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Send monthly report manually
-  app.post("/api/monthly-report/send", requireAuth, async (req, res) => {
+  // Send monthly report manually for a specific branch
+  app.post("/api/monthly-report/send/:branchId", requireAuth, async (req, res) => {
     try {
+      const branchId = parseInt(req.params.branchId);
       const { email, month, year } = req.body;
       
       if (!email) {
@@ -1137,6 +1171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const success = await triggerManualReport(
+        branchId,
         email,
         month ? parseInt(month) : undefined,
         year ? parseInt(year) : undefined
@@ -1150,6 +1185,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('❌ Error sending manual report:', error);
       res.status(500).json({ error: 'Failed to send report' });
+    }
+  });
+  
+  // Send reports to all enabled branches (manual trigger)
+  app.post("/api/monthly-report/send-all", requireAuth, async (req, res) => {
+    try {
+      const { month, year } = req.body;
+      
+      let targetDate: Date | undefined;
+      if (month && year) {
+        targetDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      }
+      
+      const results = await sendAllBranchReports(targetDate);
+      
+      res.json({ 
+        success: true, 
+        message: `Reports sent: ${results.sent}, Failed: ${results.failed}`,
+        ...results
+      });
+    } catch (error) {
+      console.error('❌ Error sending reports to all branches:', error);
+      res.status(500).json({ error: 'Failed to send reports' });
     }
   });
 

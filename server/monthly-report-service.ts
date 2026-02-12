@@ -1,13 +1,15 @@
 import sgMail from '@sendgrid/mail';
 import { db } from './db';
-import { orders, orderItems, menuItems, restaurantSettings, restaurantConfig } from '@shared/schema';
-import { eq, and, gte, lt, sql } from 'drizzle-orm';
+import { orders, orderItems, menuItems, restaurantSettings, restaurantConfig, branches } from '@shared/schema';
+import { eq, and, gte, lt, sql, isNull } from 'drizzle-orm';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 
 // Initialize SendGrid
 sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
 
 interface MonthlyReportData {
+  branchId?: number;
+  branchName?: string;
   period: {
     month: string;
     year: number;
@@ -53,20 +55,25 @@ interface MonthlyReportData {
   };
 }
 
-export async function generateMonthlyReport(targetDate?: Date): Promise<MonthlyReportData | null> {
+export async function generateMonthlyReport(branchId: number, targetDate?: Date): Promise<MonthlyReportData | null> {
   try {
     // Default to previous month if no date specified
     const reportDate = targetDate || subMonths(new Date(), 1);
     const monthStart = startOfMonth(reportDate);
     const monthEnd = endOfMonth(reportDate);
 
-    console.log(`📊 Generating monthly report for ${format(monthStart, 'MMMM yyyy')}`);
+    // Get branch info
+    const branchData = await db.select().from(branches).where(eq(branches.id, branchId)).limit(1);
+    const branchName = branchData[0]?.name || 'Unknown Branch';
 
-    // Get all orders for the month
+    console.log(`📊 Generating monthly report for ${branchName} - ${format(monthStart, 'MMMM yyyy')}`);
+
+    // Get all orders for the month for this branch
     const monthlyOrders = await db.select()
       .from(orders)
       .where(
         and(
+          eq(orders.branchId, branchId),
           gte(orders.createdAt, monthStart),
           lt(orders.createdAt, monthEnd)
         )
@@ -147,6 +154,8 @@ export async function generateMonthlyReport(targetDate?: Date): Promise<MonthlyR
       .sort((a, b) => a.date.localeCompare(b.date));
 
     return {
+      branchId,
+      branchName,
       period: {
         month: format(monthStart, 'MMMM'),
         year: monthStart.getFullYear(),
@@ -220,7 +229,7 @@ function generateReportHtml(report: MonthlyReportData, restaurantName: string): 
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #e53e3e; padding-bottom: 20px;">
           <h1 style="color: #e53e3e; margin: 0;">${restaurantName}</h1>
-          <h2 style="color: #333; margin: 10px 0 0;">Monthly Report</h2>
+          <h2 style="color: #333; margin: 10px 0 0;">Monthly Report - ${report.branchName || 'All Branches'}</h2>
           <p style="color: #666; font-size: 18px;">${report.period.month} ${report.period.year}</p>
           <p style="color: #999; font-size: 14px;">${report.period.startDate} to ${report.period.endDate}</p>
         </div>
@@ -370,30 +379,36 @@ function generateReportHtml(report: MonthlyReportData, restaurantName: string): 
   `;
 }
 
-export async function sendMonthlyReportEmail(targetDate?: Date): Promise<boolean> {
+export async function sendMonthlyReportEmail(branchId: number, targetDate?: Date): Promise<boolean> {
   try {
-    // Get settings to find report email
-    const settings = await db.select().from(restaurantSettings).limit(1);
+    // Get branch settings
+    const branchData = await db.select().from(branches).where(eq(branches.id, branchId)).limit(1);
     const config = await db.select().from(restaurantConfig).limit(1);
 
-    const reportEmail = settings[0]?.monthlyReportEmail;
-    const reportEnabled = settings[0]?.monthlyReportEnabled;
+    const branch = branchData[0];
+    if (!branch) {
+      console.log(`📧 Branch with ID ${branchId} not found`);
+      return false;
+    }
+
+    const reportEmail = branch.monthlyReportEmail;
+    const reportEnabled = branch.monthlyReportEnabled;
     const restaurantName = config[0]?.name || 'Restaurant';
 
     if (!reportEnabled) {
-      console.log('📧 Monthly report is disabled in settings');
+      console.log(`📧 Monthly report is disabled for branch: ${branch.name}`);
       return false;
     }
 
     if (!reportEmail) {
-      console.log('📧 No monthly report email configured');
+      console.log(`📧 No monthly report email configured for branch: ${branch.name}`);
       return false;
     }
 
-    // Generate the report
-    const report = await generateMonthlyReport(targetDate);
+    // Generate the report for this branch
+    const report = await generateMonthlyReport(branchId, targetDate);
     if (!report) {
-      console.log('📧 No data to report');
+      console.log(`📧 No data to report for branch: ${branch.name}`);
       return false;
     }
 
@@ -404,12 +419,12 @@ export async function sendMonthlyReportEmail(targetDate?: Date): Promise<boolean
     const msg = {
       to: reportEmail,
       from: process.env.SENDGRID_FROM_EMAIL || 'reports@ravintolababylon.fi',
-      subject: `Monthly Report - ${report.period.month} ${report.period.year} - ${restaurantName}`,
+      subject: `Monthly Report - ${report.period.month} ${report.period.year} - ${restaurantName} (${branch.name})`,
       html: htmlContent,
     };
 
     await sgMail.send(msg);
-    console.log(`✅ Monthly report sent successfully to ${reportEmail}`);
+    console.log(`✅ Monthly report sent successfully for branch ${branch.name} to ${reportEmail}`);
     return true;
   } catch (error) {
     console.error('❌ Failed to send monthly report email:', error);
@@ -417,8 +432,49 @@ export async function sendMonthlyReportEmail(targetDate?: Date): Promise<boolean
   }
 }
 
-// Function to manually trigger report for a specific month
-export async function triggerManualReport(email: string, month?: number, year?: number): Promise<boolean> {
+// Function to send reports to all enabled branches (used by scheduler)
+export async function sendAllBranchReports(targetDate?: Date): Promise<{ sent: number; failed: number }> {
+  const results = { sent: 0, failed: 0 };
+  
+  try {
+    // Get all branches with monthly reports enabled
+    const enabledBranches = await db.select()
+      .from(branches)
+      .where(
+        and(
+          eq(branches.monthlyReportEnabled, true),
+          eq(branches.isActive, true)
+        )
+      );
+
+    console.log(`📅 Found ${enabledBranches.length} branches with monthly reports enabled`);
+
+    for (const branch of enabledBranches) {
+      if (branch.monthlyReportEmail) {
+        try {
+          const success = await sendMonthlyReportEmail(branch.id, targetDate);
+          if (success) {
+            results.sent++;
+          } else {
+            results.failed++;
+          }
+        } catch (error) {
+          console.error(`❌ Failed to send report for branch ${branch.name}:`, error);
+          results.failed++;
+        }
+      }
+    }
+
+    console.log(`📅 Monthly reports completed: ${results.sent} sent, ${results.failed} failed`);
+    return results;
+  } catch (error) {
+    console.error('❌ Error in sendAllBranchReports:', error);
+    return results;
+  }
+}
+
+// Function to manually trigger report for a specific month and branch
+export async function triggerManualReport(branchId: number, email: string, month?: number, year?: number): Promise<boolean> {
   try {
     const config = await db.select().from(restaurantConfig).limit(1);
     const restaurantName = config[0]?.name || 'Restaurant';
@@ -429,7 +485,7 @@ export async function triggerManualReport(email: string, month?: number, year?: 
       targetDate = new Date(year, month - 1, 1); // month is 1-indexed for user input
     }
 
-    const report = await generateMonthlyReport(targetDate);
+    const report = await generateMonthlyReport(branchId, targetDate);
     if (!report) {
       console.log('📧 No data to report for the specified period');
       return false;
@@ -440,7 +496,7 @@ export async function triggerManualReport(email: string, month?: number, year?: 
     const msg = {
       to: email,
       from: process.env.SENDGRID_FROM_EMAIL || 'reports@ravintolababylon.fi',
-      subject: `Monthly Report - ${report.period.month} ${report.period.year} - ${restaurantName}`,
+      subject: `Monthly Report - ${report.period.month} ${report.period.year} - ${restaurantName} (${report.branchName})`,
       html: htmlContent,
     };
 

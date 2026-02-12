@@ -25,6 +25,9 @@ export const branches = pgTable("branches", {
   displayOrder: integer("display_order").default(0),
   openingHours: jsonb("opening_hours"),
   serviceCities: text("service_cities"), // Comma-separated list of cities this branch serves
+  // Monthly report settings
+  monthlyReportEmail: text("monthly_report_email"),
+  monthlyReportEnabled: boolean("monthly_report_enabled").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -1,11 +1,12 @@
 import cron, { ScheduledTask } from 'node-cron';
-import { sendMonthlyReportEmail } from './monthly-report-service';
+import { sendAllBranchReports } from './monthly-report-service';
 
 let scheduledTask: ScheduledTask | null = null;
 
 /**
  * Initialize the monthly report scheduler
  * Runs on the 1st day of every month at 8:00 AM (server timezone)
+ * Sends reports to all branches that have monthly reports enabled
  */
 export function initializeMonthlyReportScheduler(): void {
   // Stop any existing task
@@ -20,14 +21,10 @@ export function initializeMonthlyReportScheduler(): void {
     console.log(`📅 Current time: ${new Date().toISOString()}`);
     
     try {
-      const success = await sendMonthlyReportEmail();
-      if (success) {
-        console.log('✅ Monthly report sent successfully via scheduler');
-      } else {
-        console.log('⚠️ Monthly report was not sent (disabled or no email configured)');
-      }
+      const results = await sendAllBranchReports();
+      console.log(`✅ Monthly reports complete: ${results.sent} sent, ${results.failed} failed`);
     } catch (error) {
-      console.error('❌ Scheduler error sending monthly report:', error);
+      console.error('❌ Scheduler error sending monthly reports:', error);
     }
   }, {
     timezone: 'Europe/Helsinki' // Finnish timezone
@@ -35,6 +32,7 @@ export function initializeMonthlyReportScheduler(): void {
 
   console.log('📅 Monthly report scheduler initialized');
   console.log('📅 Schedule: 1st day of every month at 08:00 (Europe/Helsinki)');
+  console.log('📅 Reports will be sent to all branches with monthly reports enabled');
 }
 
 /**

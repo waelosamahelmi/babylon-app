@@ -27,6 +27,7 @@ import { StripeSettingsModal } from "@/components/stripe-settings-modal";
 import { ManualUpdateButton } from "@/components/update-checker";
 import { CategoryManagementModal } from "@/components/category-management-modal";
 import { EmailMarketing } from "@/components/email-marketing";
+import { MonthlyReportSettings } from "@/components/monthly-report-settings";
 import { BranchManagementModal } from "@/components/branch-management-modal";
 import { PromotionsManagementModal } from "@/components/promotions-management-modal";
 import { BlacklistManagementModal } from "@/components/blacklist-management-modal";
@@ -2304,6 +2305,9 @@ export default function Admin() {
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Monthly Report Settings */}
+              <MonthlyReportSettings />
             </div>
           </TabsContent>
 

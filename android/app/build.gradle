@@ -1,5 +1,10 @@
 apply plugin: 'com.android.application'
 
+// Check if keystore exists for local builds
+// CI/CD will use GitHub Actions signing step instead
+def keystorePropertiesFile = file('../release.keystore')
+def hasKeystore = keystorePropertiesFile.exists()
+
 android {
     namespace "com.restaurant.ordermaster"
     compileSdk rootProject.ext.compileSdkVersion
@@ -22,22 +27,27 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    signingConfigs {
-        release {
-            storeFile file('../release.keystore')
-            storePassword 'babylon2024'
-            keyAlias 'release'
-            keyPassword 'babylon2024'
-        }
-    }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
         }
     }
+}
+
+// Only configure signing if keystore file exists (for local builds)
+// CI/CD will use GitHub Actions signing step instead
+if (hasKeystore) {
+    android.signingConfigs {
+        release {
+            storeFile keystorePropertiesFile
+            storePassword System.getenv('KEYSTORE_PASSWORD') ?: 'babylon2024'
+            keyAlias System.getenv('KEY_ALIAS') ?: 'release'
+            keyPassword System.getenv('KEY_PASSWORD') ?: 'babylon2024'
+        }
+    }
+    android.buildTypes.release.signingConfig = android.signingConfigs.release
 }
 
 repositories {
